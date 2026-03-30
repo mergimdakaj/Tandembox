@@ -1,6 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { Settings, Ruler, Box, ArrowRight, Info, Calculator, Download, Printer } from 'lucide-react';
-import { motion } from 'motion/react';
 
 interface Dimensions {
   ballorja: number;
@@ -161,7 +160,6 @@ Gjeneruar më: ${new Date().toLocaleString()}
               value={results.ballorja} 
               unit="cm" 
               icon={<Box className="w-5 h-5" />}
-              delay={0.1}
             />
             
             {/* Ansoret */}
@@ -170,7 +168,6 @@ Gjeneruar më: ${new Date().toLocaleString()}
               value={results.ansoret} 
               unit="cm" 
               icon={<ArrowRight className="w-5 h-5" />}
-              delay={0.2}
             />
 
             {/* Leseniti Full Width */}
@@ -230,12 +227,9 @@ Gjeneruar më: ${new Date().toLocaleString()}
   );
 }
 
-function ResultCard({ title, value, unit, icon, delay }: { title: string, value: number, unit: string, icon: ReactNode, delay: number }) {
+function ResultCard({ title, value, unit, icon }: { title: string, value: number, unit: string, icon: ReactNode }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
+    <div 
       className="border border-[#141414] p-6 bg-white flex flex-col justify-between h-40 hover:shadow-[8px_8px_0px_0px_rgba(20,20,20,1)] transition-all duration-300"
     >
       <div className="flex justify-between items-start">
@@ -248,7 +242,7 @@ function ResultCard({ title, value, unit, icon, delay }: { title: string, value:
         <span className="text-4xl font-bold tracking-tight">{value}</span>
         <span className="text-sm font-mono opacity-40 uppercase">{unit}</span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
