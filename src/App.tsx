@@ -1,6 +1,24 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { Settings, Ruler, Box, ArrowRight, Info, Calculator, Download, Printer } from 'lucide-react';
 
+// Global error handler to help debug blank page issues on GitHub Pages
+if (typeof window !== 'undefined') {
+  window.onerror = function(message, source, lineno, colno, error) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '0';
+    errorDiv.style.left = '0';
+    errorDiv.style.width = '100%';
+    errorDiv.style.background = 'red';
+    errorDiv.style.color = 'white';
+    errorDiv.style.padding = '10px';
+    errorDiv.style.zIndex = '9999';
+    errorDiv.innerHTML = `<strong>Error:</strong> ${message} <br/> <small>${source}:${lineno}</small>`;
+    document.body.appendChild(errorDiv);
+    return false;
+  };
+}
+
 interface Dimensions {
   ballorja: number;
   ansoret: number;
@@ -133,7 +151,7 @@ Gjeneruar më: ${new Date().toLocaleString()}
           <div className="flex items-center justify-between mb-2 print:hidden">
             <div className="flex items-center gap-2">
               <Ruler className="w-4 h-4 opacity-40" />
-              <h2 className="font-serif italic text-sm uppercase tracking-wider opacity-60">Dimensionet e Përfituara</h2>
+              <h2 className="font-serif italic text-sm uppercase tracking-wider opacity-60">Lista e Prerjes (Cutting List)</h2>
             </div>
             <div className="flex gap-2">
               <button 
@@ -153,48 +171,10 @@ Gjeneruar më: ${new Date().toLocaleString()}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
-            {/* Ballorja */}
-            <ResultCard 
-              title="Ballorja (Mbrenda)" 
-              value={results.ballorja} 
-              unit="cm" 
-              icon={<Box className="w-5 h-5" />}
-            />
-            
-            {/* Ansoret */}
-            <ResultCard 
-              title="Anësoret e Fijokës" 
-              value={results.ansoret} 
-              unit="cm" 
-              icon={<ArrowRight className="w-5 h-5" />}
-            />
-
-            {/* Leseniti Full Width */}
-            <div className="md:col-span-2 group border border-[#141414] p-8 bg-[#141414] text-[#E4E3E0] relative overflow-hidden">
-              <div className="relative z-10">
-                <label className="block text-[11px] font-mono uppercase mb-6 tracking-widest opacity-60">
-                  Dimensionet e Lesenitit (Gjerësi x Gjatësi)
-                </label>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-baseline gap-4">
-                    <span className="text-6xl font-bold tracking-tighter">{results.lesenitiWidth}</span>
-                    <span className="text-2xl font-mono opacity-40">x</span>
-                    <span className="text-6xl font-bold tracking-tighter">{results.lesenitiDepth}</span>
-                  </div>
-                  <span className="text-2xl font-mono opacity-60">CM</span>
-                </div>
-              </div>
-              <div className="absolute -right-12 -bottom-12 opacity-5">
-                <Box className="w-64 h-64 rotate-12" />
-              </div>
-            </div>
-          </div>
-
-          {/* Cutting List Table (The one for download/print) */}
-          <div className="mt-12 border border-[#141414] bg-white shadow-[12px_12px_0px_0px_rgba(20,20,20,1)] print:shadow-none print:mt-0">
+          {/* Cutting List Table */}
+          <div className="border border-[#141414] bg-white shadow-[12px_12px_0px_0px_rgba(20,20,20,1)] print:shadow-none">
             <div className="bg-[#141414] text-[#E4E3E0] p-4 text-[12px] font-mono uppercase tracking-widest flex justify-between items-center">
-              <span>Lista e Prerjes (Cutting List)</span>
+              <span>Dimensionet për Prerje</span>
               <span className="text-[10px] opacity-60">Kaca: {kaca}cm | Llageri: {llageri}cm</span>
             </div>
             <div className="divide-y divide-[#141414]">
@@ -211,6 +191,26 @@ Gjeneruar më: ${new Date().toLocaleString()}
             </div>
           </div>
 
+          {/* Visual Summary (Simplified) */}
+          <div className="group border border-[#141414] p-8 bg-[#141414] text-[#E4E3E0] relative overflow-hidden print:hidden">
+            <div className="relative z-10">
+              <label className="block text-[11px] font-mono uppercase mb-6 tracking-widest opacity-60">
+                Përmbledhje Vizuale (Leseniti)
+              </label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-4">
+                  <span className="text-6xl font-bold tracking-tighter">{results.lesenitiWidth}</span>
+                  <span className="text-2xl font-mono opacity-40">x</span>
+                  <span className="text-6xl font-bold tracking-tighter">{results.lesenitiDepth}</span>
+                </div>
+                <span className="text-2xl font-mono opacity-60">CM</span>
+              </div>
+            </div>
+            <div className="absolute -right-12 -bottom-12 opacity-5">
+              <Box className="w-64 h-64 rotate-12" />
+            </div>
+          </div>
+
           <div className="hidden print:block mt-8 text-[10px] font-mono uppercase opacity-40 text-center">
             Gjeneruar nga Tandembox Calculator - {new Date().toLocaleString()}
           </div>
@@ -223,25 +223,6 @@ Gjeneruar më: ${new Date().toLocaleString()}
           Designed for Precision & Efficiency in Woodworking
         </p>
       </footer>
-    </div>
-  );
-}
-
-function ResultCard({ title, value, unit, icon }: { title: string, value: number, unit: string, icon: ReactNode }) {
-  return (
-    <div 
-      className="border border-[#141414] p-6 bg-white flex flex-col justify-between h-40 hover:shadow-[8px_8px_0px_0px_rgba(20,20,20,1)] transition-all duration-300"
-    >
-      <div className="flex justify-between items-start">
-        <label className="text-[10px] font-mono uppercase tracking-widest opacity-60 leading-tight max-w-[100px]">
-          {title}
-        </label>
-        <div className="opacity-20">{icon}</div>
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-bold tracking-tight">{value}</span>
-        <span className="text-sm font-mono opacity-40 uppercase">{unit}</span>
-      </div>
     </div>
   );
 }
