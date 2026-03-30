@@ -37,10 +37,11 @@ export default function App() {
   });
 
   useEffect(() => {
+    const ballorjaVal = Number((kaca - 7.8).toFixed(1));
     setResults({
-      ballorja: Number((kaca - 7.8).toFixed(1)),
+      ballorja: ballorjaVal,
       ansoret: llageri,
-      lesenitiWidth: Number((kaca - 11.2).toFixed(1)),
+      lesenitiWidth: Number((ballorjaVal + 1.2).toFixed(1)),
       lesenitiDepth: Number((llageri + 1).toFixed(1)),
     });
   }, [kaca, llageri]);
