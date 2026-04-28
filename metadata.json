@@ -1,5 +1,6 @@
 {
-  "name": "Tandembox Calculator",
-  "description": "Llogaritësi i masave për fijokat Tandembox bazuar në dimensionet e kaces dhe llagerave.",
-  "requestFramePermissions": []
+  "name": "MergimGroup - Menaxhimi i Punës",
+  "description": "Një platformë dedikuar gjurmimit të orarit të punës, menaxhimit të pushimeve dhe shpenzimeve për punonjësit.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }

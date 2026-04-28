@@ -1,371 +1,230 @@
-import { useState, useEffect, useMemo, ReactNode } from 'react';
-import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maximize2, MoveRight, ChevronDown } from 'lucide-react';
+import { useEffect, useState, createContext, useContext } from 'react';
+import { 
+  Calendar as CalendarIcon, 
+  Settings, 
+  LogOut, 
+  Wallet, 
+  LayoutDashboard,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { UserProfile } from './types';
+import { Dashboard } from './components/Dashboard';
+import { CalendarView } from './components/CalendarView';
+import { ExpensesView } from './components/ExpensesView';
+import { AdminPanel } from './components/AdminPanel';
+import { Login } from './components/Login';
+import { Landing } from './components/Landing';
+import { TandemboxCalculator } from './components/TandemboxCalculator';
+import { cn } from './lib/utils';
 
-// Global error handler to help debug blank page issues
-if (typeof window !== 'undefined') {
-  window.onerror = function(message, source, lineno, colno, error) {
-    const errorDiv = document.createElement('div');
-    errorDiv.style.position = 'fixed';
-    errorDiv.style.top = '0';
-    errorDiv.style.left = '0';
-    errorDiv.style.width = '100%';
-    errorDiv.style.background = 'red';
-    errorDiv.style.color = 'white';
-    errorDiv.style.padding = '10px';
-    errorDiv.style.zIndex = '9999';
-    errorDiv.innerHTML = `<strong>Error:</strong> ${message} <br/> <small>${source}:${lineno}</small>`;
-    document.body.appendChild(errorDiv);
-    return false;
-  };
+type View = 'dashboard' | 'calendar' | 'expenses' | 'admin';
+type AppMode = 'portal' | 'work-management' | 'calculator';
+
+interface AuthContextType {
+  user: { uid: string; email: string } | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  login: (user: { uid: string; email: string }, profile: UserProfile) => void;
+  logout: () => void;
 }
 
-type DrawerType = 'standard' | 'internal';
-type DrawerHeight = 'M' | 'K' | 'B' | 'C' | 'D';
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
+  profile: null, 
+  loading: true,
+  login: () => {},
+  logout: () => {}
+});
 
-interface Dimensions {
-  backWidth: number;
-  backHeight: number;
-  bottomWidth: number;
-  bottomLength: number;
-  frontWidth?: number;
-  frontHeight?: number;
-}
-
-const HEIGHT_MAP: Record<DrawerHeight, number> = {
-  'M': 8.4,
-  'K': 11.6,
-  'B': 14.8,
-  'C': 18.0,
-  'D': 21.2
-};
+export const useAuth = () => useContext(AuthContext);
 
 export default function App() {
-  const [kaca, setKaca] = useState<number>(45);
-  const [llageri, setLlageri] = useState<number>(45);
-  const [boardThickness, setBoardThickness] = useState<number>(1.8);
-  const [drawerType, setDrawerType] = useState<DrawerType>('standard');
-  const [drawerHeight, setDrawerHeight] = useState<DrawerHeight>('M');
+  const [user, setUser] = useState<{ uid: string; email: string } | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [appMode, setAppMode] = useState<AppMode>('portal');
 
-  const results = useMemo((): Dimensions => {
-    // Internal Width (LW)
-    const lw = kaca - (2 * boardThickness);
+  useEffect(() => {
+    const savedUser = localStorage.getItem('pl_user');
+    const savedProfile = localStorage.getItem('pl_profile');
     
-    // Bottom (Leseniti)
-    const bottomWidth = Number((lw - 7.5).toFixed(1));
-    const bottomLength = Number((llageri - 2.4).toFixed(1));
-    
-    // Back (Shpina)
-    const backWidth = Number((lw - 8.7).toFixed(1));
-    const backHeight = HEIGHT_MAP[drawerHeight];
-    
-    const dims: Dimensions = {
-      backWidth,
-      backHeight,
-      bottomWidth,
-      bottomLength,
-    };
-
-    if (drawerType === 'internal') {
-      // Front (Ballina e brendshme)
-      dims.frontWidth = Number((lw - 6.2).toFixed(1));
-      dims.frontHeight = drawerHeight === 'M' ? 11.0 : 13.5;
+    if (savedUser && savedProfile) {
+      setUser(JSON.parse(savedUser));
+      setProfile(JSON.parse(savedProfile));
+      setAppMode('work-management');
     }
+    setLoading(false);
+  }, []);
 
-    return dims;
-  }, [kaca, llageri, boardThickness, drawerType, drawerHeight]);
-
-  const downloadCuttingList = () => {
-    const content = `
-LISTA E PRERJES - TANDEMBOX
----------------------------
-Data: ${new Date().toLocaleDateString()}
-Konfigurimi:
-- Gjerësia e Kaces: ${kaca} cm
-- Gjatësia e Llagerit: ${llageri} cm
-- Trashësia e Pllakës: ${boardThickness * 10} mm
-- Lloji: ${drawerType === 'standard' ? 'Standard' : 'Mbrendshëm'}
-- Lartësia: ${drawerHeight}
-
-DIMENSIONET PËR PRERJE:
-1. Leseniti (Fundi): ${results.bottomWidth} x ${results.bottomLength} cm
-2. Shpina (Ballorja): ${results.backWidth} x ${results.backHeight} cm
-${results.frontWidth ? `3. Ballina e Brendshme: ${results.frontWidth} x ${results.frontHeight} cm` : ''}
-
-Gjeneruar nga Tandembox Calculator
-    `;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `tandembox_${kaca}cm_${drawerType}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const login = (userData: { uid: string; email: string }, profileData: UserProfile) => {
+    setUser(userData);
+    setProfile(profileData);
+    localStorage.setItem('pl_user', JSON.stringify(userData));
+    localStorage.setItem('pl_profile', JSON.stringify(profileData));
+    setAppMode('work-management');
   };
 
-  return (
-    <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
-      {/* Header */}
-      <header className="border-b border-[#141414] p-6 flex justify-between items-center bg-white/50 backdrop-blur-sm sticky top-0 z-10 print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#141414] p-2 rounded-sm">
-            <Calculator className="text-[#E4E3E0] w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight uppercase">Tandembox Pro</h1>
-            <p className="text-[10px] font-mono opacity-60 uppercase tracking-widest">Advanced Woodworking Tool v2.0</p>
-          </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-4 text-[11px] font-mono uppercase opacity-60">
-          <span>System Active</span>
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-        </div>
-      </header>
+  const logout = () => {
+    setUser(null);
+    setProfile(null);
+    localStorage.removeItem('pl_user');
+    localStorage.removeItem('pl_profile');
+    setAppMode('portal');
+  };
 
-      <main className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 py-12">
-        {/* Input Section */}
-        <section className="lg:col-span-5 space-y-6 print:hidden">
-          <div className="flex items-center gap-2 mb-2">
-            <Settings className="w-4 h-4 opacity-40" />
-            <h2 className="font-serif italic text-sm uppercase tracking-wider opacity-60">Parametrat e Konstruksionit</h2>
-          </div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
-          <div className="space-y-4">
-            {/* Kaca & Llageri Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <InputCard 
-                label="Gjerësia e Kaces" 
-                value={kaca} 
-                onChange={setKaca} 
-                unit="CM" 
-              />
-              <InputCard 
-                label="Gjatësia e Llagerit" 
-                value={llageri} 
-                onChange={setLlageri} 
-                unit="CM" 
-              />
+  const renderContent = () => {
+    if (appMode === 'portal') {
+      return <Landing 
+        onSelectWork={() => setAppMode('work-management')} 
+        onSelectCalc={() => setAppMode('calculator')} 
+      />;
+    }
+
+    if (appMode === 'calculator') {
+      return <TandemboxCalculator onBack={() => setAppMode('portal')} />;
+    }
+
+    if (!user) {
+      return <Login onBack={() => setAppMode('portal')} />;
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+        {/* Sidebar - Desktop */}
+        <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col sticky top-0 h-screen transition-all">
+          <div className="p-6 flex items-center gap-3 border-b border-slate-100">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+              MG
             </div>
-
-            {/* Board Thickness */}
-            <div className="border border-[#141414] p-4 bg-white">
-              <label className="block text-[10px] font-mono uppercase mb-3 opacity-40">Trashësia e Pllakës (mm)</label>
-              <div className="flex gap-2">
-                {[1.6, 1.8, 1.9].map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setBoardThickness(t)}
-                    className={`flex-1 py-2 text-xs font-mono border border-[#141414] transition-colors ${boardThickness === t ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/5'}`}
-                  >
-                    {t * 10}mm
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Drawer Type */}
-            <div className="border border-[#141414] p-4 bg-white">
-              <label className="block text-[10px] font-mono uppercase mb-3 opacity-40">Lloji i Fijokës</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDrawerType('standard')}
-                  className={`flex-1 py-2 text-xs font-mono border border-[#141414] transition-colors flex items-center justify-center gap-2 ${drawerType === 'standard' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/5'}`}
-                >
-                  <Box className="w-3 h-3" /> Standard
-                </button>
-                <button
-                  onClick={() => setDrawerType('internal')}
-                  className={`flex-1 py-2 text-xs font-mono border border-[#141414] transition-colors flex items-center justify-center gap-2 ${drawerType === 'internal' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/5'}`}
-                >
-                  <Layers className="w-3 h-3" /> Mbrendshëm
-                </button>
-              </div>
-            </div>
-
-            {/* Height Selection */}
-            <div className="border border-[#141414] p-4 bg-white">
-              <label className="block text-[10px] font-mono uppercase mb-3 opacity-40">Lartësia (Profile)</label>
-              <div className="grid grid-cols-5 gap-2">
-                {(['M', 'K', 'B', 'C', 'D'] as DrawerHeight[]).map((h) => (
-                  <button
-                    key={h}
-                    onClick={() => setDrawerHeight(h)}
-                    className={`py-2 text-xs font-mono border border-[#141414] transition-colors ${drawerHeight === h ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/5'}`}
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <span className="font-bold text-xl tracking-tight text-slate-800">MergimGroup</span>
           </div>
 
-          <div className="p-4 border border-dashed border-[#141414] opacity-60 text-[11px] leading-relaxed bg-[#141414]/5">
-            <div className="flex gap-2 items-start">
-              <Info className="w-4 h-4 mt-0.5 shrink-0" />
-              <p>
-                Kalkulimet bazohen në standardet Blum Tandembox. 
-                Fundi: LW - 75mm. Shpina: LW - 87mm. 
-                LW (Gjerësia e brendshme) llogaritet automatikisht bazuar në trashësinë e zgjedhur të pllakës.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Results Section */}
-        <section className="lg:col-span-7 space-y-6">
-          <div className="flex items-center justify-between mb-2 print:hidden">
-            <div className="flex items-center gap-2">
-              <Ruler className="w-4 h-4 opacity-40" />
-              <h2 className="font-serif italic text-sm uppercase tracking-wider opacity-60">Lista e Prerjes (Cutting List)</h2>
-            </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => window.print()}
-                className="p-2 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors"
-                title="Printo"
-              >
-                <Printer className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={downloadCuttingList}
-                className="p-2 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors"
-                title="Shkarko"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Cutting List Table */}
-          <motion.div 
-            layout
-            className="border border-[#141414] bg-white shadow-[12px_12px_0px_0px_rgba(20,20,20,1)] print:shadow-none overflow-hidden"
-          >
-            <div className="bg-[#141414] text-[#E4E3E0] p-4 text-[12px] font-mono uppercase tracking-widest flex justify-between items-center">
-              <span>Dimensionet për Prerje</span>
-              <span className="text-[10px] opacity-60">{drawerType.toUpperCase()} | {drawerHeight} | {boardThickness * 10}MM</span>
-            </div>
-            <div className="divide-y divide-[#141414]">
-              <ResultRow 
-                label="1. Leseniti (Fundi)" 
-                value={`${results.bottomWidth} x ${results.bottomLength} cm`} 
-                icon={<Box className="w-4 h-4" />}
-              />
-              <ResultRow 
-                label="2. Shpina (Ballorja)" 
-                value={`${results.backWidth} x ${results.backHeight} cm`} 
-                icon={<Layers className="w-4 h-4" />}
-              />
-              <AnimatePresence mode="wait">
-                {drawerType === 'internal' && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <ResultRow 
-                      label="3. Ballina e Brendshme" 
-                      value={`${results.frontWidth} x ${results.frontHeight} cm`} 
-                      icon={<Maximize2 className="w-4 h-4" />}
-                    />
-                  </motion.div>
+          <nav className="flex-1 p-4 space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id as View)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group",
+                  currentView === item.id 
+                    ? "bg-indigo-50 text-indigo-700 shadow-sm" 
+                    : "text-slate-500 hover:bg-slate-50 hover:text-indigo-600"
                 )}
-              </AnimatePresence>
-              
-              <div className="p-6 bg-[#141414]/5 flex justify-between items-center">
-                <div className="flex items-center gap-2 opacity-40">
-                  <MoveRight className="w-4 h-4" />
-                  <span className="text-[10px] font-mono uppercase">Përmbledhje Fundi</span>
-                </div>
-                <span className="text-2xl font-bold font-mono">{results.bottomWidth} x {results.bottomLength} cm</span>
+              >
+                <item.icon className={cn(
+                  "w-5 h-5 transition-colors",
+                  currentView === item.id ? "text-indigo-600" : "text-slate-400 group-hover:text-indigo-600"
+                )} />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="p-4 border-t border-slate-100">
+            <div className="flex items-center gap-3 px-4 py-3 mb-2">
+              <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 font-medium text-xs">
+                {profile?.name?.split(' ').map(n => n[0]).join('') || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{profile?.name || 'Përdorues'}</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">{profile?.role}</p>
               </div>
             </div>
-          </motion.div>
-
-          {/* Visual Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
-            <VisualCard 
-              title="Leseniti" 
-              w={results.bottomWidth} 
-              h={results.bottomLength} 
-              color="bg-[#141414]" 
-            />
-            <VisualCard 
-              title="Shpina" 
-              w={results.backWidth} 
-              h={results.backHeight} 
-              color="bg-white" 
-              textColor="text-[#141414]"
-              border="border-[#141414]"
-            />
+            <button 
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Shkyqu</span>
+            </button>
           </div>
+        </aside>
 
-          <div className="hidden print:block mt-8 text-[10px] font-mono uppercase opacity-40 text-center">
-            Gjeneruar nga Tandembox Pro Calculator - {new Date().toLocaleString()}
+        {/* Main Content */}
+        <main className="flex-1 pb-24 md:pb-0 relative h-screen overflow-y-auto">
+          {/* Header - Mobile */}
+          <header className="md:hidden bg-white px-6 py-4 border-b border-slate-200 sticky top-0 z-10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                M
+              </div>
+              <span className="font-bold text-lg tracking-tight">MergimGroup</span>
+            </div>
+            <button 
+              onClick={logout}
+              className="w-8 h-8 flex items-center justify-center text-rose-500 rounded-full bg-rose-50"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </header>
+
+          <div className="p-4 md:p-8 max-w-5xl mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentView}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                {renderView()}
+              </motion.div>
+            </AnimatePresence>
           </div>
-        </section>
-      </main>
+        </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#141414] p-8 mt-12 text-center print:hidden">
-        <p className="text-[10px] font-mono uppercase tracking-[0.3em] opacity-40">
-          Precision Engineering for Modern Cabinetry
-        </p>
-      </footer>
-    </div>
-  );
-}
+        {/* Bottom Nav - Mobile */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 py-3 flex justify-around items-center z-20">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setCurrentView(item.id as View)}
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-all",
+                currentView === item.id ? "text-indigo-600" : "text-slate-400"
+              )}
+            >
+              <item.icon className="w-6 h-6" />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    );
+  };
 
-function InputCard({ label, value, onChange, unit }: { label: string, value: number, onChange: (v: number) => void, unit: string }) {
+  const renderView = () => {
+    switch (currentView) {
+      case 'dashboard': return <Dashboard />;
+      case 'calendar': return <CalendarView />;
+      case 'expenses': return <ExpensesView />;
+      case 'admin': return profile?.role === 'admin' ? <AdminPanel /> : <Dashboard />;
+      default: return <Dashboard />;
+    }
+  };
+
+  const navItems = [
+    { id: 'dashboard', label: 'Paneli', icon: LayoutDashboard },
+    { id: 'calendar', label: 'Kalendari', icon: CalendarIcon },
+    { id: 'expenses', label: 'Shpenzimet', icon: Wallet },
+  ];
+
+  if (profile?.role === 'admin') {
+    navItems.push({ id: 'admin', label: 'Admin', icon: Settings });
+  }
+
   return (
-    <div className="group border border-[#141414] p-4 bg-white hover:bg-[#141414] hover:text-[#E4E3E0] transition-all duration-300">
-      <label className="block text-[10px] font-mono uppercase mb-2 tracking-widest opacity-40 group-hover:opacity-100">
-        {label}
-      </label>
-      <div className="flex items-end gap-2">
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="text-3xl font-bold bg-transparent border-none outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
-        <span className="text-sm font-mono mb-1 opacity-40">{unit}</span>
-      </div>
-    </div>
+    <AuthContext.Provider value={{ user, profile, loading, login, logout }}>
+      {renderContent()}
+    </AuthContext.Provider>
   );
 }
-
-function ResultRow({ label, value, icon }: { label: string, value: string, icon: ReactNode }) {
-  return (
-    <div className="flex justify-between items-center p-5 bg-white hover:bg-[#141414]/5 transition-colors group">
-      <div className="flex items-center gap-3">
-        <div className="opacity-20 group-hover:opacity-100 transition-opacity">{icon}</div>
-        <span className="text-[12px] font-mono uppercase tracking-wider opacity-60">{label}</span>
-      </div>
-      <span className="text-lg font-bold font-mono">{value}</span>
-    </div>
-  );
-}
-
-function VisualCard({ title, w, h, color, textColor = "text-[#E4E3E0]", border = "" }: { title: string, w: number, h: number, color: string, textColor?: string, border?: string }) {
-  return (
-    <div className={`border border-[#141414] p-6 ${color} ${textColor} ${border} relative overflow-hidden group`}>
-      <div className="relative z-10">
-        <label className="block text-[10px] font-mono uppercase mb-4 tracking-widest opacity-40">
-          {title}
-        </label>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold tracking-tighter">{w}</span>
-          <span className="text-xl font-mono opacity-20">x</span>
-          <span className="text-4xl font-bold tracking-tighter">{h}</span>
-          <span className="text-sm font-mono opacity-40 ml-2">CM</span>
-        </div>
-      </div>
-      <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-        <Maximize2 className="w-24 h-24" />
-      </div>
-    </div>
-  );
-}
-
