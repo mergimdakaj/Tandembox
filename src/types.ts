@@ -8,7 +8,7 @@ export interface UserProfile {
   createdAt: string;
 }
 
-export type AttendanceStatus = 'present' | 'absent' | 'vacation' | 'half-day';
+export type AttendanceStatus = 'present' | 'absent' | 'vacation' | 'half-day' | 'holiday';
 
 export interface AttendanceRecord {
   id?: string;

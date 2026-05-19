@@ -12,7 +12,9 @@ import {
   PlusCircle,
   History,
   Sun,
-  Briefcase
+  Briefcase,
+  Home,
+  Palmtree
 } from 'lucide-react';
 import { format, setHours, setMinutes } from 'date-fns';
 import { cn } from '../lib/utils';
@@ -92,6 +94,7 @@ export function Dashboard() {
       localStorage.setItem('pl_attendance', JSON.stringify(attendance));
       setCurrentAttendance(newRecord);
     }
+    window.dispatchEvent(new Event('storage'));
   };
 
   const toggleHalfDay = () => {
@@ -117,6 +120,7 @@ export function Dashboard() {
       localStorage.setItem('pl_attendance', JSON.stringify(attendance));
       setCurrentAttendance(newRecord);
     }
+    window.dispatchEvent(new Event('storage'));
   };
 
   const markFullDay = () => {
@@ -150,6 +154,7 @@ export function Dashboard() {
       localStorage.setItem('pl_attendance', JSON.stringify(attendance));
       setCurrentAttendance(newRecord);
     }
+    window.dispatchEvent(new Event('storage'));
   };
 
   const saveOvertime = () => {
@@ -163,6 +168,7 @@ export function Dashboard() {
       attendance[index].overtimeHours = hours;
       localStorage.setItem('pl_attendance', JSON.stringify(attendance));
       setCurrentAttendance({ ...attendance[index] });
+      window.dispatchEvent(new Event('storage'));
       setOvertimeSaved(true);
       setTimeout(() => setOvertimeSaved(false), 2000);
     }
@@ -217,6 +223,7 @@ export function Dashboard() {
       attendance[index].checkOut = new Date().toISOString();
       localStorage.setItem('pl_attendance', JSON.stringify(attendance));
       setCurrentAttendance(attendance[index]);
+      window.dispatchEvent(new Event('storage'));
       
       // End any active break
       if (activeBreak) {
@@ -258,6 +265,8 @@ export function Dashboard() {
 
   const getStatusColor = () => {
     if (activeBreak) return 'bg-amber-500';
+    if (currentAttendance?.status === 'holiday') return 'bg-emerald-600';
+    if (currentAttendance?.status === 'absent') return 'bg-rose-500';
     if (currentAttendance?.checkOut) return 'bg-slate-400';
     if (currentAttendance?.status === 'half-day') return 'bg-indigo-500';
     if (currentAttendance?.checkIn) return 'bg-emerald-500';
@@ -266,6 +275,8 @@ export function Dashboard() {
 
   const getStatusText = () => {
     if (activeBreak) return 'NË PAUZË';
+    if (currentAttendance?.status === 'holiday') return 'DITË PUSHIMI';
+    if (currentAttendance?.status === 'absent') return 'MUNGESË';
     if (currentAttendance?.checkOut) return 'PUNA PËRFUNDOI';
     if (currentAttendance?.status === 'half-day') return 'GJYSMË DITE';
     if (currentAttendance?.checkIn) return 'NË PUNË';
@@ -366,7 +377,7 @@ export function Dashboard() {
               REGJISTRO DALJEN
             </button>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {!activeBreak ? (
                 <button 
                   onClick={startBreak}
@@ -413,11 +424,49 @@ export function Dashboard() {
                 <PlusCircle className="w-6 h-6" />
                 <span className="text-xs">Shto Shpenzim</span>
               </button>
+            </div>
 
-              <div className="hidden lg:flex bg-white rounded-2xl p-4 border border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400">
-                <Clock className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase tracking-widest leading-none">Pasqyra</span>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={() => {
+                  if (!user) return;
+                  const today = format(new Date(), 'yyyy-MM-dd');
+                  const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
+                  const idx = attendance.findIndex((r: any) => r.userId === user.uid && r.date === today);
+                  if (idx !== -1) {
+                    attendance[idx].status = 'absent';
+                    attendance[idx].checkIn = undefined;
+                    attendance[idx].checkOut = undefined;
+                  } else {
+                    attendance.push({ id: Math.random().toString(36).substr(2, 9), userId: user.uid, date: today, status: 'absent' });
+                  }
+                  localStorage.setItem('pl_attendance', JSON.stringify(attendance));
+                  window.dispatchEvent(new Event('storage'));
+                  setCurrentAttendance(attendance.find((r: any) => r.userId === user.uid && r.date === today));
+                }}
+                className="bg-white text-slate-400 border border-slate-200 hover:bg-rose-50 hover:text-rose-500 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
+              >
+                <Home className="w-4 h-4" /> JO PUNË SOT
+              </button>
+              <button 
+                onClick={() => {
+                  if (!user) return;
+                  const today = format(new Date(), 'yyyy-MM-dd');
+                  const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
+                  const idx = attendance.findIndex((r: any) => r.userId === user.uid && r.date === today);
+                  if (idx !== -1) {
+                    attendance[idx].status = 'holiday';
+                  } else {
+                    attendance.push({ id: Math.random().toString(36).substr(2, 9), userId: user.uid, date: today, status: 'holiday' });
+                  }
+                  localStorage.setItem('pl_attendance', JSON.stringify(attendance));
+                  window.dispatchEvent(new Event('storage'));
+                  setCurrentAttendance(attendance.find((r: any) => r.userId === user.uid && r.date === today));
+                }}
+                className="bg-white text-slate-400 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-500 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
+              >
+                <Palmtree className="w-4 h-4" /> DITË PUSHIMI (FESTË)
+              </button>
             </div>
 
             {/* Overtime Selector */}

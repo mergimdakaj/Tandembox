@@ -11,9 +11,26 @@ import {
   addMonths, 
   subMonths,
   setHours,
-  setMinutes
+  setMinutes,
+  startOfWeek,
+  endOfWeek
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, CalendarCheck, Palmtree, Home, Timer, Euro, Info, X, Briefcase, Zap, Star } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  CalendarCheck, 
+  Palmtree, 
+  Home, 
+  Timer, 
+  Euro, 
+  Info, 
+  X, 
+  Briefcase, 
+  Zap, 
+  Star,
+  Coffee,
+  Calendar as CalendarIcon
+} from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -58,27 +75,30 @@ export function CalendarView() {
     return () => window.removeEventListener('storage', loadData);
   }, [user, currentMonth]);
 
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
   const days = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth)
+    start: calendarStart,
+    end: calendarEnd
   });
 
   const stats = {
     fullDays: records.filter(r => r.checkIn && r.status === 'present').length,
     halfDays: records.filter(r => r.status === 'half-day').length,
+    holidays: records.filter(r => r.status === 'holiday').length,
     saturdays: records.filter(r => r.isSaturday && r.checkIn).length,
     overtimeHours: records.reduce((sum, r) => sum + (r.overtimeHours || 0), 0),
     totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
   };
 
-  const markDay = (day: Date, status: 'absent' | 'vacation' | 'half-day') => {
+  const markDay = (day: Date, status: 'absent' | 'vacation' | 'half-day' | 'holiday') => {
     if (!user) return;
     const dateStr = format(day, 'yyyy-MM-dd');
     const allAttendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
     const existingIndex = allAttendance.findIndex((r: AttendanceRecord) => r.userId === user.uid && r.date === dateStr);
-    
-    // Only block if they checkIn (worked full day or started working)
-    // If they already have half-day, they can toggle it
     
     if (existingIndex !== -1) {
       allAttendance[existingIndex].status = allAttendance[existingIndex].status === status ? 'present' : status;
@@ -92,8 +112,7 @@ export function CalendarView() {
     }
 
     localStorage.setItem('pl_attendance', JSON.stringify(allAttendance));
-    
-    // Manual trigger loadData effect
+    window.dispatchEvent(new Event('storage'));
     refreshData();
   };
 
@@ -118,6 +137,7 @@ export function CalendarView() {
     }
     
     localStorage.setItem('pl_attendance', JSON.stringify(allAttendance));
+    window.dispatchEvent(new Event('storage'));
     refreshData();
   };
 
@@ -138,33 +158,35 @@ export function CalendarView() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Kalendari</h2>
-          <p className="text-slate-500">Menaxho ditët e punës dhe shpenzimet</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            <CalendarIcon className="text-indigo-600" /> Kalendari i Punës
+          </h2>
+          <p className="text-slate-500 font-medium text-sm">Gjurmimi i performancës suaj mujore</p>
         </div>
-        <div className="flex items-center gap-2 bg-white rounded-xl p-1 shadow-sm border border-slate-200">
+        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 p-1.5 rounded-2xl">
           <button 
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="p-2 hover:bg-slate-50 rounded-lg transition-colors"
+            className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-600 active:scale-95"
           >
-            <ChevronLeft className="w-5 h-5 text-slate-600" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="px-4 font-bold text-slate-700 min-w-[140px] text-center">
+          <span className="px-6 font-black text-slate-800 min-w-[150px] text-center uppercase tracking-widest text-xs">
             {format(currentMonth, 'MMMM yyyy')}
           </span>
           <button 
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="p-2 hover:bg-slate-50 rounded-lg transition-colors"
+            className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-600 active:scale-95"
           >
-            <ChevronRight className="w-5 h-5 text-slate-600" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+      <div className="bg-white rounded-[32px] border border-slate-200 shadow-xl overflow-hidden">
+        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/30">
           {['Hën', 'Mar', 'Mër', 'Enj', 'Pre', 'Sht', 'Die'].map(d => (
             <div key={d} className="py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
               {d}
@@ -177,308 +199,221 @@ export function CalendarView() {
             const record = getDayRecord(day);
             const dayExpenses = getDayExpenses(day);
             const totalExpense = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const isSelected = selectedDay && format(day, 'yyyy-MM-dd') === format(selectedDay, 'yyyy-MM-dd');
 
             return (
-              <div 
+              <motion.div 
                 key={day.toISOString()}
+                whileHover={isSameMonth(day, currentMonth) ? { scale: 1.02, zIndex: 10 } : {}}
                 className={cn(
-                  "bg-white min-h-[110px] p-2 flex flex-col gap-1 relative group cursor-pointer hover:bg-slate-50/50 transition-colors",
-                  !isSameMonth(day, currentMonth) && "opacity-30 pointer-events-none"
+                  "bg-white min-h-[100px] p-2 flex flex-col gap-1 relative group cursor-pointer transition-all duration-300",
+                  !isSameMonth(day, currentMonth) && "opacity-20 pointer-events-none grayscale",
+                  isSelected && "ring-2 ring-indigo-500 z-10"
                 )}
                 onClick={() => setSelectedDay(day)}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-1">
                   <span className={cn(
-                    "text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full",
-                    isToday(day) ? "bg-indigo-600 text-white" : "text-slate-400"
+                    "text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-lg transition-colors",
+                    isToday(day) ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "text-slate-400 group-hover:text-slate-900"
                   )}>
                     {format(day, 'd')}
                   </span>
                   {totalExpense > 0 && (
-                    <div className="flex items-center gap-0.5 text-rose-500 font-black text-[9px] bg-rose-50 px-1 rounded">
-                      <Euro className="w-2 h-2" />
-                      {totalExpense}
+                    <div className="flex items-center gap-0.5 text-rose-500 font-black text-[9px] bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-100">
+                      €{totalExpense.toFixed(0)}
                     </div>
                   )}
                 </div>
 
-                <div className="flex-1 space-y-1">
+                <div className="flex-1 flex flex-col gap-1">
                   {record?.checkIn && (
-                    <div className="bg-emerald-50 text-emerald-700 p-1 rounded border border-emerald-100 flex items-center gap-1">
-                      <CalendarCheck className="w-3 h-3" />
-                      <span className="text-[9px] font-black uppercase truncate">Punuar</span>
-                      {record.overtimeHours ? (
-                        <span className="ml-auto text-[8px] bg-emerald-200 px-1 rounded">+{record.overtimeHours}h</span>
-                      ) : null}
+                    <div className="bg-emerald-50 text-emerald-700 p-1.5 rounded-xl border border-emerald-100 flex items-center gap-1.5 shadow-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">PUNUAR</span>
                     </div>
                   )}
-                  {record?.isSaturday && record?.checkIn && (
-                    <div className="bg-indigo-50 text-indigo-700 p-0.5 px-1 rounded border border-indigo-100 flex items-center gap-1">
-                      <Star className="w-2.5 h-2.5 fill-current" />
-                      <span className="text-[8px] font-black uppercase">E Shtunë</span>
-                    </div>
-                  )}
-
-                  {record?.status === 'absent' && (
-                    <div className="bg-rose-50 text-rose-700 p-1 rounded border border-rose-100 flex items-center gap-1">
-                      <Home className="w-3 h-3" />
-                      <span className="text-[9px] font-black uppercase truncate">Mungesë</span>
-                    </div>
-                  )}
-
-                  {record?.status === 'vacation' && (
-                    <div className="bg-blue-50 text-blue-700 p-1 rounded border border-blue-100 flex items-center gap-1">
+                  
+                  {record?.status === 'holiday' && (
+                    <div className="bg-emerald-600 text-white p-1.5 rounded-xl border border-emerald-700 flex items-center gap-1.5 shadow-md">
                       <Palmtree className="w-3 h-3" />
-                      <span className="text-[9px] font-black uppercase truncate">Pushim</span>
+                      <span className="text-[9px] font-black uppercase tracking-tighter">FESTË</span>
                     </div>
                   )}
 
                   {record?.status === 'half-day' && (
-                    <div className="bg-amber-50 text-amber-700 p-1 rounded border border-amber-100 flex items-center gap-1">
+                    <div className="bg-amber-50 text-amber-700 p-1.5 rounded-xl border border-amber-100 flex items-center gap-1.5 shadow-sm">
                       <Timer className="w-3 h-3" />
-                      <span className="text-[9px] font-black uppercase truncate">gjysmë dite</span>
+                      <span className="text-[9px] font-black uppercase tracking-tighter">GJYSMË</span>
                     </div>
                   )}
-                </div>
 
-                {isSameMonth(day, currentMonth) && (
-                  <div className="absolute inset-0 bg-white/90 md:opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 transition-opacity z-10 backdrop-blur-sm px-1">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); markDay(day, 'absent'); }}
-                      className="flex-1 h-8 flex items-center justify-center bg-rose-500 text-white rounded-lg shadow-sm"
-                      title="Mungesë"
-                    >
-                      <Home className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); markDay(day, 'half-day'); }}
-                      className="flex-1 h-8 flex items-center justify-center bg-amber-500 text-white rounded-lg shadow-sm"
-                      title="Gjysmë dite"
-                    >
-                      <Timer className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); markDay(day, 'vacation'); }}
-                      className="flex-1 h-8 flex items-center justify-center bg-blue-500 text-white rounded-lg shadow-sm"
-                      title="Pushim"
-                    >
-                      <Palmtree className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
+                  {record?.status === 'absent' && (
+                    <div className="bg-rose-50 text-rose-700 p-1.5 rounded-xl border border-rose-100 flex items-center gap-1.5 shadow-sm">
+                      <Home className="w-3 h-3" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">MUNGESË</span>
+                    </div>
+                  )}
+
+                  {record?.overtimeHours ? (
+                    <div className="flex items-center gap-1 text-[9px] font-black text-indigo-600 bg-indigo-50/50 px-1.5 py-0.5 rounded-lg border border-indigo-100 mt-auto">
+                      <Zap className="w-2.5 h-2.5" /> +{record.overtimeHours}h
+                    </div>
+                  ) : null}
+                </div>
+              </motion.div>
             );
           })}
         </div>
       </div>
 
-      {/* Monthly Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-          <Briefcase className="w-5 h-5 text-emerald-500 mb-1" />
-          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Orar i plotë</p>
-          <p className="text-xl font-black text-slate-800">{stats.fullDays} ditë</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-          <Timer className="w-5 h-5 text-amber-500 mb-1" />
-          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Gjysmë orari</p>
-          <p className="text-xl font-black text-slate-800">{stats.halfDays} ditë</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-          <Star className="w-5 h-5 text-indigo-500 mb-1" />
-          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Të Shtuna</p>
-          <p className="text-xl font-black text-slate-800">{stats.saturdays} d</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-          <Zap className="w-5 h-5 text-indigo-600 mb-1" />
-          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Jashtë orarit</p>
-          <p className="text-xl font-black text-slate-800">{stats.overtimeHours} h</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center col-span-2 md:col-span-1">
-          <Euro className="w-5 h-5 text-rose-500 mb-1" />
-          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Shpenzime</p>
-          <p className="text-xl font-black text-rose-600">€{stats.totalExpenses.toFixed(0)}</p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <StatCard icon={<Briefcase />} label="DITE" value={stats.fullDays} color="text-emerald-500" />
+        <StatCard icon={<Timer />} label="GJYSMË" value={stats.halfDays} color="text-amber-500" />
+        <StatCard icon={<Palmtree />} label="FESTA" value={stats.holidays} color="text-emerald-700" />
+        <StatCard icon={<Star />} label="SHTUNA" value={stats.saturdays} color="text-indigo-600" />
+        <StatCard icon={<Zap />} label="EXTRA" value={stats.overtimeHours} unit="h" color="text-indigo-600" />
+        <StatCard icon={<Euro />} label="EURO" value={stats.totalExpenses} color="text-rose-500" highlight />
       </div>
 
-      {/* Details Dialog */}
-      {selectedDay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
-          >
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Detajet e ditës</p>
-                <h3 className="text-xl font-black text-slate-800">{format(selectedDay, 'd MMMM yyyy')}</h3>
-              </div>
-              <button 
-                onClick={() => setSelectedDay(null)}
-                className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Attendance Info */}
-              <div className="space-y-3">
-                <p className="text-xs font-bold text-slate-500">Statusi i punës</p>
-                <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-4">
-                  {getDayRecord(selectedDay)?.checkIn ? (
-                    <>
-                      <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-                        <CalendarCheck className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-slate-800">Punuar</p>
-                          {getDayRecord(selectedDay)?.isSaturday && (
-                            <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 rounded-full border border-indigo-100">EXTRA: E SHTUNË</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          {format(new Date(getDayRecord(selectedDay)!.checkIn!), 'HH:mm')} - {getDayRecord(selectedDay)?.checkOut ? format(new Date(getDayRecord(selectedDay)!.checkOut!), 'HH:mm') : '...'}
-                        </p>
-                        {getDayRecord(selectedDay)?.overtimeHours ? (
-                          <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-indigo-600">
-                            <Zap className="w-3 h-3" />
-                            Jashtë orarit: {getDayRecord(selectedDay)?.overtimeHours} orë
-                          </div>
-                        ) : null}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center",
-                        getDayRecord(selectedDay)?.status === 'absent' ? "bg-rose-100 text-rose-600" :
-                        getDayRecord(selectedDay)?.status === 'vacation' ? "bg-blue-100 text-blue-600" :
-                        getDayRecord(selectedDay)?.status === 'half-day' ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400"
-                      )}>
-                        {getDayRecord(selectedDay)?.status === 'absent' ? <Home className="w-6 h-6" /> :
-                         getDayRecord(selectedDay)?.status === 'vacation' ? <Palmtree className="w-6 h-6" /> :
-                         getDayRecord(selectedDay)?.status === 'half-day' ? <Timer className="w-6 h-6" /> : <Info className="w-6 h-6" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-bold text-slate-800">
-                            {getDayRecord(selectedDay)?.status === 'absent' ? 'Mungesë' :
-                             getDayRecord(selectedDay)?.status === 'vacation' ? 'Pushim' :
-                             getDayRecord(selectedDay)?.status === 'half-day' ? 'Gjysmë dite' : 'Pa regjistrim'}
-                          </p>
-                          {getDayRecord(selectedDay)?.overtimeHours ? (
-                            <span className="text-[10px] font-black text-indigo-600">+{getDayRecord(selectedDay)?.overtimeHours}h EXTRA</span>
-                          ) : null}
-                        </div>
-                        <p className="text-xs text-slate-500">Statusi aktual për këtë ditë</p>
-                      </div>
-                    </>
-                  )}
+      <AnimatePresence>
+        {selectedDay && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[40px] overflow-hidden shadow-2xl relative"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div>
+                  <p className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 mb-1">Më: {format(selectedDay, 'EEEE')}</p>
+                  <h3 className="text-2xl font-black text-slate-800">{format(selectedDay, 'd MMMM yyyy')}</h3>
                 </div>
+                <button 
+                  onClick={() => setSelectedDay(null)}
+                  className="p-3 hover:bg-white hover:shadow-md rounded-2xl transition-all text-slate-400 active:scale-95"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
-              {/* Overtime Edit Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-indigo-600" />
-                    Extra orë pas orarit
-                  </p>
-                  {!getDayRecord(selectedDay)?.checkOut && (
-                    <button 
-                      onClick={() => {
-                        const dateStr = format(selectedDay, 'yyyy-MM-dd');
-                        const allAttendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-                        const idx = allAttendance.findIndex((r: any) => r.userId === user?.uid && r.date === dateStr);
-                        const checkIn = setMinutes(setHours(new Date(selectedDay), 8), 0).toISOString();
-                        const checkOut = setMinutes(setHours(new Date(selectedDay), 16), 0).toISOString();
-                        
-                        if (idx !== -1) {
-                          allAttendance[idx].checkIn = checkIn;
-                          allAttendance[idx].checkOut = checkOut;
-                          allAttendance[idx].status = 'present';
-                        } else {
-                          allAttendance.push({
-                            id: Math.random().toString(36).substr(2, 9),
-                            userId: user?.uid,
-                            date: dateStr,
-                            checkIn, checkOut,
-                            status: 'present',
-                            isSaturday: selectedDay.getDay() === 6
-                          });
-                        }
-                        localStorage.setItem('pl_attendance', JSON.stringify(allAttendance));
-                        refreshData();
-                      }}
-                      className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 uppercase"
-                    >
-                      Bëje Ditë të Plotë (08-16)
-                    </button>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <input 
-                    type="number"
-                    step="0.5"
-                    value={dayOvertime}
-                    onChange={(e) => setDayOvertime(e.target.value)}
-                    placeholder="Oret p.sh 2"
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+              <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh]">
+                <div className="grid grid-cols-2 gap-3">
+                  <DayActionButton 
+                    active={getDayRecord(selectedDay)?.status === 'holiday'} 
+                    onClick={() => markDay(selectedDay, 'holiday')}
+                    icon={<Palmtree />} 
+                    label="Festë" 
+                    color="bg-emerald-600" 
                   />
-                  <button 
-                    onClick={saveDayOvertime}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
-                  >
-                    Ruaj Orët
-                  </button>
+                  <DayActionButton 
+                    active={getDayRecord(selectedDay)?.status === 'absent'} 
+                    onClick={() => markDay(selectedDay, 'absent')}
+                    icon={<Home />} 
+                    label="Mungesë" 
+                    color="bg-rose-500" 
+                  />
+                  <DayActionButton 
+                    active={getDayRecord(selectedDay)?.status === 'half-day'} 
+                    onClick={() => markDay(selectedDay, 'half-day')}
+                    icon={<Timer />} 
+                    label="Gjysmë" 
+                    color="bg-amber-500" 
+                  />
+                  <DayActionButton 
+                    active={getDayRecord(selectedDay)?.status === 'vacation'} 
+                    onClick={() => markDay(selectedDay, 'vacation')}
+                    icon={<Coffee />} 
+                    label="Pushim" 
+                    color="bg-blue-500" 
+                  />
                 </div>
-              </div>
 
-              {/* Expenses Info */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-slate-500">Shpenzimet</p>
-                  <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full uppercase">
-                    Total: €{getDayExpenses(selectedDay).reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
-                  </span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Jashtë Orarit (p.sh 2)</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <input 
+                      type="number"
+                      step="0.5"
+                      value={dayOvertime}
+                      onChange={(e) => setDayOvertime(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-black outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button 
+                      onClick={saveDayOvertime}
+                      className="bg-indigo-600 text-white px-8 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                    >
+                      Ruaj
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-2">
+
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shpenzimet</p>
                   {getDayExpenses(selectedDay).length > 0 ? (
-                    getDayExpenses(selectedDay).map(expense => (
-                      <div key={expense.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white text-slate-400 rounded-lg flex items-center justify-center border border-slate-100">
-                            <Euro className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-800">{expense.description}</p>
-                            <p className="text-[10px] text-slate-400">{expense.category}</p>
-                          </div>
+                    <div className="space-y-2">
+                      {getDayExpenses(selectedDay).map(exp => (
+                        <div key={exp.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                          <p className="text-sm font-bold text-slate-700">{exp.description}</p>
+                          <span className="font-black text-rose-600">€{exp.amount.toFixed(2)}</span>
                         </div>
-                        <span className="font-black text-slate-700">€{expense.amount.toFixed(2)}</span>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   ) : (
-                    <p className="text-center py-4 text-xs text-slate-400 italic">Nuk ka shpenzime për këtë ditë.</p>
+                    <p className="text-sm text-slate-300 italic text-center py-4">S'ka shpenzime për këtë ditë</p>
                   )}
                 </div>
               </div>
-            </div>
-            
-            <div className="p-6 bg-slate-50 flex gap-3">
-              <button 
-                onClick={() => setSelectedDay(null)}
-                className="flex-1 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                Mbyll
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+
+              <div className="p-8 bg-slate-50/50 flex gap-4">
+                <button 
+                  onClick={() => setSelectedDay(null)}
+                  className="w-full py-5 bg-white border border-slate-200 rounded-[20px] font-black text-xs uppercase tracking-[0.2em] text-slate-400 hover:text-slate-800 transition-all active:scale-95 shadow-sm"
+                >
+                  MBYLL
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function StatCard({ icon, label, value, unit = "", color, highlight = false }: any) {
+  return (
+    <div className={cn(
+      "p-4 rounded-3xl border border-slate-100 flex flex-col items-center justify-center text-center transition-all shadow-sm",
+      highlight ? "bg-indigo-50/50 border-indigo-100" : "bg-white"
+    )}>
+      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-1", color, "bg-current/10")}>
+        {React.cloneElement(icon, { size: 16 })}
+      </div>
+      <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+      <p className={cn("text-lg font-black", color)}>
+        {value}{unit}
+      </p>
+    </div>
+  );
+}
+
+function DayActionButton({ active, onClick, icon, label, color }: any) {
+  return (
+    <button 
+      onClick={onClick}
+      className={cn(
+        "flex flex-col items-center gap-2 p-4 rounded-3xl border transition-all active:scale-95",
+        active 
+          ? `${color} text-white border-transparent shadow-lg` 
+          : "bg-slate-50 text-slate-400 border-slate-100 hover:border-slate-300"
+      )}
+    >
+      {React.cloneElement(icon, { size: 20 })}
+      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+    </button>
   );
 }
