@@ -7,640 +7,702 @@ import {
   Square, 
   Coffee, 
   Clock, 
+  Check, 
   CheckCircle2,
   Timer,
   PlusCircle,
+  Plus,
   History,
   Sun,
   Briefcase,
   Home,
-  Palmtree
+  Palmtree,
+  Trash2,
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 import { format, setHours, setMinutes } from 'date-fns';
 import { cn } from '../lib/utils';
 
-export function Dashboard() {
+// Shared task record structure
+export interface TaskRecord {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  text: string;
+  completed: boolean;
+}
+
+interface DashboardProps {
+  selectedDate: Date;
+  setSelectedDate: (d: Date) => void;
+}
+
+export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
   const { user } = useAuth();
   const [currentAttendance, setCurrentAttendance] = useState<AttendanceRecord | null>(null);
   const [activeBreak, setActiveBreak] = useState<BreakRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expAmount, setExpAmount] = useState('');
-  const [expDesc, setExpDesc] = useState('');
-  const [overtime, setOvertime] = useState('');
-  const [todayExpenses, setTodayExpenses] = useState<ExpenseRecord[]>([]);
-  const [overtimeSaved, setOvertimeSaved] = useState(false);
+  
+  // Tasks state
+  const [tasks, setTasks] = useState<TaskRecord[]>([]);
+  const [allUncompletedTasks, setAllUncompletedTasks] = useState<TaskRecord[]>([]);
+  const [newTaskText, setNewTaskText] = useState('');
 
-  // Load data from localStorage
+  // Local state copy for UI sliders/inputs
+  const [overtime, setOvertime] = useState(0);
+
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Load attendance record, breaks, and tasks for the active date Str
   useEffect(() => {
     if (!user) return;
 
     const loadData = () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
       const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-      const todayRecord = attendance.find((r: AttendanceRecord) => r.userId === user.uid && r.date === today);
+      const record = attendance.find((r: AttendanceRecord) => r.userId === user.uid && r.date === dateStr);
       
-      setCurrentAttendance(todayRecord || null);
-      if (todayRecord?.overtimeHours) {
-        setOvertime(todayRecord.overtimeHours.toString());
-      }
+      setCurrentAttendance(record || null);
+      setOvertime(record?.overtimeHours || 0);
 
-      if (todayRecord) {
+      if (record) {
         const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
-        const activeBrk = breaks.find((b: BreakRecord) => b.attendanceId === todayRecord.id && !b.endTime);
+        const activeBrk = breaks.find((b: BreakRecord) => b.attendanceId === record.id && !b.endTime);
         setActiveBreak(activeBrk || null);
+      } else {
+        setActiveBreak(null);
       }
 
-      // Load today's expenses
-      const allExpenses = JSON.parse(localStorage.getItem('pl_expenses') || '[]');
-      const filteredExpenses = allExpenses.filter((e: ExpenseRecord) => 
-        e.userId === user.uid && format(new Date(e.date), 'yyyy-MM-dd') === today
-      );
-      setTodayExpenses(filteredExpenses);
-      
+      // Load tasks
+      const allTasks = JSON.parse(localStorage.getItem('pl_tasks') || '[]');
+      const filteredTasks = allTasks.filter((t: TaskRecord) => t.userId === user.uid && t.date === dateStr);
+      setTasks(filteredTasks);
+
+      // Load all uncompleted tasks globally for notification warning
+      const uncompletedTasks = allTasks.filter((t: TaskRecord) => t.userId === user.uid && !t.completed);
+      setAllUncompletedTasks(uncompletedTasks);
+
       setLoading(false);
     };
 
     loadData();
-    const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, [user, dateStr]);
+
+  const saveAttendanceRecord = (record: AttendanceRecord) => {
+    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
+    const index = attendance.findIndex((r: AttendanceRecord) => r.userId === user?.uid && r.date === dateStr);
+    
+    if (index !== -1) {
+      attendance[index] = record;
+    } else {
+      attendance.push(record);
+    }
+    localStorage.setItem('pl_attendance', JSON.stringify(attendance));
+    setCurrentAttendance(record);
+    window.dispatchEvent(new Event('storage'));
+  };
 
   const handleCheckIn = () => {
     if (!user) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const isSaturday = new Date().getDay() === 6;
-    
-    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-    const existingIndex = attendance.findIndex((r: AttendanceRecord) => r.userId === user.uid && r.date === today);
+    const isSaturday = selectedDate.getDay() === 6;
 
-    if (existingIndex !== -1) {
-      attendance[existingIndex].checkIn = new Date().toISOString();
-      if (attendance[existingIndex].status === 'absent' || attendance[existingIndex].status === 'vacation') {
-        attendance[existingIndex].status = 'present';
-      }
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance({ ...attendance[existingIndex] });
-    } else {
-      const newRecord: AttendanceRecord = {
-        id: Math.random().toString(36).substr(2, 9),
-        userId: user.uid,
-        date: today,
-        checkIn: new Date().toISOString(),
-        status: 'present',
-        isSaturday,
-      };
-      attendance.push(newRecord);
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance(newRecord);
-    }
-    window.dispatchEvent(new Event('storage'));
-  };
-
-  const toggleHalfDay = () => {
-    if (!user) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-    const existingIndex = attendance.findIndex((r: AttendanceRecord) => r.userId === user.uid && r.date === today);
-
-    if (existingIndex !== -1) {
-      const newStatus = attendance[existingIndex].status === 'half-day' ? 'present' : 'half-day';
-      attendance[existingIndex].status = newStatus;
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance({ ...attendance[existingIndex] });
-    } else {
-      const newRecord: AttendanceRecord = {
-        id: Math.random().toString(36).substr(2, 9),
-        userId: user.uid,
-        date: today,
-        status: 'half-day',
-        isSaturday: new Date().getDay() === 6,
-      };
-      attendance.push(newRecord);
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance(newRecord);
-    }
-    window.dispatchEvent(new Event('storage'));
-  };
-
-  const markFullDay = () => {
-    if (!user) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    
-    // Set 08:00 to 16:00
-    const checkIn = setMinutes(setHours(new Date(), 8), 0).toISOString();
-    const checkOut = setMinutes(setHours(new Date(), 16), 0).toISOString();
-    
-    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-    const existingIndex = attendance.findIndex((r: AttendanceRecord) => r.userId === user.uid && r.date === today);
-
-    if (existingIndex !== -1) {
-      attendance[existingIndex].checkIn = checkIn;
-      attendance[existingIndex].checkOut = checkOut;
-      attendance[existingIndex].status = 'present';
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance({ ...attendance[existingIndex] });
-    } else {
-      const newRecord: AttendanceRecord = {
-        id: Math.random().toString(36).substr(2, 9),
-        userId: user.uid,
-        date: today,
-        checkIn,
-        checkOut,
-        status: 'present',
-        isSaturday: new Date().getDay() === 6,
-      };
-      attendance.push(newRecord);
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance(newRecord);
-    }
-    window.dispatchEvent(new Event('storage'));
-  };
-
-  const saveOvertime = () => {
-    if (!currentAttendance?.id) return;
-    const hours = parseFloat(overtime) || 0;
-    
-    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-    const index = attendance.findIndex((r: AttendanceRecord) => r.id === currentAttendance.id);
-    
-    if (index !== -1) {
-      attendance[index].overtimeHours = hours;
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance({ ...attendance[index] });
-      window.dispatchEvent(new Event('storage'));
-      setOvertimeSaved(true);
-      setTimeout(() => setOvertimeSaved(false), 2000);
-    }
-  };
-
-  const handleAddQuickExpense = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !expAmount || !expDesc) return;
-
-    const newExpense: ExpenseRecord = {
-      id: Math.random().toString(36).substr(2, 9),
+    const item: AttendanceRecord = {
+      id: currentAttendance?.id || Math.random().toString(36).substr(2, 9),
       userId: user.uid,
-      amount: parseFloat(expAmount),
-      description: expDesc,
-      category: 'Pauzë',
-      date: new Date().toISOString(),
+      date: dateStr,
+      checkIn: new Date().toISOString(),
+      status: 'present',
+      isSaturday,
+      overtimeHours: overtime,
     };
-
-    const allExpenses = JSON.parse(localStorage.getItem('pl_expenses') || '[]');
-    allExpenses.push(newExpense);
-    localStorage.setItem('pl_expenses', JSON.stringify(allExpenses));
-    
-    // Update local state for immediate feedback
-    setTodayExpenses(prev => [...prev, newExpense]);
-    
-    setExpAmount('');
-    setExpDesc('');
-    setShowExpenseModal(false);
-  };
-
-  const resetToday = () => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-    const filtered = attendance.filter((r: AttendanceRecord) => !(r.userId === user?.uid && r.date === today));
-    localStorage.setItem('pl_attendance', JSON.stringify(filtered));
-    
-    const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
-    const filteredBreaks = breaks.filter((b: BreakRecord) => b.userId !== user?.uid || !b.startTime.startsWith(today));
-    localStorage.setItem('pl_breaks', JSON.stringify(filteredBreaks));
-    
-    setCurrentAttendance(null);
-    setActiveBreak(null);
+    saveAttendanceRecord(item);
   };
 
   const handleCheckOut = () => {
-    if (!currentAttendance?.id) return;
-    
-    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-    const index = attendance.findIndex((r: AttendanceRecord) => r.id === currentAttendance.id);
-    
-    if (index !== -1) {
-      attendance[index].checkOut = new Date().toISOString();
-      localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-      setCurrentAttendance(attendance[index]);
-      window.dispatchEvent(new Event('storage'));
-      
-      // End any active break
-      if (activeBreak) {
-        endBreak();
-      }
+    if (!currentAttendance) return;
+    const item: AttendanceRecord = {
+      ...currentAttendance,
+      checkOut: new Date().toISOString(),
+    };
+    saveAttendanceRecord(item);
+
+    // Stop active break if any
+    if (activeBreak) {
+      endBreak();
     }
   };
 
   const startBreak = () => {
-    if (!user || !currentAttendance?.id) return;
-    
+    if (!user || !currentAttendance) return;
     const newBreak: BreakRecord = {
       id: Math.random().toString(36).substr(2, 9),
       userId: user.uid,
       attendanceId: currentAttendance.id,
       startTime: new Date().toISOString(),
     };
-
     const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
     breaks.push(newBreak);
     localStorage.setItem('pl_breaks', JSON.stringify(breaks));
     setActiveBreak(newBreak);
+    window.dispatchEvent(new Event('storage'));
   };
 
   const endBreak = () => {
-    if (!activeBreak?.id) return;
-    
+    if (!activeBreak) return;
     const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
     const index = breaks.findIndex((b: BreakRecord) => b.id === activeBreak.id);
-    
     if (index !== -1) {
       breaks[index].endTime = new Date().toISOString();
       localStorage.setItem('pl_breaks', JSON.stringify(breaks));
       setActiveBreak(null);
+      window.dispatchEvent(new Event('storage'));
     }
+  };
+
+  const toggleHalfDay = () => {
+    if (!user) return;
+    const isSaturday = selectedDate.getDay() === 6;
+    const targetStatus = currentAttendance?.status === 'half-day' ? 'present' : 'half-day';
+
+    const item: AttendanceRecord = {
+      id: currentAttendance?.id || Math.random().toString(36).substr(2, 9),
+      userId: user.uid,
+      date: dateStr,
+      status: targetStatus,
+      isSaturday,
+      overtimeHours: overtime,
+    };
+    saveAttendanceRecord(item);
+  };
+
+  const markFullDayVal = () => {
+    if (!user) return;
+    const checkIn = setMinutes(setHours(new Date(selectedDate), 8), 0).toISOString();
+    const checkOut = setMinutes(setHours(new Date(selectedDate), 16), 0).toISOString();
+    const isSaturday = selectedDate.getDay() === 6;
+
+    const item: AttendanceRecord = {
+      id: currentAttendance?.id || Math.random().toString(36).substr(2, 9),
+      userId: user.uid,
+      date: dateStr,
+      checkIn,
+      checkOut,
+      status: 'present',
+      isSaturday,
+      overtimeHours: overtime,
+    };
+    saveAttendanceRecord(item);
+  };
+
+  const changeOvertimeVal = (delta: number) => {
+    const newVal = Math.max(0, overtime + delta);
+    setOvertime(newVal);
+
+    if (currentAttendance) {
+      const item: AttendanceRecord = {
+        ...currentAttendance,
+        overtimeHours: newVal,
+      };
+      saveAttendanceRecord(item);
+    }
+  };
+
+  const handleMarkNoWork = () => {
+    if (!user) return;
+    const item: AttendanceRecord = {
+      id: currentAttendance?.id || Math.random().toString(36).substr(2, 9),
+      userId: user.uid,
+      date: dateStr,
+      status: 'absent',
+    };
+    saveAttendanceRecord(item);
+  };
+
+  const handleMarkHoliday = () => {
+    if (!user) return;
+    const item: AttendanceRecord = {
+      id: currentAttendance?.id || Math.random().toString(36).substr(2, 9),
+      userId: user.uid,
+      date: dateStr,
+      status: 'holiday',
+    };
+    saveAttendanceRecord(item);
+  };
+
+  const handleResetDay = () => {
+    const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
+    const filtered = attendance.filter((r: AttendanceRecord) => !(r.userId === user?.uid && r.date === dateStr));
+    localStorage.setItem('pl_attendance', JSON.stringify(filtered));
+
+    const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
+    const filteredBreaks = breaks.filter((b: BreakRecord) => b.userId !== user?.uid || !b.startTime.startsWith(dateStr));
+    localStorage.setItem('pl_breaks', JSON.stringify(filteredBreaks));
+
+    setCurrentAttendance(null);
+    setActiveBreak(null);
+    setOvertime(0);
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  // Checklist action triggers
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !newTaskText.trim()) return;
+
+    const newTask: TaskRecord = {
+      id: Math.random().toString(36).substring(2, 9),
+      userId: user.uid,
+      date: dateStr,
+      text: newTaskText.trim(),
+      completed: false,
+    };
+
+    const allTasks = JSON.parse(localStorage.getItem('pl_tasks') || '[]');
+    allTasks.push(newTask);
+    localStorage.setItem('pl_tasks', JSON.stringify(allTasks));
+
+    setTasks(prev => [...prev, newTask]);
+    setNewTaskText('');
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const toggleTask = (id: string) => {
+    const allTasks = JSON.parse(localStorage.getItem('pl_tasks') || '[]');
+    const updated = allTasks.map((t: TaskRecord) => {
+      if (t.id === id) return { ...t, completed: !t.completed };
+      return t;
+    });
+    localStorage.setItem('pl_tasks', JSON.stringify(updated));
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  const deleteTask = (id: string) => {
+    const allTasks = JSON.parse(localStorage.getItem('pl_tasks') || '[]');
+    const filtered = allTasks.filter((t: TaskRecord) => t.id !== id);
+    localStorage.setItem('pl_tasks', JSON.stringify(filtered));
+    setTasks(prev => prev.filter(t => t.id !== id));
+    window.dispatchEvent(new Event('storage'));
   };
 
   if (loading) return null;
 
-  const getStatusColor = () => {
-    if (activeBreak) return 'bg-amber-500';
-    if (currentAttendance?.status === 'holiday') return 'bg-emerald-600';
-    if (currentAttendance?.status === 'absent') return 'bg-rose-500';
-    if (currentAttendance?.checkOut) return 'bg-slate-400';
-    if (currentAttendance?.status === 'half-day') return 'bg-indigo-500';
-    if (currentAttendance?.checkIn) return 'bg-emerald-500';
-    return 'bg-blue-600';
-  };
-
+  // Status computation for header tag
   const getStatusText = () => {
     if (activeBreak) return 'NË PAUZË';
     if (currentAttendance?.status === 'holiday') return 'DITË PUSHIMI';
-    if (currentAttendance?.status === 'absent') return 'MUNGESË';
+    if (currentAttendance?.status === 'absent') return 'JO PUNE SOT';
     if (currentAttendance?.checkOut) return 'PUNA PËRFUNDOI';
     if (currentAttendance?.status === 'half-day') return 'GJYSMË DITE';
-    if (currentAttendance?.checkIn) return 'NË PUNË';
-    return 'JO AKTIV';
+    if (currentAttendance?.checkIn) return 'DUKE PUNUAR';
+    return 'PUNA SKAS FILLUAR';
   };
+
+  const getStatusColorClass = () => {
+    if (activeBreak) return 'text-amber-500 bg-amber-50 border-amber-100';
+    if (currentAttendance?.status === 'holiday') return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+    if (currentAttendance?.status === 'absent') return 'text-rose-500 bg-rose-50 border-rose-100';
+    if (currentAttendance?.checkOut) return 'text-slate-400 bg-slate-50 border-slate-100';
+    if (currentAttendance?.status === 'half-day') return 'text-indigo-500 bg-indigo-50 border-indigo-100';
+    if (currentAttendance?.checkIn) return 'text-emerald-500 bg-emerald-50 border-emerald-100';
+    return 'text-slate-300 bg-slate-50 border-dashed border-slate-200';
+  };
+
+  const completedTasksCount = tasks.filter(t => t.completed).length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Përshëndetje!</h2>
-          <p className="text-slate-500">{format(new Date(), 'EEEE, d MMMM yyyy')}</p>
+
+      {/* NOTIFICATION BOX PREMIUM ALERT (QKA NUK KOM KRY) */}
+      <AnimatePresence>
+        {allUncompletedTasks.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-amber-50/90 border border-amber-200/80 rounded-[28px] p-5 space-y-3 shadow-md shadow-amber-500/5 relative overflow-hidden"
+          >
+            {/* Ambient decorative warning highlight indicator gradient */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0 animate-pulse mt-0.5">
+                <AlertCircle className="w-5 h-5 stroke-[2.5]" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider leading-snug">
+                  Njoftim: Detyra të Pakryera!
+                </h4>
+                <p className="text-[10px] font-semibold text-amber-600 mt-0.5 leading-tight">
+                  Keni <span className="font-extrabold text-amber-700">{allUncompletedTasks.length} detyra</span> të papërfunduara në total. Klikoni mbi to për të shkuar te data ose kryejini direkt këtu:
+                </p>
+              </div>
+            </div>
+
+            {/* List of uncompleted tasks scrollable */}
+            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {allUncompletedTasks.map((task) => {
+                const taskDateParsed = new Date(task.date);
+                const isSelectedDate = task.date === dateStr;
+
+                return (
+                  <div 
+                    key={task.id}
+                    className={cn(
+                      "flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors",
+                      isSelectedDate 
+                        ? "bg-[#fff9eb] border-amber-200/60" 
+                        : "bg-white/80 border-slate-100 hover:border-amber-200/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 w-5/6">
+                      <button 
+                        onClick={() => toggleTask(task.id)}
+                        className="w-4.5 h-4.5 rounded-full border border-amber-400 bg-white hover:bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 transition-colors"
+                        title="Shëno si të kryer"
+                      >
+                        <Check className="w-3 h-3 stroke-[3.5]" />
+                      </button>
+
+                      <span 
+                        onClick={() => {
+                          const parsed = new Date(task.date + "T12:00:00");
+                          setSelectedDate(parsed);
+                        }}
+                        className="font-bold text-slate-700 hover:text-amber-700 cursor-pointer break-all truncate text-[11px] select-none"
+                        title="Zgjidh këtë datë"
+                      >
+                        {task.text}
+                      </span>
+                    </div>
+
+                    <span 
+                      onClick={() => {
+                        const parsed = new Date(task.date + "T12:00:00");
+                        setSelectedDate(parsed);
+                      }}
+                      className={cn(
+                        "text-[9px] font-black px-1.5 py-0.5 rounded-lg border flex-shrink-0 select-none cursor-pointer uppercase tracking-wider font-mono",
+                        isSelectedDate 
+                          ? "bg-amber-100 text-amber-700 border-amber-200" 
+                          : "bg-slate-100 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-100"
+                      )}
+                    >
+                      {format(taskDateParsed, 'dd/MM')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DETYRAT DITORE CHECKLIST (Placed at the top) */}
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+          <div>
+            <h4 className="text-base font-black text-slate-800 tracking-tight">Detyrat Ditore</h4>
+            <p className="text-slate-400 text-[10px] font-semibold">Projektet për gjatë ditës së zgjedhur.</p>
+          </div>
+          
+          <span className="text-[10px] font-black text-indigo-600 bg-[#f3f2ff] border border-[#e6e4ff] px-2.5 py-1 rounded-xl leading-none">
+            {tasks.length > 0 ? `${completedTasksCount}/${tasks.length} Kryer` : '0 Puna'}
+          </span>
         </div>
+
+        {/* Dynamic Task List */}
+        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+          {tasks.map((task) => (
+            <div 
+              key={task.id}
+              className={cn(
+                "flex items-center justify-between p-3.5 rounded-2xl border transition-all hover:bg-slate-50/50 Group",
+                task.completed ? "bg-slate-50 border-slate-100/65 opacity-65" : "bg-white border-slate-100"
+              )}
+            >
+              <div className="flex items-center gap-3 w-5/6">
+                {/* Custom circular checkbox trigger */}
+                <button 
+                  onClick={() => toggleTask(task.id)}
+                  className={cn(
+                    "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all duration-200 active:scale-90",
+                    task.completed 
+                      ? "bg-indigo-600 border-indigo-700 text-white" 
+                      : "border-slate-300 bg-white hover:border-slate-400"
+                  )}
+                >
+                  {task.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </button>
+
+                <span className={cn(
+                  "text-xs font-semibold leading-tight break-all cursor-pointer select-none",
+                  task.completed ? "text-slate-400 line-through" : "text-slate-700"
+                )}
+                onClick={() => toggleTask(task.id)}
+                >
+                  {task.text}
+                </span>
+              </div>
+
+              <button 
+                onClick={() => deleteTask(task.id)}
+                className="text-slate-300 hover:text-rose-500 p-1 rounded-lg transition-colors ml-2"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+
+          {tasks.length === 0 && (
+            <div className="text-center py-6 text-slate-300 italic text-xs">
+              S'ka detyra të regjistruara për këtë datë.
+            </div>
+          )}
+        </div>
+
+        {/* Input adding Form */}
+        <form onSubmit={handleAddTask} className="flex gap-2 pt-2">
+          <input 
+            type="text" 
+            placeholder="Shkruani një detyrë të re..."
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 placeholder-slate-400 text-xs font-medium outline-none focus:bg-white focus:border-[#4239b3] focus:ring-1 focus:ring-[#4239b3]/20 transition-all font-sans"
+            required
+          />
+          <button 
+            type="submit"
+            className="w-10 h-10 rounded-full bg-[#4239b3] text-white flex items-center justify-center hover:bg-[#342caa] transition-all active:scale-95 flex-shrink-0"
+          >
+            <Plus className="w-5 h-5 stroke-[2.5]" />
+          </button>
+        </form>
       </div>
 
-      <motion.div 
-        layout
-        className={cn(
-          "rounded-3xl p-8 text-white shadow-xl relative overflow-hidden transition-colors duration-500",
-          getStatusColor()
-        )}
-      >
-        <div className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/80 font-medium uppercase tracking-widest text-xs mb-1">Statusi Aktual</p>
-              <h3 className="text-4xl font-black mb-6">{getStatusText()}</h3>
-            </div>
-            <button 
-              onClick={resetToday}
-              className="mb-6 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 active:scale-95"
-              title="Fshi të dhënat e sotme për testim"
-            >
-              Reset Test
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-            <div>
-              <p className="text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1">Fillimi</p>
-              <p className="text-lg font-bold">
-                {currentAttendance?.checkIn ? format(new Date(currentAttendance.checkIn), 'HH:mm') : '--:--'}
-              </p>
-            </div>
-            <div>
-              <p className="text-white/60 text-[10px] uppercase font-bold tracking-wider mb-1">Mbarimi</p>
-              <p className="text-lg font-bold">
-                {currentAttendance?.checkOut ? format(new Date(currentAttendance.checkOut), 'HH:mm') : '--:--'}
-              </p>
-            </div>
-          </div>
+      {/* STATUSI I DITES HEADER BOX */}
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+            Statusi i Ditës
+          </span>
+          <span className={cn(
+            "text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-xl border leading-none transition-all duration-300", 
+            getStatusColorClass()
+          )}>
+            {getStatusText()}
+          </span>
         </div>
-        
-        <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-          <CheckCircle2 size={240} strokeWidth={1} />
-        </div>
-      </motion.div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {!currentAttendance?.checkIn ? (
-          <div className="flex flex-col gap-4">
-            <button 
-              onClick={handleCheckIn}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition-all active:translate-y-1 flex items-center justify-center gap-3"
-            >
-              <Play className="w-6 h-6 fill-current" />
-              REGJISTRO HYRJEN
-            </button>
-            <div className="grid grid-cols-2 gap-4">
+        {/* List of interactive panels matching Screenshot 1/5 */}
+        <div className="space-y-3.5">
+          {/* 1. Chekin state bar */}
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50/60 border border-slate-100/60 transition-all">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                currentAttendance?.checkIn ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400"
+              )}>
+                <Check className="w-4.5 h-4.5 stroke-[3]" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-800 leading-snug">
+                  {currentAttendance?.checkIn ? "Duke punuar në kohë reale" : "Puna nuk mund të regjistrohet"}
+                </p>
+                <p className="text-[9px] font-semibold text-slate-400 mt-0.5 leading-none">
+                  {currentAttendance?.checkIn 
+                    ? `Koha e hyrjes sot: ${format(new Date(currentAttendance.checkIn), 'HH:mm')}` 
+                    : "Regjistroni hyrjen për të filluar ndjekjen automatike"}
+                </p>
+              </div>
+            </div>
+
+            {/* If not checked in, show check-in trigger */}
+            {!currentAttendance?.checkIn && (
               <button 
-                onClick={markFullDay}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-5 rounded-2xl shadow-lg border-b-4 border-emerald-700 transition-all active:translate-y-1 flex items-center justify-center gap-3"
+                onClick={handleCheckIn}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm transition-all active:scale-95 flex items-center gap-1"
               >
-                <Sun className="w-6 h-6" />
-                DITË E PLOTË
+                <Play className="w-3 h-3 fill-current" /> Hyr
               </button>
+            )}
+          </div>
+
+          {/* 2. Half Day Toggle Switch Option */}
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50/60 border border-slate-100/60 transition-all">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                currentAttendance?.status === 'half-day' ? "bg-amber-100 text-amber-500" : "bg-slate-200 text-slate-400"
+              )}>
+                <Clock className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-800 leading-snug">
+                  Statusi: {currentAttendance?.status === 'half-day' ? "Gjysmë dite" : "Orar i plotë"}
+                </p>
+                <p className="text-[9px] font-semibold text-slate-400 mt-0.5 leading-none">
+                  {currentAttendance?.status === 'half-day' ? "Gjysmë pune (4 orë)" : "Punë e plotë (8 orë)"}
+                </p>
+              </div>
+            </div>
+
+            {/* Custom Interactive Switch Handle */}
+            <button 
+              onClick={toggleHalfDay}
+              className={cn(
+                "w-11 h-6 rounded-full p-0.5 transition-colors relative focus:outline-none flex items-center shadow-sm border",
+                currentAttendance?.status === 'half-day' ? "bg-indigo-600 border-indigo-700" : "bg-slate-200 border-slate-300"
+              )}
+            >
+              <div className={cn(
+                "w-4.5 h-4.5 rounded-full bg-white transition-transform shadow-sm transform",
+                currentAttendance?.status === 'half-day' ? "translate-x-5" : "translate-x-0"
+              )} />
+            </button>
+          </div>
+
+          {/* 3. Overtime hours Stepper Control */}
+          <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50/60 border border-slate-100/60 transition-all">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                overtime > 0 ? "bg-indigo-100 text-[#4239b3]" : "bg-slate-200 text-slate-400"
+              )}>
+                <Timer className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-800 leading-snug">
+                  Orë shtesë (Paguhen Extra)
+                </p>
+                <p className="text-[9px] font-semibold text-slate-400 mt-0.5 leading-none">
+                  {overtime > 0 ? `Shtuar +${overtime.toFixed(1)}h orë shtesë sot` : "Pa orë shtesë"}
+                </p>
+              </div>
+            </div>
+
+            {/* Incrementor Buttons Row */}
+            <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-sm">
               <button 
-                onClick={toggleHalfDay}
-                className={cn(
-                  "w-full font-bold py-5 rounded-2xl shadow-lg border-b-4 transition-all active:translate-y-1 flex items-center justify-center gap-3",
-                  currentAttendance?.status === 'half-day' 
-                    ? "bg-amber-100 text-amber-700 border-amber-300" 
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                )}
+                onClick={() => changeOvertimeVal(-0.5)}
+                disabled={overtime <= 0}
+                className="w-6 h-6 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold flex items-center justify-center text-xs disabled:opacity-30 disabled:pointer-events-none transition-all active:scale-95"
               >
-                <Timer className="w-6 h-6" />
-                {currentAttendance?.status === 'half-day' ? 'GJYSMË DITE (AKTIVE)' : 'GJYSMË DITE'}
+                -
+              </button>
+              <span className="text-xs font-black text-slate-800 w-8 text-center select-none font-mono">
+                {overtime.toFixed(1)}h
+              </span>
+              <button 
+                onClick={() => changeOvertimeVal(0.5)}
+                className="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-[#4239b3] font-bold flex items-center justify-center text-xs transition-all active:scale-95"
+              >
+                +
               </button>
             </div>
           </div>
-        ) : !currentAttendance.checkOut ? (
-          <div className="space-y-4">
-            <button 
-              onClick={handleCheckOut}
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-5 rounded-2xl shadow-lg border-b-4 border-rose-800 transition-all active:translate-y-1 flex items-center justify-center gap-3"
-            >
-              <Square className="w-6 h-6 fill-current" />
-              REGJISTRO DALJEN
-            </button>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 4. Active Break controls if checking in but not out */}
+          {currentAttendance?.checkIn && !currentAttendance?.checkOut && (
+            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-[#fffcf5] border border-amber-100 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center">
+                  <Coffee className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-800 leading-snug">
+                    {activeBreak ? "Keni nisur pauzën" : "Kohë Pauze"}
+                  </p>
+                  <p className="text-[9px] font-semibold text-slate-400 mt-0.5 leading-none">
+                    {activeBreak ? "Regjistro mbarimin kur të ktheheni" : "Nisni kohën e pushimit"}
+                  </p>
+                </div>
+              </div>
+
               {!activeBreak ? (
                 <button 
                   onClick={startBreak}
-                  className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 border-amber-700 transition-all active:translate-y-1"
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-xl text-[10px] font-black uppercase text-white tracking-wider flex items-center gap-1 active:scale-95 transition-all"
                 >
-                  <Coffee className="w-6 h-6" />
-                  <span className="text-xs">Fillo Pauzën</span>
+                  <Coffee className="w-3.5 h-3.5" /> Nis Pauzën
                 </button>
               ) : (
                 <button 
                   onClick={endBreak}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 border-indigo-700 transition-all active:translate-y-1"
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl text-[10px] font-black uppercase text-white tracking-wider flex items-center gap-1 active:scale-95 transition-all"
                 >
-                  <CheckCircle2 className="w-6 h-6" />
-                  <span className="text-xs">Mbaro Pauzën</span>
+                  <Check className="w-3.5 h-3.5" /> Mbyll Pauzën
                 </button>
               )}
-              
-              <button 
-                onClick={markFullDay}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 border-emerald-700 transition-all active:translate-y-1"
-              >
-                <Sun className="w-6 h-6" />
-                <span className="text-xs">Ditë e Plotë</span>
-              </button>
-
-              <button 
-                onClick={toggleHalfDay}
-                className={cn(
-                  "font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 transition-all active:translate-y-1",
-                  currentAttendance?.status === 'half-day' 
-                    ? "bg-indigo-600 text-white border-indigo-800" 
-                    : "bg-white text-slate-500 border-slate-200"
-                )}
-              >
-                <Timer className="w-6 h-6" />
-                <span className="text-xs">Gjysmë Dite</span>
-              </button>
-
-              <button 
-                onClick={() => setShowExpenseModal(true)}
-                className="bg-white hover:bg-slate-50 text-rose-500 font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 border-slate-200 transition-all active:translate-y-1"
-              >
-                <PlusCircle className="w-6 h-6" />
-                <span className="text-xs">Shto Shpenzim</span>
-              </button>
             </div>
+          )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={() => {
-                  if (!user) return;
-                  const today = format(new Date(), 'yyyy-MM-dd');
-                  const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-                  const idx = attendance.findIndex((r: any) => r.userId === user.uid && r.date === today);
-                  if (idx !== -1) {
-                    attendance[idx].status = 'absent';
-                    attendance[idx].checkIn = undefined;
-                    attendance[idx].checkOut = undefined;
-                  } else {
-                    attendance.push({ id: Math.random().toString(36).substr(2, 9), userId: user.uid, date: today, status: 'absent' });
-                  }
-                  localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-                  window.dispatchEvent(new Event('storage'));
-                  setCurrentAttendance(attendance.find((r: any) => r.userId === user.uid && r.date === today));
-                }}
-                className="bg-white text-slate-400 border border-slate-200 hover:bg-rose-50 hover:text-rose-500 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
-              >
-                <Home className="w-4 h-4" /> JO PUNË SOT
-              </button>
-              <button 
-                onClick={() => {
-                  if (!user) return;
-                  const today = format(new Date(), 'yyyy-MM-dd');
-                  const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
-                  const idx = attendance.findIndex((r: any) => r.userId === user.uid && r.date === today);
-                  if (idx !== -1) {
-                    attendance[idx].status = 'holiday';
-                  } else {
-                    attendance.push({ id: Math.random().toString(36).substr(2, 9), userId: user.uid, date: today, status: 'holiday' });
-                  }
-                  localStorage.setItem('pl_attendance', JSON.stringify(attendance));
-                  window.dispatchEvent(new Event('storage'));
-                  setCurrentAttendance(attendance.find((r: any) => r.userId === user.uid && r.date === today));
-                }}
-                className="bg-white text-slate-400 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-500 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
-              >
-                <Palmtree className="w-4 h-4" /> DITË PUSHIMI (FESTË)
-              </button>
-            </div>
-
-            {/* Overtime Selector */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-4 text-indigo-600">
-                <History className="w-5 h-5" />
-                <h4 className="font-bold text-sm uppercase tracking-wider">Jashtë Orarit (Pas orës 16:00)</h4>
-                {overtimeSaved && (
-                  <motion.span 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="ml-auto text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-black uppercase"
-                  >
-                    U Ruajt!
-                  </motion.span>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <input 
-                  type="number"
-                  step="0.5"
-                  value={overtime}
-                  onChange={(e) => setOvertime(e.target.value)}
-                  placeholder="Oret p.sh 1.5"
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-bold"
-                />
-                <button 
-                  onClick={saveOvertime}
-                  className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-200"
-                >
-                  RUAJ
-                </button>
-              </div>
-              <p className="mt-2 text-[10px] text-slate-400 italic">Shtoni oret e punuara mbas orarit te rregullt.</p>
-            </div>
-
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="bg-indigo-50 p-8 rounded-[32px] border border-indigo-100 flex flex-col items-center justify-center gap-4 text-center">
-              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-indigo-900 leading-tight">MIRËUPAFSHIM!</h3>
-                <p className="text-sm text-indigo-600/70 font-medium">Puna për sot u regjistrua me sukses.</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={() => setShowExpenseModal(true)}
-                className="bg-white hover:bg-slate-50 text-rose-500 font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 border-slate-200 transition-all active:translate-y-1"
-              >
-                <PlusCircle className="w-6 h-6" />
-                <span className="text-xs">Shto Shpenzim</span>
-              </button>
-              
-              <button 
-                onClick={resetToday}
-                className="bg-white hover:bg-slate-50 text-slate-400 font-bold py-4 rounded-2xl flex flex-col items-center gap-2 shadow-md border-b-4 border-slate-200 transition-all active:translate-y-1"
-              >
-                <History className="w-6 h-6" />
-                <span className="text-xs">Rifillo Ditën</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Today's Summary Section - Always visible if there is data */}
-        {currentAttendance && (todayExpenses.length > 0 || currentAttendance?.overtimeHours) && (
-          <div className="bg-slate-50 rounded-[32px] p-6 border border-slate-100 shadow-inner">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Përmbledhja e sotme</h4>
-              <span className="text-[10px] font-black text-indigo-500 bg-white px-2 py-0.5 rounded-full border border-indigo-50 leading-none">Vëzhgim</span>
-            </div>
-            
-            <div className="space-y-3">
-              {currentAttendance?.overtimeHours ? (
-                <div className="flex items-center justify-between p-3 bg-white rounded-2xl border border-indigo-100 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                      <History className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-700">Jashtë orarit</p>
-                      <p className="text-[9px] text-slate-400 font-black uppercase">Statistikë</p>
-                    </div>
-                  </div>
-                  <span className="font-black text-indigo-600 bg-indigo-50/50 px-3 py-1 rounded-lg">+{currentAttendance.overtimeHours} orë</span>
-                </div>
-              ) : null}
-
-              {todayExpenses.map(expense => (
-                <div key={expense.id} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-rose-100 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
-                      <PlusCircle className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-700">{expense.description}</p>
-                      <p className="text-[9px] text-rose-400 font-black uppercase">Shpenzim</p>
-                    </div>
-                  </div>
-                  <span className="font-black text-rose-600 bg-rose-50/50 px-3 py-1 rounded-lg">€{expense.amount.toFixed(2)}</span>
-                </div>
-              ))}
-              
-              {todayExpenses.length > 0 && (
-                <div className="flex justify-between items-center px-4 pt-3 border-t border-slate-200/60 mt-2">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Total Shpenzime sot:</span>
-                  <span className="text-lg font-black text-rose-600">€{todayExpenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          {/* 5. Big Exit / Close Day button */}
+          {currentAttendance?.checkIn && !currentAttendance?.checkOut && (
+            <button 
+              onClick={handleCheckOut}
+              className="w-full mt-2 py-4 bg-rose-500 hover:bg-rose-600 text-white font-black rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 uppercase text-xs tracking-wider"
+            >
+              <Square className="w-4 h-4 fill-current text-white/90" />
+              Mbyll Ditën e Punës (Dalje)
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Quick Expense Modal */}
-      <AnimatePresence>
-        {showExpenseModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl p-8"
-            >
-              <h3 className="text-2xl font-black text-slate-800 mb-6">Shto Shpenzim</h3>
-              <form onSubmit={handleAddQuickExpense} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Shuma (€)</label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    placeholder="0.00"
-                    value={expAmount}
-                    onChange={(e) => setExpAmount(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-rose-500 text-xl font-black"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Përshkrimi</label>
-                  <input 
-                    type="text" 
-                    placeholder="p.sh. Kafja e mëngjesit"
-                    value={expDesc}
-                    onChange={(e) => setExpDesc(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-rose-500 font-bold"
-                    required
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button 
-                    type="button"
-                    onClick={() => setShowExpenseModal(false)}
-                    className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl hover:bg-slate-200 transition-all"
-                  >
-                    ANULO
-                  </button>
-                  <button 
-                    type="submit"
-                    className="flex-1 py-4 bg-rose-500 text-white font-black rounded-2xl hover:bg-rose-600 transition-all shadow-lg shadow-rose-200"
-                  >
-                    SHTO
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* QUICK INACTIVE ALTERNATIVES FOR ABSENCE OR HOLIDAYS */}
+      {!currentAttendance?.checkIn && (
+        <div className="grid grid-cols-2 gap-3.5">
+          <button 
+            onClick={handleMarkNoWork}
+            className={cn(
+              "p-4 rounded-3xl border text-center flex flex-col items-center justify-center gap-1 bg-white hover:border-slate-300 transition-all duration-200 active:scale-95 shadow-sm",
+              currentAttendance?.status === 'absent' && 'ring-2 ring-rose-500 border-transparent bg-rose-50/20'
+            )}
+          >
+            <Home className="w-6 h-6 text-rose-500 mb-1" />
+            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">Jo Punë Sot</span>
+            <span className="text-[8px] text-slate-400 font-bold">Mungesë</span>
+          </button>
+
+          <button 
+            onClick={handleMarkHoliday}
+            className={cn(
+              "p-4 rounded-3xl border text-center flex flex-col items-center justify-center gap-1 bg-white hover:border-slate-300 transition-all duration-200 active:scale-95 shadow-sm",
+              currentAttendance?.status === 'holiday' && 'ring-2 ring-emerald-500 border-transparent bg-emerald-50/20'
+            )}
+          >
+            <Palmtree className="w-6 h-6 text-emerald-500 mb-1" />
+            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">1 Maj / Festë</span>
+            <span className="text-[8px] text-slate-400 font-bold">Pushim me Pagesë</span>
+          </button>
+        </div>
+      )}
+
+      {/* FULL DAY PRESET AND TEST RESET CLOCK ACTIONS */}
+      {!currentAttendance?.checkIn ? (
+        <button 
+          onClick={markFullDayVal}
+          className="w-full py-4.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+        >
+          <Sun className="w-5 h-5" /> Regjistro orar të plotë (08:00 - 16:00)
+        </button>
+      ) : (
+        <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-2xl text-slate-400">
+          <span className="text-[9px] font-black uppercase tracking-wider pl-1.5 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Shënime të ruajtura lokal
+          </span>
+          <button 
+            onClick={handleResetDay}
+            className="text-[9px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 px-3 py-1.5 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors"
+          >
+            Reset Ditën
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
