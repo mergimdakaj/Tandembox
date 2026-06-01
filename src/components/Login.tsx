@@ -69,7 +69,7 @@ export function Login({ onBack }: LoginProps) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-              placeholder="Përdoruesi (mergim)"
+              placeholder="Përdoruesi"
               required
             />
           </div>
@@ -80,7 +80,7 @@ export function Login({ onBack }: LoginProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-              placeholder="Fjalëkalimi (mergim)"
+              placeholder="Fjalëkalimi"
               required
             />
           </div>
@@ -93,10 +93,6 @@ export function Login({ onBack }: LoginProps) {
             {loading ? 'Duke u kyqur...' : 'KYQU'}
           </button>
         </form>
-
-        <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-400">Përdorni <b>mergim</b> si përdorues dhe fjalëkalim për <b>MergimGroup</b>.</p>
-        </div>
       </motion.div>
     </div>
   );
