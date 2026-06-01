@@ -19,10 +19,25 @@ export function Login({ onBack }: LoginProps) {
     setLoading(true);
     setError(null);
     
-    // Simulate API delay
-    setTimeout(() => {
-      // Load all registered users from local state (which syncs with Firestore)
-      const users = JSON.parse(localStorage.getItem('pl_users') || '[]');
+    try {
+      // Actively pull the latest users list directly from Firebase Firestore 
+      // to support new devices / colleague phones immediately without delay
+      let users = [];
+      try {
+        const { loadCollectionFromFirebase } = await import('../lib/firebase');
+        const freshUsers = await loadCollectionFromFirebase('users');
+        if (freshUsers && freshUsers.length > 0) {
+          localStorage.setItem('pl_users', JSON.stringify(freshUsers));
+          window.dispatchEvent(new Event('storage'));
+          users = freshUsers;
+          console.log("Successfully retrieved fresh users list from Firebase Firestore during login.");
+        } else {
+          users = JSON.parse(localStorage.getItem('pl_users') || '[]');
+        }
+      } catch (fbErr) {
+        console.warn("Could not retrieve fresh users from cloud, falling back to cached local storage:", fbErr);
+        users = JSON.parse(localStorage.getItem('pl_users') || '[]');
+      }
       
       const inputVal = username.toLowerCase().trim();
       const inputNoSpaces = inputVal.replace(/\s+/g, '');
@@ -77,8 +92,11 @@ export function Login({ onBack }: LoginProps) {
       } else {
         setError('Përdoruesi ose fjalëkalimi i pasaktë.');
       }
+    } catch (err) {
+      setError('Ndodhi një gabim gjatë verifikimit të llogarisë tuaj.');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
