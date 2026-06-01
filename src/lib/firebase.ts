@@ -74,11 +74,23 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Test Connection function as mandated by SKILL.md
 export async function testFirebaseConnection(): Promise<boolean> {
   try {
-    // Attempt standard connection test doc lookup
-    await getDocFromServer(doc(db, 'test_connection', 'ping'));
+    // Attempt a lookup from 'users' collection (which we have permissions for in rules)
+    await getDocFromServer(doc(db, 'users', 'test_conn_ping'));
     return true;
-  } catch (error) {
-    console.warn("Firebase offline or initial connection test:", error);
+  } catch (error: any) {
+    console.warn("Firebase collection connection test:", error);
+    
+    // If the error indicates we reached the server but was block/denied, we ARE online!
+    const errStr = String(error?.message || error?.code || error || '').toLowerCase();
+    if (
+      errStr.includes('permission') || 
+      errStr.includes('insufficient') || 
+      errStr.includes('unauthenticated') || 
+      errStr.includes('auth')
+    ) {
+      console.log("Firebase server is reachable (online).");
+      return true;
+    }
     return false;
   }
 }

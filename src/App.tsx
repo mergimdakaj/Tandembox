@@ -112,6 +112,22 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
+    // Ensure pl_users is initialized on startup so fresh or guest sessions can log in
+    const existingUsers = localStorage.getItem('pl_users');
+    if (!existingUsers || JSON.parse(existingUsers).length === 0) {
+      const defaultUsers = [
+        {
+          uid: 'mergim-id',
+          name: 'Administrator',
+          email: 'admin',
+          role: 'admin',
+          password: 'admin',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem('pl_users', JSON.stringify(defaultUsers));
+    }
+
     const savedUser = localStorage.getItem('pl_user');
     const savedProfile = localStorage.getItem('pl_profile');
     

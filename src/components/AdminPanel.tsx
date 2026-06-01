@@ -27,45 +27,72 @@ export function AdminPanel() {
   const { 
     profile, 
     firebaseConnected, 
-    syncing, 
+    syncing: globalSyncing, 
     triggerManualSyncUp, 
-    triggerManualSyncDown 
+    triggerManualSyncDown,
+    showToast
   } = useAuth();
   const [employees, setEmployees] = useState<StaffUser[]>([]);
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [localSyncing, setLocalSyncing] = useState(false);
   
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'employee'>('employee');
   const [newPassword, setNewPassword] = useState('admin');
 
-  useEffect(() => {
-    const loadUsers = () => {
-      const users = JSON.parse(localStorage.getItem('pl_users') || '[]');
-      if (users.length === 0) {
-        const defaultUsers: StaffUser[] = [
-          {
-            uid: 'mergim-id',
-            name: 'Administrator',
-            email: 'admin',
-            role: 'admin',
-            password: 'admin',
-            createdAt: new Date().toISOString()
-          }
-        ];
-        localStorage.setItem('pl_users', JSON.stringify(defaultUsers));
-        setEmployees(defaultUsers);
-      } else {
-        setEmployees(users);
-      }
-    };
+  const loadUsers = () => {
+    const users = JSON.parse(localStorage.getItem('pl_users') || '[]');
+    if (users.length === 0) {
+      const defaultUsers: StaffUser[] = [
+        {
+          uid: 'mergim-id',
+          name: 'Administrator',
+          email: 'admin',
+          role: 'admin',
+          password: 'admin',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem('pl_users', JSON.stringify(defaultUsers));
+      setEmployees(defaultUsers);
+    } else {
+      setEmployees(users);
+    }
+  };
 
+  useEffect(() => {
     loadUsers();
     window.addEventListener('storage', loadUsers);
     return () => window.removeEventListener('storage', loadUsers);
   }, []);
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleSyncUp = async () => {
+    setLocalSyncing(true);
+    try {
+      await triggerManualSyncUp();
+      showToast("Llogaritë dhe të dhënat u sinkronizuan me sukses në Cloud!", "success");
+    } catch (e) {
+      showToast("Dështoi sinkronizimi automatik. Versioni u ruajt lokalisht.", "warning");
+    } finally {
+      setLocalSyncing(false);
+    }
+  };
+
+  const handleSyncDown = async () => {
+    setLocalSyncing(true);
+    try {
+      await triggerManualSyncDown();
+      loadUsers();
+      showToast("Të dhënat më të reja u shkarkuan me sukses nga Cloud!", "success");
+    } catch (e) {
+      showToast("Dështoi shkarkimi nga Cloud.", "warning");
+    } finally {
+      setLocalSyncing(false);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName) return;
 
@@ -88,6 +115,13 @@ export function AdminPanel() {
     };
 
     const users = JSON.parse(localStorage.getItem('pl_users') || '[]');
+    // Avoid duplicates of same uid
+    const exists = users.some((u: any) => u.uid === generatedUid);
+    if (exists) {
+      showToast("Ky përdorues ekziston tashmë në sistem!", "warning");
+      return;
+    }
+
     users.push(newUser);
     localStorage.setItem('pl_users', JSON.stringify(users));
     setEmployees(users);
@@ -97,9 +131,20 @@ export function AdminPanel() {
     setShowAdd(false);
     setNewName('');
     setNewPassword('admin');
+
+    // Instantly try pushing to Firestore Cloud
+    setLocalSyncing(true);
+    try {
+      await triggerManualSyncUp();
+      showToast(`Përdoruesi u krijua dhe u sinkronizua në Cloud: ${generatedUid}`, "success");
+    } catch (err) {
+      showToast("Përdoruesi u krijua vetëm Lokalisht (Offline).", "info");
+    } finally {
+      setLocalSyncing(false);
+    }
   };
 
-  const handleDeleteUser = (uid: string) => {
+  const handleDeleteUser = async (uid: string) => {
     if (uid === 'mergim-id') {
       alert("Nuk mund të fshini llogarinë kryesore të administratorit.");
       return;
@@ -112,6 +157,17 @@ export function AdminPanel() {
     localStorage.setItem('pl_users', JSON.stringify(updated));
     setEmployees(updated);
     window.dispatchEvent(new Event('storage'));
+
+    // Instantly try pushing deletion to Firestore Cloud
+    setLocalSyncing(true);
+    try {
+      await triggerManualSyncUp();
+      showToast("Përdoruesi u fshi dhe ndryshimet u sinkronizuan në Cloud.", "success");
+    } catch (err) {
+      showToast("Përdoruesi u fshi Lokalisht.", "info");
+    } finally {
+      setLocalSyncing(false);
+    }
   };
 
   const filteredEmployees = employees.filter(e => 
@@ -120,6 +176,7 @@ export function AdminPanel() {
   );
 
   const isAdmin = profile?.role === 'admin';
+  const isSyncingActive = globalSyncing || localSyncing;
 
   return (
     <div className="space-y-6">
@@ -139,6 +196,55 @@ export function AdminPanel() {
             <Plus className="w-4 h-4" /> Shto
           </button>
         )}
+      </div>
+
+      {/* Cloud Database Integration Status Panel */}
+      <div className="bg-gradient-to-br from-indigo-50/50 to-slate-50 border border-indigo-100/60 p-5 rounded-3xl shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className={cn(
+              "w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-sm",
+              firebaseConnected ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border border-amber-100"
+            )}>
+              <CloudLightning className={cn("w-5 h-5", isSyncingActive && "animate-pulse")} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Lidhja me Serverin Cloud (Firestore)</h3>
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest",
+                  firebaseConnected ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                )}>
+                  {firebaseConnected ? "AKTIVE" : "OFFLINE"}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                {firebaseConnected 
+                  ? "Sistemi është i lidhur me databazën qëndrore. Çdo përdorues i ri sinkronizohet automatikisht në cloud."
+                  : "Sistemi aktualisht është në gjendje të jashtme (offline). Ndryshimet do të ruhen lokal në këtë browser."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              onClick={handleSyncDown}
+              disabled={isSyncingActive || !firebaseConnected}
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Shkarko përdoruesit më të rinj nga serveri"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 text-indigo-500", isSyncingActive && "animate-spin")} /> Shkarko
+            </button>
+            <button
+              onClick={handleSyncUp}
+              disabled={isSyncingActive || !firebaseConnected}
+              className="px-3.5 py-2 bg-[#4239b3] hover:bg-[#342caa] text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm shadow-indigo-600/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Ngarko dhe sinkronizo të gjitha të dhënat lokale tek serveri"
+            >
+              <UploadCloud className="w-3.5 h-3.5" /> Ngarko / Ruaj
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Roster list */}
