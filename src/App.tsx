@@ -46,6 +46,7 @@ interface AuthContextType {
   login: (user: { uid: string; email: string }, profile: UserProfile) => void;
   logout: () => void;
   firebaseConnected: boolean;
+  firebaseError: string | null;
   syncing: boolean;
   triggerManualSyncUp: () => Promise<void>;
   triggerManualSyncDown: () => Promise<void>;
@@ -59,6 +60,7 @@ const AuthContext = createContext<AuthContextType>({
   login: () => {},
   logout: () => {},
   firebaseConnected: false,
+  firebaseError: null,
   syncing: false,
   triggerManualSyncUp: async () => {},
   triggerManualSyncDown: async () => {},
@@ -109,6 +111,7 @@ export default function App() {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
@@ -144,6 +147,9 @@ export default function App() {
     async function initFirebaseSync() {
       const isConnected = await testFirebaseConnection();
       setFirebaseConnected(isConnected);
+      const { lastFirebaseError } = await import('./lib/firebase');
+      setFirebaseError(lastFirebaseError);
+      
       if (isConnected) {
         setSyncing(true);
         try {
@@ -533,6 +539,7 @@ export default function App() {
       login, 
       logout,
       firebaseConnected,
+      firebaseError,
       syncing,
       triggerManualSyncUp,
       triggerManualSyncDown,

@@ -27,6 +27,7 @@ export function AdminPanel() {
   const { 
     profile, 
     firebaseConnected, 
+    firebaseError,
     syncing: globalSyncing, 
     triggerManualSyncUp, 
     triggerManualSyncDown,
@@ -37,9 +38,87 @@ export function AdminPanel() {
   const [showAdd, setShowAdd] = useState(false);
   const [localSyncing, setLocalSyncing] = useState(false);
   
+  // Backup / local sync states
+  const [showBackupBlock, setShowBackupBlock] = useState(false);
+  const [backupJsonStr, setBackupJsonStr] = useState('');
+  const [importString, setImportString] = useState('');
+  
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'employee'>('employee');
   const [newPassword, setNewPassword] = useState('admin');
+
+  const handleExportData = () => {
+    try {
+      const exportEnvelope = {
+        version: 1,
+        timestamp: new Date().toISOString(),
+        data: {
+          pl_users: JSON.parse(localStorage.getItem('pl_users') || '[]'),
+          pl_tasks: JSON.parse(localStorage.getItem('pl_tasks') || '[]'),
+          pl_attendance: JSON.parse(localStorage.getItem('pl_attendance') || '[]'),
+          pl_breaks: JSON.parse(localStorage.getItem('pl_breaks') || '[]'),
+          pl_expenses: JSON.parse(localStorage.getItem('pl_expenses') || '[]'),
+          pl_notifications: JSON.parse(localStorage.getItem('pl_notifications') || '[]')
+        }
+      };
+      const json = JSON.stringify(exportEnvelope, null, 2);
+      setBackupJsonStr(json);
+      
+      // Attempt copy to clipboard
+      navigator.clipboard.writeText(json).then(() => {
+        showToast("Të dhënat u kopjuan me sukses në Clipboard! Tani dërgoja kolegut p.sh. në Viber/WhatsApp.", "success");
+      }).catch(() => {
+        showToast("Backup u gjenerua! Kopjoje kodin nga fusha më poshtë.", "info");
+      });
+    } catch (e) {
+      showToast("Dështoi gjenerimi i Backup-it.", "warning");
+    }
+  };
+
+  const handleImportData = () => {
+    if (!importString.trim()) {
+      showToast("Ju lutem vendosni kodin e backup-it!", "warning");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(importString.trim());
+      if (!parsed || parsed.version !== 1 || !parsed.data) {
+        showToast("Format i pavlefshëm! Sigurohu që ke kopjuar gjithë kodin e saktë.", "warning");
+        return;
+      }
+      
+      const payload = parsed.data;
+      if (Array.isArray(payload.pl_users) && payload.pl_users.length > 0) {
+        localStorage.setItem('pl_users', JSON.stringify(payload.pl_users));
+      }
+      if (Array.isArray(payload.pl_tasks)) {
+        localStorage.setItem('pl_tasks', JSON.stringify(payload.pl_tasks));
+      }
+      if (Array.isArray(payload.pl_attendance)) {
+        localStorage.setItem('pl_attendance', JSON.stringify(payload.pl_attendance));
+      }
+      if (Array.isArray(payload.pl_breaks)) {
+        localStorage.setItem('pl_breaks', JSON.stringify(payload.pl_breaks));
+      }
+      if (Array.isArray(payload.pl_expenses)) {
+        localStorage.setItem('pl_expenses', JSON.stringify(payload.pl_expenses));
+      }
+      if (Array.isArray(payload.pl_notifications)) {
+        localStorage.setItem('pl_notifications', JSON.stringify(payload.pl_notifications));
+      }
+      
+      // Notify application of structural state changes
+      window.dispatchEvent(new Event('storage'));
+      loadUsers();
+      
+      showToast("Të dhënat (Llogaritë/Punët) u importuan me sukses!", "success");
+      setImportString('');
+      setBackupJsonStr('');
+      setShowBackupBlock(false);
+    } catch (e) {
+      showToast("Kodi i kopjuar nuk është i vlefshëm!", "warning");
+    }
+  };
 
   const loadUsers = () => {
     const users = JSON.parse(localStorage.getItem('pl_users') || '[]');
@@ -221,8 +300,16 @@ export function AdminPanel() {
               <p className="text-[10px] text-slate-400 font-semibold mt-1">
                 {firebaseConnected 
                   ? "Sistemi është i lidhur me databazën qëndrore. Çdo përdorues i ri sinkronizohet automatikisht në cloud."
-                  : "Sistemi aktualisht është në gjendje të jashtme (offline). Ndryshimet do të ruhen lokal në këtë browser."}
+                  : "Sistemi aktualisht është në gjendje të jashtme (offline në këtë domain/server). Ndryshimet do të ruhen lokalisht në këtë browser."}
               </p>
+              {!firebaseConnected && firebaseError && (
+                <div className="mt-2.5 p-2 px-3 bg-amber-50/75 border border-amber-100 rounded-xl text-[9px] font-mono text-amber-800 break-all max-w-[280px] sm:max-w-md">
+                  <strong>Gabimi i lidhjes:</strong> {firebaseError}
+                  <div className="mt-1 text-[8px] opacity-80 leading-normal font-sans">
+                    * Sugjerim: Mund të konfiguroni variablat e mjedisit (Environment Variables) në panelin Vercel për të lidhur Firebase tuaj personal.
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,6 +332,80 @@ export function AdminPanel() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Manual Data Sync/Backup Tool (Alternative option for easy manual sync across devices) */}
+      <div className="bg-slate-50 border border-slate-200/50 p-5 rounded-3xl shadow-xs">
+        <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 flex-shrink-0">
+              <Database className="w-4 h-4 text-slate-500" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">Sinkronizimi Manual (pa server)</h4>
+              <p className="text-[10px] text-slate-400 font-semibold leading-normal">Transfero llogaritë dhe oraret tek telefoni i kolegut pa pasur nevojë për internet cloud.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowBackupBlock(!showBackupBlock)}
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0 self-end sm:self-center"
+          >
+            {showBackupBlock ? "Mbyll" : "Hap Panelin"}
+          </button>
+        </div>
+
+        {showBackupBlock && (
+          <div className="mt-4 pt-4 border-t border-slate-200/60 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Export Container */}
+              <div className="bg-white border border-slate-200/60 p-4 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-600">1. Eksporto të dhënat</h5>
+                  <button
+                    onClick={handleExportData}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border border-emerald-100 flex items-center gap-1 cursor-pointer"
+                  >
+                    <UploadCloud className="w-3 h-3" /> Gjenero & Kopjo
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-normal font-semibold">
+                  Kliko butonin për të kopjuar automatikisht të gjithë kodin e llogarive dhe të dhënave, pastaj dërgoja kolegut përmes një mesazhi (e-mail, WhatsApp, etj.).
+                </p>
+                {backupJsonStr && (
+                  <textarea
+                    readOnly
+                    value={backupJsonStr}
+                    onClick={(e) => (e.target as any).select()}
+                    className="w-full h-24 p-2 bg-slate-50 border border-slate-100 text-[9px] font-mono rounded-xl focus:outline-none focus:border-indigo-400 text-slate-500"
+                    placeholder="Kodi i backup-it do të shfaqet këtu..."
+                  />
+                )}
+              </div>
+
+              {/* Import Container */}
+              <div className="bg-white border border-slate-200/60 p-4 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-600">2. Importo në pajisjen e re</h5>
+                  <button
+                    onClick={handleImportData}
+                    className="px-2.5 py-1 bg-[#4239b3] hover:bg-[#342caa] text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <DownloadCloud className="w-3 h-3" /> Ruaj në këtë Telefon
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-normal font-semibold">
+                  Në telefonin e kolegut, hap këtë faqe, shto kodin e backup-it të pranuar në fushën më poshtë dhe kliko butonin për të importuar llogaritë menjëherë!
+                </p>
+                <textarea
+                  value={importString}
+                  onChange={(e) => setImportString(e.target.value)}
+                  className="w-full h-24 p-2 bg-slate-50 border border-slate-100 text-[9px] font-mono rounded-xl focus:outline-none focus:border-[#4239b3]"
+                  placeholder="Ngjit (Paste) kodin e backup-it këtu..."
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Roster list */}

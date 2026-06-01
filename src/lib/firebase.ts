@@ -11,14 +11,14 @@ import {
   getDocFromServer
 } from "firebase/firestore";
 
-// User's provided Firebase configuration
+// Support dynamic configurations via standard Vite environment variables for custom deployment (e.g. Vercel)
 const firebaseConfig = {
-  apiKey: "AIzaSyASd916xba2C7RfJSNifeuv_gzuQDp-ohU",
-  authDomain: "gen-lang-client-0824386898.firebaseapp.com",
-  projectId: "gen-lang-client-0824386898",
-  storageBucket: "gen-lang-client-0824386898.firebasestorage.app",
-  messagingSenderId: "560498468072",
-  appId: "1:560498468072:web:cfb3c65432f7296cc3d55d"
+  apiKey: ((import.meta as any).env?.VITE_FIREBASE_API_KEY as string) || "AIzaSyASd916xba2C7RfJSNifeuv_gzuQDp-ohU",
+  authDomain: ((import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN as string) || "gen-lang-client-0824386898.firebaseapp.com",
+  projectId: ((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID as string) || "gen-lang-client-0824386898",
+  storageBucket: ((import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET as string) || "gen-lang-client-0824386898.firebasestorage.app",
+  messagingSenderId: ((import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || "560498468072",
+  appId: ((import.meta as any).env?.VITE_FIREBASE_APP_ID as string) || "1:560498468072:web:cfb3c65432f7296cc3d55d"
 };
 
 // Initialize Firebase App
@@ -71,17 +71,24 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+export let lastFirebaseError: string | null = null;
+
 // Test Connection function as mandated by SKILL.md
 export async function testFirebaseConnection(): Promise<boolean> {
   try {
+    lastFirebaseError = null;
     // Attempt a lookup from 'users' collection (which we have permissions for in rules)
     await getDocFromServer(doc(db, 'users', 'test_conn_ping'));
     return true;
   } catch (error: any) {
     console.warn("Firebase collection connection test:", error);
     
+    const errCode = error?.code || '';
+    const errMsg = error?.message || '';
+    lastFirebaseError = errCode ? `[${errCode}] ${errMsg}` : String(error);
+
     // If the error indicates we reached the server but was block/denied, we ARE online!
-    const errStr = String(error?.message || error?.code || error || '').toLowerCase();
+    const errStr = String(errMsg || errCode || error || '').toLowerCase();
     if (
       errStr.includes('permission') || 
       errStr.includes('insufficient') || 
