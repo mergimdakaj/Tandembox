@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { AttendanceRecord, BreakRecord, ExpenseRecord } from '../types';
 import { DashboardChart } from './DashboardChart';
-import { LeaveRequestSection } from './LeaveRequestSection';
+import { WorkNotesSection } from './WorkNotesSection';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, 
@@ -493,8 +493,8 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
         </div>
       )}
 
-      {/* SEKSIONI I DEDIKUAR PER PUSHIMET VJETORE */}
-      <LeaveRequestSection />
+      {/* SEKSIONI I DEDIKUAR PER SHËNIMET E PUNËS / PRERJES */}
+      <WorkNotesSection selectedDate={selectedDate} />
 
       {/* STATUSI I DITES HEADER BOX */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-6">

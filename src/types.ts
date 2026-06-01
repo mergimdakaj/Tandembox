@@ -50,3 +50,13 @@ export interface LeaveRequest {
   createdAt: string; // ISO string
 }
 
+export interface WorkNote {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  text: string;
+  completed: boolean;
+  createdAt: string; // ISO string
+  noteType: 'work' | 'cut' | 'other';
+}
+
