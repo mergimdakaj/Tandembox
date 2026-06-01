@@ -41,7 +41,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
-  const { user } = useAuth();
+  const { user, showToast } = useAuth();
   const [currentAttendance, setCurrentAttendance] = useState<AttendanceRecord | null>(null);
   const [activeBreak, setActiveBreak] = useState<BreakRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +56,33 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
   const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Dynamic check for working hours near completion
+  useEffect(() => {
+    if (!currentAttendance?.checkIn || currentAttendance?.checkOut || activeBreak) return;
+
+    const checkWorkingHoursCompletion = () => {
+      const checkInTime = new Date(currentAttendance.checkIn).getTime();
+      const now = new Date().getTime();
+      const elapsedHours = (now - checkInTime) / (3600 * 1000);
+
+      // Notify if user worked >= 7.5 hours and less than 8.2 hours
+      if (elapsedHours >= 7.5 && elapsedHours < 8.2) {
+        const lastAlert = localStorage.getItem(`pl_work_hours_alert_${currentAttendance.date}`);
+        if (!lastAlert) {
+          showToast('⏳ Koha e rregullt e punës është pranë përfundimit! Mos harroni të bëni Sign Out bashkë me shënimet tuaja.', 'info');
+          localStorage.setItem(`pl_work_hours_alert_${currentAttendance.date}`, 'true');
+        }
+      }
+    };
+
+    // Run on startup
+    checkWorkingHoursCompletion();
+
+    // Recheck every 60 seconds
+    const timer = setInterval(checkWorkingHoursCompletion, 60000);
+    return () => clearInterval(timer);
+  }, [currentAttendance, activeBreak, showToast]);
 
   // Load attendance record, breaks, and tasks for the active date Str
   useEffect(() => {
@@ -279,14 +306,33 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
   };
 
   const toggleTask = (id: string) => {
+    let wasCheckedAsUnfinished = false;
+    let taskName = '';
     const allTasks = JSON.parse(localStorage.getItem('pl_tasks') || '[]');
     const updated = allTasks.map((t: TaskRecord) => {
-      if (t.id === id) return { ...t, completed: !t.completed };
+      if (t.id === id) {
+        if (t.completed) {
+          wasCheckedAsUnfinished = true;
+          taskName = t.text;
+        }
+        return { ...t, completed: !t.completed };
+      }
       return t;
     });
     localStorage.setItem('pl_tasks', JSON.stringify(updated));
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        return { ...t, completed: !t.completed };
+      }
+      return t;
+    }));
     window.dispatchEvent(new Event('storage'));
+
+    if (wasCheckedAsUnfinished) {
+      showToast(`⚠️ Detyra "${taskName || 'Detyra'}" u shënua si e pakryer / papërfunduar!`, 'warning');
+    } else {
+      showToast(`✅ Detyra u shënua si e përfunduar me sukses!`, 'success');
+    }
   };
 
   const deleteTask = (id: string) => {

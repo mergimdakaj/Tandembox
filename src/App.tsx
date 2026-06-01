@@ -10,7 +10,9 @@ import {
   TrendingUp,
   Users,
   ArrowLeft,
-  Sun
+  Sun,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile } from './types';
@@ -45,6 +47,7 @@ interface AuthContextType {
   syncing: boolean;
   triggerManualSyncUp: () => Promise<void>;
   triggerManualSyncDown: () => Promise<void>;
+  showToast: (message: string, type?: 'success' | 'warning' | 'info') => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -56,10 +59,17 @@ const AuthContext = createContext<AuthContextType>({
   firebaseConnected: false,
   syncing: false,
   triggerManualSyncUp: async () => {},
-  triggerManualSyncDown: async () => {}
+  triggerManualSyncDown: async () => {},
+  showToast: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
+
+interface ToastType {
+  id: string;
+  message: string;
+  type: 'success' | 'warning' | 'info';
+}
 
 export default function App() {
   const [user, setUser] = useState<{ uid: string; email: string } | null>(null);
@@ -70,6 +80,27 @@ export default function App() {
   
   // High fidelity selectedDate state synchronized globally with top visual scroller
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Toast notification state
+  const [toasts, setToasts] = useState<ToastType[]>([]);
+  
+  const showToast = (message: string, type: 'success' | 'warning' | 'info' = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4500);
+  };
+
+  useEffect(() => {
+    const handleToastEvent = (e: any) => {
+      if (e.detail && e.detail.message) {
+        showToast(e.detail.message, e.detail.type || 'info');
+      }
+    };
+    window.addEventListener('show-toast', handleToastEvent);
+    return () => window.removeEventListener('show-toast', handleToastEvent);
+  }, []);
 
   // Dynamic status indicators badges
   const [uncompletedTasksCount, setUncompletedTasksCount] = useState(0);
@@ -259,7 +290,7 @@ export default function App() {
     { id: 'calendar', label: 'Kalendari', icon: CalendarDays },
     { id: 'notifications', label: 'Njoftimet', icon: Bell, badgeCount: unreadNotificationsCount },
     { id: 'expenses', label: 'Financat', icon: TrendingUp },
-    { id: 'admin', label: 'Përdoruesit', icon: Users },
+    ...(profile?.role === 'admin' ? [{ id: 'admin', label: 'Përdoruesit', icon: Users }] : []),
   ];
 
   const renderContent = () => {
@@ -290,6 +321,42 @@ export default function App() {
         {/* Dynamic Smartphone Mockup Layout Frame */}
         <div className="w-full max-w-sm sm:max-w-md bg-[#fafbfe] sm:min-h-[85vh] sm:max-h-[94vh] sm:rounded-[48px] sm:ring-[14px] sm:ring-slate-800/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden border border-slate-700/30 h-screen sm:h-auto">
           
+          {/* TOAST PANEL OVERLAY */}
+          <div className="absolute top-4 left-4 right-4 z-50 pointer-events-none space-y-2">
+            <AnimatePresence>
+              {toasts.map((t) => (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: -25, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 26 }}
+                  className={cn(
+                    "p-4 rounded-2xl border text-xs font-semibold shadow-lg flex items-start gap-3 pointer-events-auto backdrop-blur-md",
+                    t.type === 'success' && "bg-emerald-50/95 border-emerald-100 text-emerald-800",
+                    t.type === 'warning' && "bg-amber-50/95 border-amber-200 text-amber-800",
+                    t.type === 'info' && "bg-indigo-50/95 border-indigo-100 text-indigo-900"
+                  )}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {t.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-500" />}
+                    {t.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500 animate-bounce" />}
+                    {t.type === 'info' && <Bell className="w-4 h-4 text-[#4239b3]" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="leading-tight text-[11px] font-black">{t.message}</p>
+                  </div>
+                  <button 
+                    onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+                    className="text-slate-400 hover:text-slate-600 focus:outline-none shrink-0"
+                  >
+                    ✕
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
           {/* TOP APPLET SCROLLING HEADER BODY */}
           <div className="flex-1 overflow-y-auto px-6 pt-7 pb-28 space-y-6 scrollbar-thin">
             
@@ -447,7 +514,8 @@ export default function App() {
       firebaseConnected,
       syncing,
       triggerManualSyncUp,
-      triggerManualSyncDown
+      triggerManualSyncDown,
+      showToast
     }}>
       {renderContent()}
     </AuthContext.Provider>
