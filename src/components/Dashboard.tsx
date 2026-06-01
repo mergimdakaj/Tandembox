@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, 
   Square, 
-  Coffee, 
   Clock, 
   Check, 
   CheckCircle2,
@@ -43,7 +42,6 @@ interface DashboardProps {
 export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
   const { user, showToast } = useAuth();
   const [currentAttendance, setCurrentAttendance] = useState<AttendanceRecord | null>(null);
-  const [activeBreak, setActiveBreak] = useState<BreakRecord | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Tasks state
@@ -59,7 +57,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
 
   // Dynamic check for working hours near completion
   useEffect(() => {
-    if (!currentAttendance?.checkIn || currentAttendance?.checkOut || activeBreak) return;
+    if (!currentAttendance?.checkIn || currentAttendance?.checkOut) return;
 
     const checkWorkingHoursCompletion = () => {
       const checkInTime = new Date(currentAttendance.checkIn).getTime();
@@ -82,7 +80,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
     // Recheck every 60 seconds
     const timer = setInterval(checkWorkingHoursCompletion, 60000);
     return () => clearInterval(timer);
-  }, [currentAttendance, activeBreak, showToast]);
+  }, [currentAttendance, showToast]);
 
   // Load attendance record, breaks, and tasks for the active date Str
   useEffect(() => {
@@ -94,14 +92,6 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
       
       setCurrentAttendance(record || null);
       setOvertime(record?.overtimeHours || 0);
-
-      if (record) {
-        const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
-        const activeBrk = breaks.find((b: BreakRecord) => b.attendanceId === record.id && !b.endTime);
-        setActiveBreak(activeBrk || null);
-      } else {
-        setActiveBreak(null);
-      }
 
       // Load all records for the current month
       const activeMonthStr = format(selectedDate, 'yyyy-MM');
@@ -164,38 +154,6 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
       checkOut: new Date().toISOString(),
     };
     saveAttendanceRecord(item);
-
-    // Stop active break if any
-    if (activeBreak) {
-      endBreak();
-    }
-  };
-
-  const startBreak = () => {
-    if (!user || !currentAttendance) return;
-    const newBreak: BreakRecord = {
-      id: Math.random().toString(36).substr(2, 9),
-      userId: user.uid,
-      attendanceId: currentAttendance.id,
-      startTime: new Date().toISOString(),
-    };
-    const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
-    breaks.push(newBreak);
-    localStorage.setItem('pl_breaks', JSON.stringify(breaks));
-    setActiveBreak(newBreak);
-    window.dispatchEvent(new Event('storage'));
-  };
-
-  const endBreak = () => {
-    if (!activeBreak) return;
-    const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
-    const index = breaks.findIndex((b: BreakRecord) => b.id === activeBreak.id);
-    if (index !== -1) {
-      breaks[index].endTime = new Date().toISOString();
-      localStorage.setItem('pl_breaks', JSON.stringify(breaks));
-      setActiveBreak(null);
-      window.dispatchEvent(new Event('storage'));
-    }
   };
 
   const toggleHalfDay = () => {
@@ -273,12 +231,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
     const filtered = attendance.filter((r: AttendanceRecord) => !(r.userId === user?.uid && r.date === dateStr));
     localStorage.setItem('pl_attendance', JSON.stringify(filtered));
 
-    const breaks = JSON.parse(localStorage.getItem('pl_breaks') || '[]');
-    const filteredBreaks = breaks.filter((b: BreakRecord) => b.userId !== user?.uid || !b.startTime.startsWith(dateStr));
-    localStorage.setItem('pl_breaks', JSON.stringify(filteredBreaks));
-
     setCurrentAttendance(null);
-    setActiveBreak(null);
     setOvertime(0);
     window.dispatchEvent(new Event('storage'));
   };
@@ -347,7 +300,6 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
 
   // Status computation for header tag
   const getStatusText = () => {
-    if (activeBreak) return 'NË PAUZË';
     if (currentAttendance?.status === 'holiday') return 'DITË PUSHIMI';
     if (currentAttendance?.status === 'absent') return 'JO PUNE SOT';
     if (currentAttendance?.checkOut) return 'PUNA PËRFUNDOI';
@@ -357,7 +309,6 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
   };
 
   const getStatusColorClass = () => {
-    if (activeBreak) return 'text-amber-500 bg-amber-50 border-amber-100';
     if (currentAttendance?.status === 'holiday') return 'text-emerald-600 bg-emerald-50 border-emerald-100';
     if (currentAttendance?.status === 'absent') return 'text-rose-500 bg-rose-50 border-rose-100';
     if (currentAttendance?.checkOut) return 'text-slate-400 bg-slate-50 border-slate-100';
@@ -670,40 +621,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
             </div>
           </div>
 
-          {/* 4. Active Break controls if checking in but not out */}
-          {currentAttendance?.checkIn && !currentAttendance?.checkOut && (
-            <div className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-[#fffcf5] border border-amber-100 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center">
-                  <Coffee className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-slate-800 leading-snug">
-                    {activeBreak ? "Keni nisur pauzën" : "Kohë Pauze"}
-                  </p>
-                  <p className="text-[9px] font-semibold text-slate-400 mt-0.5 leading-none">
-                    {activeBreak ? "Regjistro mbarimin kur të ktheheni" : "Nisni kohën e pushimit"}
-                  </p>
-                </div>
-              </div>
 
-              {!activeBreak ? (
-                <button 
-                  onClick={startBreak}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 rounded-xl text-[10px] font-black uppercase text-white tracking-wider flex items-center gap-1 active:scale-95 transition-all"
-                >
-                  <Coffee className="w-3.5 h-3.5" /> Nis Pauzën
-                </button>
-              ) : (
-                <button 
-                  onClick={endBreak}
-                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl text-[10px] font-black uppercase text-white tracking-wider flex items-center gap-1 active:scale-95 transition-all"
-                >
-                  <Check className="w-3.5 h-3.5" /> Mbyll Pauzën
-                </button>
-              )}
-            </div>
-          )}
 
           {/* 5. Big Exit / Close Day button */}
           {currentAttendance?.checkIn && !currentAttendance?.checkOut && (
