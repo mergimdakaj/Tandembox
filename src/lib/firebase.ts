@@ -13,17 +13,18 @@ import {
 
 // Support dynamic configurations via standard Vite environment variables for custom deployment (e.g. Vercel)
 const firebaseConfig = {
-  apiKey: ((import.meta as any).env?.VITE_FIREBASE_API_KEY as string) || "AIzaSyASd916xba2C7RfJSNifeuv_gzuQDp-ohU",
-  authDomain: ((import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN as string) || "gen-lang-client-0824386898.firebaseapp.com",
-  projectId: ((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID as string) || "gen-lang-client-0824386898",
-  storageBucket: ((import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET as string) || "gen-lang-client-0824386898.firebasestorage.app",
-  messagingSenderId: ((import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || "560498468072",
-  appId: ((import.meta as any).env?.VITE_FIREBASE_APP_ID as string) || "1:560498468072:web:cfb3c65432f7296cc3d55d"
+  apiKey: ((import.meta as any).env?.VITE_FIREBASE_API_KEY as string) || "AIzaSyBw5D_zEoST0LfI5b3KwBJN-93LlHLuARM",
+  authDomain: ((import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN as string) || "gen-lang-client-0460187845.firebaseapp.com",
+  projectId: ((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID as string) || "gen-lang-client-0460187845",
+  storageBucket: ((import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET as string) || "gen-lang-client-0460187845.firebasestorage.app",
+  messagingSenderId: ((import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || "832520150761",
+  appId: ((import.meta as any).env?.VITE_FIREBASE_APP_ID as string) || "1:832520150761:web:c908f6cb8b9643821e5a78",
+  firestoreDatabaseId: ((import.meta as any).env?.VITE_FIREBASE_DATABASE_ID as string) || "ai-studio-982785fb-cf0e-43b3-aeaa-09d43b58f9af"
 };
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 // Operational Types as per SKILL.md specs
 export enum OperationType {

@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming(req) {
+      return req.resource.data;
+    }
+
+    // Validation for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role']) 
+        && data.uid is string && data.uid.size() <= 128
+        && data.name is string && data.name.size() <= 128
+        && data.email is string && data.email.size() <= 128
+        && (data.role == 'admin' || data.role == 'employee');
+    }
+
+    // Validation for TaskRecord
+    function isValidTaskRecord(data) {
+      return data.keys().hasAll(['userId', 'text', 'completed', 'date'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.text is string && data.text.size() <= 1000
+        && data.completed is bool
+        && data.date is string && data.date.size() <= 32;
+    }
+
+    // Validation for AttendanceRecord
+    function isValidAttendanceRecord(data) {
+      return data.keys().hasAll(['userId', 'date', 'status'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.date is string && data.date.size() <= 32
+        && (data.status == 'present' || data.status == 'absent' || data.status == 'vacation' || data.status == 'half-day' || data.status == 'holiday');
+    }
+
+    // Validation for BreakRecord
+    function isValidBreakRecord(data) {
+      return data.keys().hasAll(['userId', 'attendanceId', 'startTime'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.attendanceId is string && data.attendanceId.size() <= 128
+        && data.startTime is string && data.startTime.size() <= 64;
+    }
+
+    // Validation for ExpenseRecord
+    function isValidExpenseRecord(data) {
+      return data.keys().hasAll(['userId', 'date', 'amount', 'description', 'category'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.date is string && data.date.size() <= 32
+        && (data.amount is number || data.amount is int)
+        && data.description is string && data.description.size() <= 2000
+        && data.category is string && data.category.size() <= 128;
+    }
+
+    // Validation for NotificationRecord
+    function isValidNotificationRecord(data) {
+      return data.keys().hasAll(['title', 'message', 'date'])
+        && data.title is string && data.title.size() <= 256
+        && data.message is string && data.message.size() <= 5000
+        && data.date is string && data.date.size() <= 64;
+    }
+
+    // Rules for each collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId) && isValidUserProfile(incoming(request));
+    }
+
+    match /tasks/{taskId} {
+      allow read: if true;
+      allow write: if isValidId(taskId) && isValidTaskRecord(incoming(request));
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if true;
+      allow write: if isValidId(attendanceId) && isValidAttendanceRecord(incoming(request));
+    }
+
+    match /breaks/{breakId} {
+      allow read: if true;
+      allow write: if isValidId(breakId) && isValidBreakRecord(incoming(request));
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if true;
+      allow write: if isValidId(expenseId) && isValidExpenseRecord(incoming(request));
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow write: if isValidId(notificationId) && isValidNotificationRecord(incoming(request));
+    }
+  }
+}
