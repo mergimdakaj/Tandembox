@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Lock, Mail, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ArrowLeft, Database, Download } from 'lucide-react';
 import { useAuth } from '../App';
 
 interface LoginProps {
@@ -8,11 +8,13 @@ interface LoginProps {
 }
 
 export function Login({ onBack }: LoginProps) {
-  const { login } = useAuth();
+  const { login, showToast } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importString, setImportString] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
