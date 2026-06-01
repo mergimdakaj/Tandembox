@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { useAuth } from '../App';
+import { cn } from '../lib/utils';
 import { 
   UserPlus, 
   Search, 
@@ -8,7 +9,13 @@ import {
   X, 
   Shield, 
   User as UserIcon,
-  Plus
+  Plus,
+  Database,
+  RefreshCw,
+  CheckCircle2,
+  CloudLightning,
+  UploadCloud,
+  DownloadCloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -17,14 +24,18 @@ interface StaffUser extends UserProfile {
 }
 
 export function AdminPanel() {
-  const { profile } = useAuth();
+  const { 
+    profile, 
+    firebaseConnected, 
+    syncing, 
+    triggerManualSyncUp, 
+    triggerManualSyncDown 
+  } = useAuth();
   const [employees, setEmployees] = useState<StaffUser[]>([]);
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   
   const [newName, setNewName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newUid, setNewUid] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'employee'>('employee');
   const [newPassword, setNewPassword] = useState('admin');
 
@@ -56,12 +67,21 @@ export function AdminPanel() {
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || !newEmail || !newUid) return;
+    if (!newName) return;
+
+    // Auto-generate uid and email by slugifying the name (e.g. Alban Berisha -> alban.berisha)
+    const normalized = newName.toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '.');
+
+    const generatedUid = normalized || `user-${Date.now()}`;
+    const generatedEmail = `${generatedUid}@primelink.com`;
 
     const newUser: StaffUser = {
-      uid: newUid,
+      uid: generatedUid,
       name: newName,
-      email: newEmail,
+      email: generatedEmail,
       role: newRole,
       password: newPassword,
       createdAt: new Date().toISOString(),
@@ -76,8 +96,6 @@ export function AdminPanel() {
     // Reset Form
     setShowAdd(false);
     setNewName('');
-    setNewEmail('');
-    setNewUid('');
     setNewPassword('admin');
   };
 
@@ -97,14 +115,85 @@ export function AdminPanel() {
   };
 
   const filteredEmployees = employees.filter(e => 
-    e.name.toLowerCase().includes(search.toLowerCase()) || 
-    e.email.toLowerCase().includes(search.toLowerCase())
+    (e.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (e.email || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const isAdmin = profile?.role === 'admin';
 
   return (
     <div className="space-y-6">
+      {/* Firebase Cloud Sync Status Card */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-[#121324] rounded-3xl p-5 text-white border border-slate-800 shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-[180px] h-[180px] bg-indigo-500/10 rounded-full blur-[45px] pointer-events-none" />
+        <div className="flex items-start justify-between relative z-10 gap-3">
+          <div className="space-y-1 min-w-0">
+            <span className="text-[9px] font-black uppercase tracking-widest text-[#a599ff]">Integrimi Firebase</span>
+            <h3 className="text-base font-black tracking-tight flex items-center gap-1.5 leading-tight">
+              <Database className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span className="truncate">gen-lang-client-0824386898</span>
+            </h3>
+            <p className="text-[10.5px] leading-snug max-w-[280px] text-slate-300">
+              Të dhënat tuaja po ruhen në kohë reale brenda databazës Firestore të Firebase!
+            </p>
+          </div>
+          
+          <div className="flex-shrink-0">
+            {firebaseConnected ? (
+              <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-black tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 animate-pulse text-emerald-400 shrink-0" /> AKTIV
+              </span>
+            ) : (
+              <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1">
+                <CloudLightning className="w-3.5 h-3.5 text-amber-400 shrink-0" /> LOCAL
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-slate-900/60 flex items-center justify-between gap-2 relative z-10">
+          <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1 min-w-0">
+            <RefreshCw className={cn("w-3 h-3 text-indigo-400 shrink-0", syncing && "animate-spin")} />
+            <span className="truncate">{syncing ? "Duke sinkronizuar cloud-in..." : "Lidhja me databazën është e sigurt"}</span>
+          </p>
+          
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={async () => {
+                try {
+                  await triggerManualSyncDown();
+                  alert("Të dhënat u shkarkuan me sukses nga Firebase Firestore!");
+                } catch (e) {
+                  alert("Gabim gjatë shkarkimit nga Firebase!");
+                }
+              }}
+              disabled={syncing}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/65 rounded-xl text-[9px] font-black transition-all disabled:opacity-50 hover:text-white cursor-pointer"
+              title="Shkarko ndryshimet nga cloudi"
+            >
+              <DownloadCloud className="w-3 h-3 text-indigo-400" /> SHKARKO
+            </button>
+            <button
+              onClick={async () => {
+                const conf = window.confirm("A dëshironi të ngarkoni të gjitha të dhënat lokale në Firebase Firestore?");
+                if (!conf) return;
+                try {
+                  await triggerManualSyncUp();
+                  alert("Të gjitha të dhënat lokale u ngarkuan dhe u sinkronizuan me sukses në Firestore!");
+                } catch (e) {
+                  alert("Gabim gjatë sinkronizimit në Firestore!");
+                }
+              }}
+              disabled={syncing}
+              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[9px] font-black tracking-wider transition-all disabled:opacity-50 cursor-pointer"
+              title="Ngarko të gjithë bazën lokale në Firestore të Firebase"
+            >
+              <UploadCloud className="w-3 h-3" /> SINKRONIZO
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Page Title & Search Section */}
       <div className="flex items-center justify-between">
         <div>
@@ -154,10 +243,10 @@ export function AdminPanel() {
                       {emp.name}
                     </h4>
                     <p className="text-slate-400 text-xs font-semibold mt-0.5 leading-none">
-                      @{emp.email} <span className="mx-1">|</span> <span className="capitalize">{emp.role === 'admin' ? 'Administrator' : 'Punonjës'}</span>
+                      <span className="capitalize">{emp.role === 'admin' ? 'Administrator' : 'Punonjës'}</span>
                     </p>
                     <p className="text-[#594fd7] text-xs font-semibold mt-1.5 bg-[#f3f2ff] px-2.5 py-1 rounded-xl inline-block leading-none">
-                      Fjalëkalimi: {emp.password || 'admin'}
+                      Përdoruesi: <span className="font-extrabold">{emp.uid}</span> | Fjalëkalimi: {emp.password || 'admin'}
                     </p>
                   </div>
                 </div>
@@ -205,36 +294,12 @@ export function AdminPanel() {
 
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Emri i Plotë</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Emri i Plotë (Përdoruesi)</label>
                   <input 
                     type="text" 
                     placeholder="p.sh. Alban Berisha"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 outline-none focus:ring-2 focus:ring-[#4239b3] font-bold"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Përdoruesi / Emaili</label>
-                  <input 
-                    type="text" 
-                    placeholder="p.sh. alban"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 outline-none focus:ring-2 focus:ring-[#4239b3] font-bold"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ID Unike (UID)</label>
-                  <input 
-                    type="text" 
-                    placeholder="p.sh. alban-id"
-                    value={newUid}
-                    onChange={(e) => setNewUid(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 outline-none focus:ring-2 focus:ring-[#4239b3] font-bold"
                     required
                   />

@@ -21,7 +21,38 @@ export function Login({ onBack }: LoginProps) {
     
     // Simulate API delay
     setTimeout(() => {
-      if (username === 'mergim' && password === 'mergim') {
+      // Load all registered users from local state (which syncs with Firestore)
+      const users = JSON.parse(localStorage.getItem('pl_users') || '[]');
+      
+      const inputVal = username.toLowerCase().trim();
+      const inputNoSpaces = inputVal.replace(/\s+/g, '');
+      const inputPass = password.trim();
+
+      const matchedUser = users.find((u: any) => {
+        if (!u) return false;
+        
+        const uEmail = String(u.email || '').toLowerCase().trim();
+        const uUid = String(u.uid || '').toLowerCase().trim();
+        const uName = String(u.name || '').toLowerCase().trim();
+        const uNameNoSpaces = uName.replace(/\s+/g, '');
+        
+        // Match conditions:
+        const matchEmail = uEmail === inputVal;
+        const matchUid = uUid === inputVal || uUid.replace(/\./g, '') === inputNoSpaces;
+        const matchName = uName === inputVal || uNameNoSpaces === inputNoSpaces;
+        
+        // Also allow first name match if they just write their first name (e.g. "alban" instead of "Alban Berisha")
+        const firstName = uName.split(' ')[0] || '';
+        const matchFirstName = firstName && firstName === inputVal;
+
+        // Check if matching credentials
+        const credentialsMatch = matchEmail || matchUid || matchName || matchFirstName;
+        const passMatch = String(u.password || '').trim() === inputPass;
+
+        return credentialsMatch && passMatch;
+      });
+
+      if ((inputVal === 'mergim' || inputVal === 'mergim-id') && inputPass === 'mergim') {
         login(
           { uid: 'mergim-id', email: 'mergim@primelink.com' },
           { 
@@ -30,6 +61,17 @@ export function Login({ onBack }: LoginProps) {
             email: 'mergim@primelink.com', 
             role: 'admin',
             createdAt: new Date().toISOString() 
+          }
+        );
+      } else if (matchedUser) {
+        login(
+          { uid: matchedUser.uid, email: matchedUser.email },
+          {
+            uid: matchedUser.uid,
+            name: matchedUser.name,
+            email: matchedUser.email,
+            role: matchedUser.role,
+            createdAt: matchedUser.createdAt || new Date().toISOString()
           }
         );
       } else {

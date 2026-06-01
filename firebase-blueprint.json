@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "employee"] },
+        "password": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "TaskRecord": {
+      "title": "TaskRecord",
+      "description": "A task assigned to a user for a specific date",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "text": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "date": { "type": "string" }
+      },
+      "required": ["userId", "text", "completed", "date"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Daily employee attendance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "checkIn": { "type": "string" },
+        "checkOut": { "type": "string" },
+        "status": { "type": "string", "enum": ["present", "absent", "vacation", "half-day", "holiday"] },
+        "isSaturday": { "type": "boolean" },
+        "note": { "type": "string" },
+        "overtimeHours": { "type": "number" }
+      },
+      "required": ["userId", "date", "status"]
+    },
+    "BreakRecord": {
+      "title": "BreakRecord",
+      "description": "An attendance break",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "attendanceId": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" }
+      },
+      "required": ["userId", "attendanceId", "startTime"]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "An expense record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["userId", "date", "amount", "description", "category"]
+    },
+    "NotificationRecord": {
+      "title": "NotificationRecord",
+      "description": "A system notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string" },
+        "readBy": { "type": "array" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "message", "date"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "UserProfile",
+      "description": "Contains user profiles with roles"
+    },
+    "tasks": {
+      "schema": "TaskRecord",
+      "description": "Daily employee task lists"
+    },
+    "attendance": {
+      "schema": "AttendanceRecord",
+      "description": "Employee check-in/check-out and attendance statuses"
+    },
+    "breaks": {
+      "schema": "BreakRecord",
+      "description": "Break records linked to attendance"
+    },
+    "expenses": {
+      "schema": "ExpenseRecord",
+      "description": "Material or project expenses"
+    },
+    "notifications": {
+      "schema": "NotificationRecord",
+      "description": "Global notices"
+    }
+  }
+}

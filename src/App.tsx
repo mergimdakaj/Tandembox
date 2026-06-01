@@ -24,6 +24,13 @@ import { Landing } from './components/Landing';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
 import { cn } from './lib/utils';
 import { format, addDays } from 'date-fns';
+import { 
+  testFirebaseConnection, 
+  syncAllFromFirebase, 
+  syncAllToFirebase, 
+  initSyncCache, 
+  syncLocalChangesToFirebase 
+} from './lib/firebase';
 
 type View = 'dashboard' | 'calendar' | 'notifications' | 'expenses' | 'admin';
 type AppMode = 'portal' | 'work-management' | 'calculator';
@@ -34,6 +41,10 @@ interface AuthContextType {
   loading: boolean;
   login: (user: { uid: string; email: string }, profile: UserProfile) => void;
   logout: () => void;
+  firebaseConnected: boolean;
+  syncing: boolean;
+  triggerManualSyncUp: () => Promise<void>;
+  triggerManualSyncDown: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -41,7 +52,11 @@ const AuthContext = createContext<AuthContextType>({
   profile: null, 
   loading: true,
   login: () => {},
-  logout: () => {}
+  logout: () => {},
+  firebaseConnected: false,
+  syncing: false,
+  triggerManualSyncUp: async () => {},
+  triggerManualSyncDown: async () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -60,6 +75,9 @@ export default function App() {
   const [uncompletedTasksCount, setUncompletedTasksCount] = useState(0);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
   useEffect(() => {
     const savedUser = localStorage.getItem('pl_user');
     const savedProfile = localStorage.getItem('pl_profile');
@@ -71,6 +89,63 @@ export default function App() {
     }
     setLoading(false);
   }, []);
+
+  // Synchronize with Firebase Firestore
+  useEffect(() => {
+    async function initFirebaseSync() {
+      const isConnected = await testFirebaseConnection();
+      setFirebaseConnected(isConnected);
+      if (isConnected) {
+        setSyncing(true);
+        try {
+          // Pull down any fresh cloud data from Firebase
+          await syncAllFromFirebase();
+          console.log("Firebase connection established and database pulled down!");
+        } catch (e) {
+          console.error("Initial sync down failed, starting in cached offline mode:", e);
+        } finally {
+          setSyncing(false);
+        }
+      }
+      
+      // Initialize our memory change-tracker cache
+      initSyncCache();
+
+      // Listen for local writes (which emit standard 'storage' event) and mirror them to Firestore!
+      const handleSyncTrigger = async () => {
+        try {
+          await syncLocalChangesToFirebase();
+        } catch (err) {
+          console.error("Failed to push changes to Firebase:", err);
+        }
+      };
+
+      window.addEventListener('storage', handleSyncTrigger);
+      return () => {
+        window.removeEventListener('storage', handleSyncTrigger);
+      };
+    }
+
+    initFirebaseSync();
+  }, []);
+
+  const triggerManualSyncUp = async () => {
+    setSyncing(true);
+    try {
+      await syncAllToFirebase();
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const triggerManualSyncDown = async () => {
+    setSyncing(true);
+    try {
+      await syncAllFromFirebase();
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Listen to storage sync events to dynamically drive real-time counter changes
   useEffect(() => {
@@ -363,7 +438,17 @@ export default function App() {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      login, 
+      logout,
+      firebaseConnected,
+      syncing,
+      triggerManualSyncUp,
+      triggerManualSyncDown
+    }}>
       {renderContent()}
     </AuthContext.Provider>
   );
