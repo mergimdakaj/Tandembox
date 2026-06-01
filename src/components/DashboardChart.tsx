@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../App';
 import { AttendanceRecord } from '../types';
 import { 
   format, 
   startOfMonth, 
   endOfMonth, 
   eachDayOfInterval, 
-  getWeekOfMonth 
+  getWeekOfMonth,
+  parseISO
 } from 'date-fns';
 import { 
   ResponsiveContainer, 
@@ -15,9 +17,7 @@ import {
   YAxis, 
   Tooltip, 
   Legend, 
-  CartesianGrid,
-  AreaChart,
-  Area
+  CartesianGrid
 } from 'recharts';
 import { 
   Clock, 
@@ -26,7 +26,8 @@ import {
   BarChart3, 
   CalendarDays,
   Target,
-  Award
+  Award,
+  User
 } from 'lucide-react';
 
 interface DashboardChartProps {
@@ -35,7 +36,53 @@ interface DashboardChartProps {
 }
 
 export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
+  const { user } = useAuth();
   const [viewType, setViewType] = useState<'weekly' | 'daily'>('weekly');
+  
+  // Selection states for administrators
+  const isAdmin = user?.role === 'admin';
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      setSelectedUserId(user.uid);
+    }
+  }, [user]);
+
+  // Load registered users and update full attendance
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      const storedUsers = JSON.parse(localStorage.getItem('pl_users') || '[]');
+      const list = [...storedUsers];
+      
+      // Ensure current user is in list 
+      if (user && !list.some(u => u.uid === user.uid)) {
+        list.push({ uid: user.uid, name: user.name || 'Përdorues', email: user.email });
+      }
+      
+      // Ensure mergim-id fallback exists
+      if (!list.some(u => u.uid === 'mergim-id')) {
+        list.push({ uid: 'mergim-id', name: 'Mergim', email: 'mergim@primelink.com' });
+      }
+
+      setEmployees(list);
+
+      const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
+      setAllAttendance(attendance);
+    };
+
+    handleStorageUpdate();
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => window.removeEventListener('storage', handleStorageUpdate);
+  }, [user]);
+
+  // Determine active records based on selected user or generic props
+  const activeMonthStr = format(selectedDate, 'yyyy-MM');
+  const activeRecords = isAdmin && selectedUserId
+    ? allAttendance.filter(r => r.userId === selectedUserId && r.date.startsWith(activeMonthStr))
+    : records;
 
   // Calculates regular & overtime hours for a given attendance record
   const calculateHours = (record: AttendanceRecord) => {
@@ -65,8 +112,8 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
   };
 
   // Compile monthly statistics
-  const totalRegular = records.reduce((sum, r) => sum + calculateHours(r).regular, 0);
-  const totalOvertime = records.reduce((sum, r) => sum + calculateHours(r).overtime, 0);
+  const totalRegular = activeRecords.reduce((sum, r) => sum + calculateHours(r).regular, 0);
+  const totalOvertime = activeRecords.reduce((sum, r) => sum + calculateHours(r).overtime, 0);
   const totalWorked = totalRegular + totalOvertime;
   
   // Weekly aggregation code
@@ -86,7 +133,7 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
 
   daysInMonth.forEach(day => {
     const dateStr = format(day, 'yyyy-MM-dd');
-    const record = records.find(r => r.date === dateStr);
+    const record = activeRecords.find(r => r.date === dateStr);
     const weekNum = getWeekOfMonth(day, { weekStartsOn: 1 }); // Monday start
 
     if (record) {
@@ -110,10 +157,9 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
     .filter(item => item['Orë Pune'] > 0 || item['Orë Shtesë'] > 0);
 
   // Daily chronological aggregation code 
-  const dailyChartData = records
+  const dailyChartData = activeRecords
     .map(record => {
       const { regular, overtime } = calculateHours(record);
-      // Format to "04/06" standard Albanian list index
       let dayLabel = '';
       try {
         dayLabel = format(new Date(record.date + 'T12:00:00'), 'dd/MM');
@@ -157,7 +203,7 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
   return (
     <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100/60">
-        <div>
+        <div className="space-y-1">
           <h4 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-[#4239b3]" />
             Analiza e Orëve të Punës
@@ -167,28 +213,48 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
           </p>
         </div>
 
-        {/* View Toggle (Weekly / Daily) */}
-        <div className="flex items-center p-1 bg-slate-50 border border-slate-200/50 rounded-xl self-start">
-          <button
-            onClick={() => setViewType('weekly')}
-            className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wider uppercase transition-all flex items-center gap-1.5 ${
-              viewType === 'weekly'
-                ? 'bg-white text-[#4239b3] shadow-xs border border-slate-100'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <CalendarDays className="w-3 h-3" /> Javore
-          </button>
-          <button
-            onClick={() => setViewType('daily')}
-            className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wider uppercase transition-all flex items-center gap-1.5 ${
-              viewType === 'daily'
-                ? 'bg-white text-[#4239b3] shadow-xs border border-slate-100'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <BarChart3 className="w-3 h-3" /> Ditore
-          </button>
+        {/* Administrator profile Selector Dropdown */}
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <div className="flex items-center gap-2 bg-[#f4f2ff] border border-indigo-100 rounded-xl px-3.5 py-1.5">
+              <User className="w-3.5 h-3.5 text-[#4239b3]" />
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="bg-transparent text-[10px] font-black text-[#4239b3] uppercase tracking-wider outline-none cursor-pointer"
+              >
+                {employees.map(emp => (
+                  <option key={emp.uid} value={emp.uid}>
+                    {emp.name || emp.email || emp.uid}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* View Toggle (Weekly / Daily) */}
+          <div className="flex items-center p-1 bg-slate-50 border border-slate-200/50 rounded-xl">
+            <button
+              onClick={() => setViewType('weekly')}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                viewType === 'weekly'
+                  ? 'bg-white text-[#4239b3] shadow-xs border border-slate-100'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <CalendarDays className="w-3 h-3" /> Javore
+            </button>
+            <button
+              onClick={() => setViewType('daily')}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                viewType === 'daily'
+                  ? 'bg-white text-[#4239b3] shadow-xs border border-slate-100'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <BarChart3 className="w-3 h-3" /> Ditore
+            </button>
+          </div>
         </div>
       </div>
 
@@ -230,7 +296,7 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
           <Award className="w-8 h-8 text-slate-300 mb-2" />
           <h5 className="text-xs font-bold text-slate-400">Nuk ka të dhëna për këtë muaj</h5>
           <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">
-            Hapni orarin ose regjistroni hyrje-daljet për të vizualizuar krahasimin.
+            Nuk ka hyrje-dalje të regjistruara për periudhën e përzgjedhur.
           </p>
         </div>
       ) : (

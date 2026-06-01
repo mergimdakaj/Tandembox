@@ -326,171 +326,175 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
     <div className="space-y-6">
 
       {/* NOTIFICATION BOX PREMIUM ALERT (QKA NUK KOM KRY) */}
-      <AnimatePresence>
-        {allUncompletedTasks.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-amber-50/90 border border-amber-200/80 rounded-[28px] p-5 space-y-3 shadow-md shadow-amber-500/5 relative overflow-hidden"
-          >
-            {/* Ambient decorative warning highlight indicator gradient */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
+      {user?.role === 'admin' && (
+        <AnimatePresence>
+          {allUncompletedTasks.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-amber-50/90 border border-amber-200/80 rounded-[28px] p-5 space-y-3 shadow-md shadow-amber-500/5 relative overflow-hidden"
+            >
+              {/* Ambient decorative warning highlight indicator gradient */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/5 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0 animate-pulse mt-0.5">
-                <AlertCircle className="w-5 h-5 stroke-[2.5]" />
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 flex-shrink-0 animate-pulse mt-0.5">
+                  <AlertCircle className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider leading-snug">
+                    Njoftim: Detyra të Pakryera!
+                  </h4>
+                  <p className="text-[10px] font-semibold text-amber-600 mt-0.5 leading-tight">
+                    Keni <span className="font-extrabold text-amber-700">{allUncompletedTasks.length} detyra</span> të papërfunduara në total. Klikoni mbi to për të shkuar te data ose kryejini direkt këtu:
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider leading-snug">
-                  Njoftim: Detyra të Pakryera!
-                </h4>
-                <p className="text-[10px] font-semibold text-amber-600 mt-0.5 leading-tight">
-                  Keni <span className="font-extrabold text-amber-700">{allUncompletedTasks.length} detyra</span> të papërfunduara në total. Klikoni mbi to për të shkuar te data ose kryejini direkt këtu:
-                </p>
-              </div>
-            </div>
 
-            {/* List of uncompleted tasks scrollable */}
-            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-              {allUncompletedTasks.map((task) => {
-                const taskDateParsed = new Date(task.date);
-                const isSelectedDate = task.date === dateStr;
+              {/* List of uncompleted tasks scrollable */}
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {allUncompletedTasks.map((task) => {
+                  const taskDateParsed = new Date(task.date);
+                  const isSelectedDate = task.date === dateStr;
 
-                return (
-                  <div 
-                    key={task.id}
-                    className={cn(
-                      "flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors",
-                      isSelectedDate 
-                        ? "bg-[#fff9eb] border-amber-200/60" 
-                        : "bg-white/80 border-slate-100 hover:border-amber-200/40"
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5 w-5/6">
-                      <button 
-                        onClick={() => toggleTask(task.id)}
-                        className="w-4.5 h-4.5 rounded-full border border-amber-400 bg-white hover:bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 transition-colors"
-                        title="Shëno si të kryer"
-                      >
-                        <Check className="w-3 h-3 stroke-[3.5]" />
-                      </button>
+                  return (
+                    <div 
+                      key={task.id}
+                      className={cn(
+                        "flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors",
+                        isSelectedDate 
+                          ? "bg-[#fff9eb] border-amber-200/60" 
+                          : "bg-white/80 border-slate-100 hover:border-amber-200/40"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 w-5/6">
+                        <button 
+                          onClick={() => toggleTask(task.id)}
+                          className="w-4.5 h-4.5 rounded-full border border-amber-400 bg-white hover:bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 transition-colors"
+                          title="Shëno si të kryer"
+                        >
+                          <Check className="w-3 h-3 stroke-[3.5]" />
+                        </button>
+
+                        <span 
+                          onClick={() => {
+                            const parsed = new Date(task.date + "T12:00:00");
+                            setSelectedDate(parsed);
+                          }}
+                          className="font-bold text-slate-700 hover:text-amber-700 cursor-pointer break-all truncate text-[11px] select-none"
+                          title="Zgjidh këtë datë"
+                        >
+                          {task.text}
+                        </span>
+                      </div>
 
                       <span 
                         onClick={() => {
                           const parsed = new Date(task.date + "T12:00:00");
                           setSelectedDate(parsed);
                         }}
-                        className="font-bold text-slate-700 hover:text-amber-700 cursor-pointer break-all truncate text-[11px] select-none"
-                        title="Zgjidh këtë datë"
+                        className={cn(
+                          "text-[9px] font-black px-1.5 py-0.5 rounded-lg border flex-shrink-0 select-none cursor-pointer uppercase tracking-wider font-mono",
+                          isSelectedDate 
+                            ? "bg-amber-100 text-amber-700 border-amber-200" 
+                            : "bg-slate-100 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-100"
+                        )}
                       >
-                        {task.text}
+                        {format(taskDateParsed, 'dd/MM')}
                       </span>
                     </div>
-
-                    <span 
-                      onClick={() => {
-                        const parsed = new Date(task.date + "T12:00:00");
-                        setSelectedDate(parsed);
-                      }}
-                      className={cn(
-                        "text-[9px] font-black px-1.5 py-0.5 rounded-lg border flex-shrink-0 select-none cursor-pointer uppercase tracking-wider font-mono",
-                        isSelectedDate 
-                          ? "bg-amber-100 text-amber-700 border-amber-200" 
-                          : "bg-slate-100 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-100"
-                      )}
-                    >
-                      {format(taskDateParsed, 'dd/MM')}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* DETYRAT DITORE CHECKLIST (Placed at the top) */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-          <div>
-            <h4 className="text-base font-black text-slate-800 tracking-tight">Detyrat Ditore</h4>
-            <p className="text-slate-400 text-[10px] font-semibold">Projektet për gjatë ditës së zgjedhur.</p>
+      {user?.role === 'admin' && (
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+            <div>
+              <h4 className="text-base font-black text-slate-800 tracking-tight">Detyrat Ditore</h4>
+              <p className="text-slate-400 text-[10px] font-semibold">Projektet për gjatë ditës së zgjedhur.</p>
+            </div>
+            
+            <span className="text-[10px] font-black text-indigo-600 bg-[#f3f2ff] border border-[#e6e4ff] px-2.5 py-1 rounded-xl leading-none">
+              {tasks.length > 0 ? `${completedTasksCount}/${tasks.length} Kryer` : '0 Puna'}
+            </span>
           </div>
-          
-          <span className="text-[10px] font-black text-indigo-600 bg-[#f3f2ff] border border-[#e6e4ff] px-2.5 py-1 rounded-xl leading-none">
-            {tasks.length > 0 ? `${completedTasksCount}/${tasks.length} Kryer` : '0 Puna'}
-          </span>
-        </div>
 
-        {/* Dynamic Task List */}
-        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-          {tasks.map((task) => (
-            <div 
-              key={task.id}
-              className={cn(
-                "flex items-center justify-between p-3.5 rounded-2xl border transition-all hover:bg-slate-50/50 Group",
-                task.completed ? "bg-slate-50 border-slate-100/65 opacity-65" : "bg-white border-slate-100"
-              )}
-            >
-              <div className="flex items-center gap-3 w-5/6">
-                {/* Custom circular checkbox trigger */}
-                <button 
-                  onClick={() => toggleTask(task.id)}
-                  className={cn(
-                    "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all duration-200 active:scale-90",
-                    task.completed 
-                      ? "bg-indigo-600 border-indigo-700 text-white" 
-                      : "border-slate-300 bg-white hover:border-slate-400"
-                  )}
-                >
-                  {task.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                </button>
-
-                <span className={cn(
-                  "text-xs font-semibold leading-tight break-all cursor-pointer select-none",
-                  task.completed ? "text-slate-400 line-through" : "text-slate-700"
+          {/* Dynamic Task List */}
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            {tasks.map((task) => (
+              <div 
+                key={task.id}
+                className={cn(
+                  "flex items-center justify-between p-3.5 rounded-2xl border transition-all hover:bg-slate-50/50 Group",
+                  task.completed ? "bg-slate-50 border-slate-100/65 opacity-65" : "bg-white border-slate-100"
                 )}
-                onClick={() => toggleTask(task.id)}
-                >
-                  {task.text}
-                </span>
-              </div>
-
-              <button 
-                onClick={() => deleteTask(task.id)}
-                className="text-slate-300 hover:text-rose-500 p-1 rounded-lg transition-colors ml-2"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-3 w-5/6">
+                  {/* Custom circular checkbox trigger */}
+                  <button 
+                    onClick={() => toggleTask(task.id)}
+                    className={cn(
+                      "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-all duration-200 active:scale-90",
+                      task.completed 
+                        ? "bg-indigo-600 border-indigo-700 text-white" 
+                        : "border-slate-300 bg-white hover:border-slate-400"
+                    )}
+                  >
+                    {task.completed && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </button>
 
-          {tasks.length === 0 && (
-            <div className="text-center py-6 text-slate-300 italic text-xs">
-              S'ka detyra të regjistruara për këtë datë.
-            </div>
-          )}
+                  <span className={cn(
+                    "text-xs font-semibold leading-tight break-all cursor-pointer select-none",
+                    task.completed ? "text-slate-400 line-through" : "text-slate-700"
+                  )}
+                  onClick={() => toggleTask(task.id)}
+                  >
+                    {task.text}
+                  </span>
+                </div>
+
+                <button 
+                  onClick={() => deleteTask(task.id)}
+                  className="text-slate-300 hover:text-rose-500 p-1 rounded-lg transition-colors ml-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+
+            {tasks.length === 0 && (
+              <div className="text-center py-6 text-slate-300 italic text-xs">
+                S'ka detyra të regjistruara për këtë datë.
+              </div>
+            )}
+          </div>
+
+          {/* Input adding Form */}
+          <form onSubmit={handleAddTask} className="flex gap-2 pt-2">
+            <input 
+              type="text" 
+              placeholder="Shkruani një detyrë të re..."
+              value={newTaskText}
+              onChange={(e) => setNewTaskText(e.target.value)}
+              className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 placeholder-slate-400 text-xs font-medium outline-none focus:bg-white focus:border-[#4239b3] focus:ring-1 focus:ring-[#4239b3]/20 transition-all font-sans"
+              required
+            />
+            <button 
+              type="submit"
+              className="w-10 h-10 rounded-full bg-[#4239b3] text-white flex items-center justify-center hover:bg-[#342caa] transition-all active:scale-95 flex-shrink-0"
+            >
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+            </button>
+          </form>
         </div>
-
-        {/* Input adding Form */}
-        <form onSubmit={handleAddTask} className="flex gap-2 pt-2">
-          <input 
-            type="text" 
-            placeholder="Shkruani një detyrë të re..."
-            value={newTaskText}
-            onChange={(e) => setNewTaskText(e.target.value)}
-            className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 placeholder-slate-400 text-xs font-medium outline-none focus:bg-white focus:border-[#4239b3] focus:ring-1 focus:ring-[#4239b3]/20 transition-all font-sans"
-            required
-          />
-          <button 
-            type="submit"
-            className="w-10 h-10 rounded-full bg-[#4239b3] text-white flex items-center justify-center hover:bg-[#342caa] transition-all active:scale-95 flex-shrink-0"
-          >
-            <Plus className="w-5 h-5 stroke-[2.5]" />
-          </button>
-        </form>
-      </div>
+      )}
 
       {/* COMPONENT VIZUAL ME RECHARTS (KRAHASIMI ME OVERTIME) */}
       <DashboardChart records={monthlyRecords} selectedDate={selectedDate} />
@@ -691,7 +695,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
             )}
           >
             <Palmtree className="w-6 h-6 text-emerald-500 mb-1" />
-            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">1 Maj / Festë</span>
+            <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">Festë Zyrtare</span>
             <span className="text-[8px] text-slate-400 font-bold">Pushim me Pagesë</span>
           </button>
         </div>
