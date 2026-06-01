@@ -123,76 +123,7 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Firebase Cloud Sync Status Card */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-[#121324] rounded-3xl p-5 text-white border border-slate-800 shadow-xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-[180px] h-[180px] bg-indigo-500/10 rounded-full blur-[45px] pointer-events-none" />
-        <div className="flex items-start justify-between relative z-10 gap-3">
-          <div className="space-y-1 min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[#a599ff]">Integrimi Firebase</span>
-            <h3 className="text-base font-black tracking-tight flex items-center gap-1.5 leading-tight">
-              <Database className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span className="truncate">gen-lang-client-0824386898</span>
-            </h3>
-            <p className="text-[10.5px] leading-snug max-w-[280px] text-slate-300">
-              Të dhënat tuaja po ruhen në kohë reale brenda databazës Firestore të Firebase!
-            </p>
-          </div>
-          
-          <div className="flex-shrink-0">
-            {firebaseConnected ? (
-              <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-black tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 animate-pulse text-emerald-400 shrink-0" /> AKTIV
-              </span>
-            ) : (
-              <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-black tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1">
-                <CloudLightning className="w-3.5 h-3.5 text-amber-400 shrink-0" /> LOCAL
-              </span>
-            )}
-          </div>
-        </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-900/60 flex items-center justify-between gap-2 relative z-10">
-          <p className="text-[9px] font-bold text-slate-400 flex items-center gap-1 min-w-0">
-            <RefreshCw className={cn("w-3 h-3 text-indigo-400 shrink-0", syncing && "animate-spin")} />
-            <span className="truncate">{syncing ? "Duke sinkronizuar cloud-in..." : "Lidhja me databazën është e sigurt"}</span>
-          </p>
-          
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={async () => {
-                try {
-                  await triggerManualSyncDown();
-                  alert("Të dhënat u shkarkuan me sukses nga Firebase Firestore!");
-                } catch (e) {
-                  alert("Gabim gjatë shkarkimit nga Firebase!");
-                }
-              }}
-              disabled={syncing}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/65 rounded-xl text-[9px] font-black transition-all disabled:opacity-50 hover:text-white cursor-pointer"
-              title="Shkarko ndryshimet nga cloudi"
-            >
-              <DownloadCloud className="w-3 h-3 text-indigo-400" /> SHKARKO
-            </button>
-            <button
-              onClick={async () => {
-                const conf = window.confirm("A dëshironi të ngarkoni të gjitha të dhënat lokale në Firebase Firestore?");
-                if (!conf) return;
-                try {
-                  await triggerManualSyncUp();
-                  alert("Të gjitha të dhënat lokale u ngarkuan dhe u sinkronizuan me sukses në Firestore!");
-                } catch (e) {
-                  alert("Gabim gjatë sinkronizimit në Firestore!");
-                }
-              }}
-              disabled={syncing}
-              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[9px] font-black tracking-wider transition-all disabled:opacity-50 cursor-pointer"
-              title="Ngarko të gjithë bazën lokale në Firestore të Firebase"
-            >
-              <UploadCloud className="w-3 h-3" /> SINKRONIZO
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Page Title & Search Section */}
       <div className="flex items-center justify-between">
@@ -227,17 +158,12 @@ export function AdminPanel() {
         {/* User profile list */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredEmployees.map((emp) => {
-            const initials = emp.name ? emp.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
             return (
               <div 
                 key={emp.uid}
                 className="p-5 bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-4">
-                  {/* Avatar badge */}
-                  <div className="w-12 h-12 rounded-full bg-[#eeeeff] text-[#4239b3] flex items-center justify-center font-black text-sm uppercase flex-shrink-0">
-                    {initials}
-                  </div>
                   <div className="min-w-0">
                     <h4 className="text-base font-black text-slate-800 tracking-tight leading-tight">
                       {emp.name}

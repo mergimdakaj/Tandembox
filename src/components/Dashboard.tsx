@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
 import { AttendanceRecord, BreakRecord, ExpenseRecord } from '../types';
+import { DashboardChart } from './DashboardChart';
+import { LeaveRequestSection } from './LeaveRequestSection';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, 
@@ -51,6 +53,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
 
   // Local state copy for UI sliders/inputs
   const [overtime, setOvertime] = useState(0);
+  const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
@@ -73,6 +76,13 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
         setActiveBreak(null);
       }
 
+      // Load all records for the current month
+      const activeMonthStr = format(selectedDate, 'yyyy-MM');
+      const currentMonthRecords = attendance.filter((r: AttendanceRecord) => 
+        r.userId === user.uid && r.date.startsWith(activeMonthStr)
+      );
+      setMonthlyRecords(currentMonthRecords);
+
       // Load tasks
       const allTasks = JSON.parse(localStorage.getItem('pl_tasks') || '[]');
       const filteredTasks = allTasks.filter((t: TaskRecord) => t.userId === user.uid && t.date === dateStr);
@@ -88,7 +98,7 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
     loadData();
     window.addEventListener('storage', loadData);
     return () => window.removeEventListener('storage', loadData);
-  }, [user, dateStr]);
+  }, [user, dateStr, selectedDate]);
 
   const saveAttendanceRecord = (record: AttendanceRecord) => {
     const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
@@ -481,6 +491,12 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
           </button>
         </form>
       </div>
+
+      {/* COMPONENT VIZUAL ME RECHARTS (KRAHASIMI ME OVERTIME) */}
+      <DashboardChart records={monthlyRecords} selectedDate={selectedDate} />
+
+      {/* SEKSIONI I DEDIKUAR PER PUSHIMET VJETORE */}
+      <LeaveRequestSection />
 
       {/* STATUSI I DITES HEADER BOX */}
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 space-y-6">

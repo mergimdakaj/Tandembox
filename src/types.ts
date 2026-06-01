@@ -38,3 +38,15 @@ export interface BreakRecord {
   startTime: string; // ISO string
   endTime?: string; // ISO string
 }
+
+export interface LeaveRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string; // ISO string
+}
+

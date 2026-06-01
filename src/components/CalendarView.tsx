@@ -255,6 +255,13 @@ export function CalendarView() {
                     </div>
                   )}
 
+                  {record?.status === 'vacation' && (
+                    <div className="bg-sky-50 text-sky-700 p-1.5 rounded-xl border border-sky-100 flex items-center gap-1.5 shadow-sm">
+                      <Palmtree className="w-3 h-3" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">PUSHIM</span>
+                    </div>
+                  )}
+
                   {record?.overtimeHours ? (
                     <div className="flex items-center gap-1 text-[9px] font-black text-indigo-600 bg-indigo-50/50 px-1.5 py-0.5 rounded-lg border border-indigo-100 mt-auto">
                       <Zap className="w-2.5 h-2.5" /> +{record.overtimeHours}h
