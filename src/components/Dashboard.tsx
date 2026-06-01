@@ -493,9 +493,6 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
         </div>
       )}
 
-      {/* COMPONENT VIZUAL ME RECHARTS (KRAHASIMI ME OVERTIME) */}
-      <DashboardChart records={monthlyRecords} selectedDate={selectedDate} />
-
       {/* SEKSIONI I DEDIKUAR PER PUSHIMET VJETORE */}
       <LeaveRequestSection />
 
@@ -674,13 +671,10 @@ export function Dashboard({ selectedDate, setSelectedDate }: DashboardProps) {
           <Sun className="w-5 h-5" /> Regjistro orar të plotë (08:00 - 16:00)
         </button>
       ) : (
-        <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-2xl text-slate-400">
-          <span className="text-[9px] font-black uppercase tracking-wider pl-1.5 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Shënime të ruajtura lokal
-          </span>
+        <div className="flex justify-end text-slate-400">
           <button 
             onClick={handleResetDay}
-            className="text-[9px] font-black uppercase tracking-widest bg-white border border-slate-200 text-slate-500 px-3 py-1.5 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            className="text-[9px] font-black uppercase tracking-widest bg-red-50 border border-red-100 text-red-500 px-3.5 py-1.5 rounded-xl hover:bg-rose-600 hover:text-white hover:border-transparent transition-all active:scale-95 duration-200"
           >
             Reset Ditën
           </button>

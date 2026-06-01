@@ -27,11 +27,16 @@ import {
   CalendarDays,
   Target,
   Award,
-  User
+  User,
+  Coins,
+  Settings2,
+  X,
+  Euro
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface DashboardChartProps {
-  records: AttendanceRecord[];
+  records?: AttendanceRecord[];
   selectedDate: Date;
 }
 
@@ -44,6 +49,52 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [employees, setEmployees] = useState<any[]>([]);
   const [allAttendance, setAllAttendance] = useState<AttendanceRecord[]>([]);
+
+  // Hourly wage rates setup with fallback and state
+  const [normalRate, setNormalRate] = useState<number>(5.00);
+  const [overtimeRate, setOvertimeRate] = useState<number>(7.50);
+  const [showRateModal, setShowRateModal] = useState(false);
+  const [inputNormal, setInputNormal] = useState('5.00');
+  const [inputOvertime, setInputOvertime] = useState('7.50');
+
+  useEffect(() => {
+    if (selectedUserId) {
+      const persistedNormal = localStorage.getItem(`pl_wage_normal_rate_${selectedUserId}`) 
+        || localStorage.getItem('pl_wage_normal_rate') 
+        || '5.00';
+      const persistedOvertime = localStorage.getItem(`pl_wage_overtime_rate_${selectedUserId}`)
+        || localStorage.getItem('pl_wage_overtime_rate')
+        || '7.50';
+      
+      setNormalRate(parseFloat(persistedNormal));
+      setOvertimeRate(parseFloat(persistedOvertime));
+      setInputNormal(persistedNormal);
+      setInputOvertime(persistedOvertime);
+    }
+  }, [selectedUserId]);
+
+  const saveRates = (e: React.FormEvent) => {
+    e.preventDefault();
+    const rateNorm = parseFloat(inputNormal) || 0;
+    const rateOvr = parseFloat(inputOvertime) || 0;
+
+    setNormalRate(rateNorm);
+    setOvertimeRate(rateOvr);
+    
+    if (selectedUserId) {
+      localStorage.setItem(`pl_wage_normal_rate_${selectedUserId}`, rateNorm.toFixed(2));
+      localStorage.setItem(`pl_wage_overtime_rate_${selectedUserId}`, rateOvr.toFixed(2));
+      
+      // Also save as global default if changing own or none specific
+      if (selectedUserId === user?.uid) {
+        localStorage.setItem(`pl_wage_normal_rate`, rateNorm.toFixed(2));
+        localStorage.setItem(`pl_wage_overtime_rate`, rateOvr.toFixed(2));
+      }
+    }
+    
+    window.dispatchEvent(new Event('storage'));
+    setShowRateModal(false);
+  };
 
   useEffect(() => {
     if (user) {
@@ -80,9 +131,9 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
 
   // Determine active records based on selected user or generic props
   const activeMonthStr = format(selectedDate, 'yyyy-MM');
-  const activeRecords = isAdmin && selectedUserId
+  const activeRecords = selectedUserId
     ? allAttendance.filter(r => r.userId === selectedUserId && r.date.startsWith(activeMonthStr))
-    : records;
+    : (records || allAttendance.filter(r => r.userId === user?.uid && r.date.startsWith(activeMonthStr)));
 
   // Calculates regular & overtime hours for a given attendance record
   const calculateHours = (record: AttendanceRecord) => {
@@ -291,6 +342,37 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
         </div>
       </div>
 
+      {/* Paga / Salary Llogaritësi Block */}
+      <div className="bg-indigo-950 text-white rounded-[24px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-indigo-900 shadow-md relative overflow-hidden">
+        {/* Decorative ambient gradient */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="z-10 flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-300 flex-shrink-0 animate-pulse">
+            <Coins className="w-5.5 h-5.5 stroke-[2]" />
+          </div>
+          <div>
+            <span className="text-[9px] font-black uppercase text-indigo-300 tracking-wider flex items-center gap-1.5 leading-none">
+              Paga e Llogaritur ({format(selectedDate, 'MMMM yyyy')})
+            </span>
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-xl sm:text-2xl font-black tracking-tight select-all">
+                € {((totalRegular * normalRate) + (totalOvertime * overtimeRate)).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[10px] font-bold text-indigo-200">
+                (Normale: €{normalRate}/h • Shtesë: €{overtimeRate}/h)
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <button
+          onClick={() => setShowRateModal(true)}
+          className="z-10 bg-white/10 hover:bg-white/15 text-indigo-100 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 active:scale-95 transition-all text-center shrink-0 border border-white/5"
+        >
+          <Settings2 className="w-3.5 h-3.5" /> Vendos Tarifat
+        </button>
+      </div>
+
       {chartData.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
           <Award className="w-8 h-8 text-slate-300 mb-2" />
@@ -350,6 +432,91 @@ export function DashboardChart({ records, selectedDate }: DashboardChartProps) {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Rate Editing Modal */}
+      <AnimatePresence>
+        {showRateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl p-7 border border-slate-100 text-slate-800"
+            >
+              <div className="flex justify-between items-center mb-5 pb-2 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black tracking-tight text-slate-800 flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-indigo-600" /> Tarifat e Pagesës
+                  </h3>
+                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+                    Rregullo pagesën për orë pune për punonjësin
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowRateModal(false)}
+                  className="p-1.5 hover:bg-slate-50 rounded-xl transition-all"
+                >
+                  <X className="w-4 h-4 text-slate-400" />
+                </button>
+              </div>
+
+              <form onSubmit={saveRates} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                    Ora Normale (€/h)
+                  </label>
+                  <div className="relative">
+                    <Euro className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="5.00"
+                      value={inputNormal}
+                      onChange={(e) => setInputNormal(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-5 py-3.5 outline-none focus:ring-2 focus:ring-indigo-600 font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                    Ora Shtesë (Overtime €/h)
+                  </label>
+                  <div className="relative">
+                    <Euro className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      placeholder="7.50"
+                      value={inputOvertime}
+                      onChange={(e) => setInputOvertime(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-5 py-3.5 outline-none focus:ring-2 focus:ring-indigo-600 font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowRateModal(false)}
+                    className="flex-1 py-3 bg-slate-100 text-slate-600 font-black rounded-2xl hover:bg-slate-200 transition-all text-[11px] uppercase tracking-wider"
+                  >
+                    Anulo
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-[#4239b3] text-white font-black rounded-2xl hover:bg-[#342caa] transition-all shadow-lg shadow-[#4239b3]/20 text-[11px] uppercase tracking-wider"
+                  >
+                    Ruaj Tarifat
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

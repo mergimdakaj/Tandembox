@@ -12,7 +12,8 @@ import {
   ArrowLeft,
   Sun,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Coins
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile } from './types';
@@ -24,6 +25,7 @@ import { NotificationsView } from './components/NotificationsView';
 import { Login } from './components/Login';
 import { Landing } from './components/Landing';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
+import { DashboardChart } from './components/DashboardChart';
 import { cn } from './lib/utils';
 import { format, addDays } from 'date-fns';
 import { 
@@ -34,7 +36,7 @@ import {
   syncLocalChangesToFirebase 
 } from './lib/firebase';
 
-type View = 'dashboard' | 'calendar' | 'notifications' | 'expenses' | 'admin';
+type View = 'dashboard' | 'calendar' | 'notifications' | 'expenses' | 'admin' | 'salary';
 type AppMode = 'portal' | 'work-management' | 'calculator';
 
 interface AuthContextType {
@@ -276,6 +278,8 @@ export default function App() {
         return <CalendarView />;
       case 'notifications': 
         return <NotificationsView />;
+      case 'salary':
+        return <DashboardChart selectedDate={selectedDate} />;
       case 'expenses': 
         return <ExpensesView />;
       case 'admin': 
@@ -289,6 +293,7 @@ export default function App() {
     { id: 'dashboard', label: 'Detyrat', icon: LayoutList, badgeCount: uncompletedTasksCount },
     { id: 'calendar', label: 'Kalendari', icon: CalendarDays },
     { id: 'notifications', label: 'Njoftimet', icon: Bell, badgeCount: unreadNotificationsCount },
+    { id: 'salary', label: 'Paga', icon: Coins },
     { id: 'expenses', label: 'Financat', icon: TrendingUp },
     ...(profile?.role === 'admin' ? [{ id: 'admin', label: 'Përdoruesit', icon: Users }] : []),
   ];
