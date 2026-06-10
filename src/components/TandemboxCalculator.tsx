@@ -197,14 +197,14 @@ Gjeneruar nga MergimGroup Tool
               {type === 'roboti' ? (
                 <>
                   <InputBox label="Lartësia Kaces" value={cabinetHeight} onChange={setCabinetHeight} unit="CM" />
-                  <InputBox label="Gjerësia Kaces" value={kaca} onChange={setKaca} unit="CM" />
-                  <InputBox label="Thellësia Kaces" value={cabinetDepth} onChange={setCabinetDepth} unit="CM" />
+                  <InputBox label="Gjerësia Kaces <--->" value={kaca} onChange={setKaca} unit="CM" />
+                  <InputBox label="Thellësia Kaces <--->" value={cabinetDepth} onChange={setCabinetDepth} unit="CM" />
                   <InputBox label="Nr. Raftave" value={numShelves} onChange={setNumShelves} unit="COPE" />
                 </>
               ) : (
                 <>
-                  <InputBox label="Gjerësia Kaces" value={kaca} onChange={setKaca} unit="CM" />
-                   <InputBox label="Gjatësia Llagerit" value={llageri} onChange={setLlageri} unit="CM" />
+                  <InputBox label="Gjerësia Kaces <--->" value={kaca} onChange={setKaca} unit="CM" />
+                  <InputBox label="Gjatësia Llagerit <--->" value={llageri} onChange={setLlageri} unit="CM" />
                 </>
               )}
             </div>
@@ -212,7 +212,7 @@ Gjeneruar nga MergimGroup Tool
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Trashësia Pllakës (mm)</label>
               <div className="flex gap-2">
-                {(type === 'antaro' ? [1.8] : (type === 'roboti' ? [1.6, 1.8, 1.9, 2.2] : [1.6, 1.8, 1.9])).map((t) => (
+                {(type === 'antaro' ? [1.8] : [1.6, 1.8, 1.9, 2.2]).map((t) => (
                   <button
                     key={t}
                     onClick={() => setBoardThickness(t)}
