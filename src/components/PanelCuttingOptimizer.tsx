@@ -99,11 +99,11 @@ export function PanelCuttingOptimizer() {
   const [damageTop, setDamageTop] = useState<boolean>(false);
   const [damageBottom, setDamageBottom] = useState<boolean>(false);
 
-  // If damage checkbox is checked, add 5cm to that margin
-  const activeTrimLeft = useMemo(() => trimLeft + (damageLeft ? 5 : 0), [trimLeft, damageLeft]);
-  const activeTrimRight = useMemo(() => trimRight + (damageRight ? 5 : 0), [trimRight, damageRight]);
-  const activeTrimTop = useMemo(() => trimTop + (damageTop ? 5 : 0), [trimTop, damageTop]);
-  const activeTrimBottom = useMemo(() => trimBottom + (damageBottom ? 5 : 0), [trimBottom, damageBottom]);
+  // If damage checkbox is checked, use exactly 5cm. If not checked, use the standard 1cm trim.
+  const activeTrimLeft = useMemo(() => (damageLeft ? 5 : trimLeft), [trimLeft, damageLeft]);
+  const activeTrimRight = useMemo(() => (damageRight ? 5 : trimRight), [trimRight, damageRight]);
+  const activeTrimTop = useMemo(() => (damageTop ? 5 : trimTop), [trimTop, damageTop]);
+  const activeTrimBottom = useMemo(() => (damageBottom ? 5 : trimBottom), [trimBottom, damageBottom]);
 
   // Cut parts list
   const [parts, setParts] = useState<CutPart[]>([]);
@@ -770,7 +770,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
               <Scissors className="w-3.5 h-3.5 text-amber-600" /> Pastrimi i Teheve ose Demtimet
             </h4>
             <p className="text-[10px] text-amber-700/80 leading-relaxed font-medium">
-              Zgjidhni cilën anë të panelit dëshironi ta shkurtoni me <strong>5 cm</strong> për shkak të dëmtimeve ose pastrimit të makinës:
+              Zgjidhni cilën anë të panelit dëshironi ta shkurtoni me <strong>50 mm</strong> për shkak të dëmtimeve ose pastrimit të makinës:
             </p>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
@@ -784,7 +784,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Majtas (+5cm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Majtas (50 mm)</span>
               </label>
 
               <label className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:border-amber-200 cursor-pointer select-none">
@@ -797,7 +797,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Djathtas (+5cm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Djathtas (50 mm)</span>
               </label>
 
               <label className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:border-amber-200 cursor-pointer select-none">
@@ -810,7 +810,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Sipër (+5cm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Sipër (50 mm)</span>
               </label>
 
               <label className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:border-amber-200 cursor-pointer select-none">
@@ -823,13 +823,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Poshtë (+5cm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Poshtë (50 mm)</span>
               </label>
             </div>
 
             {/* Showing current total margins deducted */}
             <div className="text-[9px] text-slate-500 font-bold pt-2 border-t border-amber-100">
-              Masa e pastër shfrytëzuese e panelit: <span className="text-indigo-600">{(Number(sheetWidth || 280) - activeTrimLeft - activeTrimRight).toFixed(1)} x {(Number(sheetHeight || 207) - activeTrimTop - activeTrimBottom).toFixed(1)} cm</span>
+              Masa e pastër shfrytëzuese e panelit: <span className="text-indigo-600">{((Number(sheetWidth || 280) - activeTrimLeft - activeTrimRight) * 10).toFixed(0)} x {((Number(sheetHeight || 207) - activeTrimTop - activeTrimBottom) * 10).toFixed(0)} mm</span>
             </div>
           </div>
 
