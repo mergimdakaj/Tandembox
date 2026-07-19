@@ -1112,6 +1112,11 @@ PANELI MASTER #${shLayout.sheetIndex}:
                             <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#334155" strokeWidth="0.15" />
                           </pattern>
 
+                          {/* CAD warning hatch pattern for trim margins */}
+                          <pattern id="trimHatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                            <line x1="0" y1="0" x2="0" y2="6" stroke="#f43f5e" strokeWidth="1.5" opacity="0.5" />
+                          </pattern>
+
                           {/* Vertical Wood Grain Pattern (Walnut / Dru Arre) */}
                           <pattern id="grainVertical" width="12" height="120" patternUnits="userSpaceOnUse">
                             {/* Dark rich walnut wood background */}
@@ -1159,16 +1164,90 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
                         {/* Edge trims (Damaged/clean-up zones highlighted in red overlay) */}
                         {sheet.trimLeft > 0 && (
-                          <rect width={sheet.trimLeft} height={sheet.height} fill="#f43f5e" opacity="0.15" />
+                          <g>
+                            <rect width={sheet.trimLeft} height={sheet.height} fill="#fee2e2" opacity="0.3" />
+                            <rect width={sheet.trimLeft} height={sheet.height} fill="url(#trimHatch)" />
+                            <rect width={sheet.trimLeft} height={sheet.height} stroke="#ef4444" strokeWidth="0.4" strokeDasharray="1 1" fill="none" />
+                            <text
+                              x={sheet.trimLeft / 2}
+                              y={sheet.height / 2}
+                              fill="#ef4444"
+                              fontSize="6"
+                              fontWeight="black"
+                              textAnchor="middle"
+                              transform={`rotate(-90, ${sheet.trimLeft / 2}, ${sheet.height / 2})`}
+                              stroke="#ffffff"
+                              strokeWidth="1.5"
+                              paintOrder="stroke fill"
+                              className="font-mono"
+                            >
+                              -{(sheet.trimLeft * 10).toFixed(0)} mm
+                            </text>
+                          </g>
                         )}
                         {sheet.trimRight > 0 && (
-                          <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="#f43f5e" opacity="0.15" />
+                          <g>
+                            <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="#fee2e2" opacity="0.3" />
+                            <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="url(#trimHatch)" />
+                            <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} stroke="#ef4444" strokeWidth="0.4" strokeDasharray="1 1" fill="none" />
+                            <text
+                              x={sheet.width - sheet.trimRight / 2}
+                              y={sheet.height / 2}
+                              fill="#ef4444"
+                              fontSize="6"
+                              fontWeight="black"
+                              textAnchor="middle"
+                              transform={`rotate(-90, ${sheet.width - sheet.trimRight / 2}, ${sheet.height / 2})`}
+                              stroke="#ffffff"
+                              strokeWidth="1.5"
+                              paintOrder="stroke fill"
+                              className="font-mono"
+                            >
+                              -{(sheet.trimRight * 10).toFixed(0)} mm
+                            </text>
+                          </g>
                         )}
                         {sheet.trimTop > 0 && (
-                          <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="#f43f5e" opacity="0.15" />
+                          <g>
+                            <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="#fee2e2" opacity="0.3" />
+                            <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="url(#trimHatch)" />
+                            <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} stroke="#ef4444" strokeWidth="0.4" strokeDasharray="1 1" fill="none" />
+                            <text
+                              x={sheet.width / 2}
+                              y={sheet.trimTop / 2 + 2}
+                              fill="#ef4444"
+                              fontSize="6"
+                              fontWeight="black"
+                              textAnchor="middle"
+                              stroke="#ffffff"
+                              strokeWidth="1.5"
+                              paintOrder="stroke fill"
+                              className="font-mono"
+                            >
+                              -{(sheet.trimTop * 10).toFixed(0)} mm
+                            </text>
+                          </g>
                         )}
                         {sheet.trimBottom > 0 && (
-                          <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="#f43f5e" opacity="0.15" />
+                          <g>
+                            <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="#fee2e2" opacity="0.3" />
+                            <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="url(#trimHatch)" />
+                            <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} stroke="#ef4444" strokeWidth="0.4" strokeDasharray="1 1" fill="none" />
+                            <text
+                              x={sheet.width / 2}
+                              y={sheet.height - sheet.trimBottom / 2 + 2}
+                              fill="#ef4444"
+                              fontSize="6"
+                              fontWeight="black"
+                              textAnchor="middle"
+                              stroke="#ffffff"
+                              strokeWidth="1.5"
+                              paintOrder="stroke fill"
+                              className="font-mono"
+                            >
+                              -{(sheet.trimBottom * 10).toFixed(0)} mm
+                            </text>
+                          </g>
                         )}
 
                         {/* Dashed line representing clean cutting frame inside margins */}
@@ -1556,8 +1635,11 @@ PANELI MASTER #${shLayout.sheetIndex}:
                         <div className="flex items-center gap-1">
                           <span className="w-2 h-2 bg-indigo-400 rounded-sm"></span> Detajet
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 bg-rose-500/20 rounded-sm"></span> Pastrimi i Teheve
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 bg-rose-500/20 rounded-xs border border-rose-500/60 flex items-center justify-center overflow-hidden relative">
+                            <span className="absolute inset-0 bg-[linear-gradient(45deg,rgba(244,63,94,0.5)_25%,transparent_25%,transparent_50%,rgba(244,63,94,0.5)_50%,rgba(244,63,94,0.5)_75%,transparent_75%,transparent)] bg-[length:3px_3px]"></span>
+                          </span>
+                          <span>Pastrimi i Teheve (Dëmtimi)</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="w-2 h-2 bg-amber-500/20 border border-dashed border-amber-500 rounded-sm"></span> Tepricë e Lirë
@@ -1704,6 +1786,11 @@ PANELI MASTER #${shLayout.sheetIndex}:
                       <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e2e8f0" strokeWidth="0.2" />
                     </pattern>
 
+                    {/* CAD warning hatch pattern for print trim margins */}
+                    <pattern id="printTrimHatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+                      <line x1="0" y1="0" x2="0" y2="6" stroke="#ef4444" strokeWidth="1.2" opacity="0.4" />
+                    </pattern>
+
                     {/* Print Vertical Grain */}
                     <pattern id="printGrainVertical" width="15" height="120" patternUnits="userSpaceOnUse">
                       <line x1="0" y1="0" x2="0" y2="120" stroke="#cccccc" strokeWidth="0.8" opacity="0.6" />
@@ -1733,16 +1820,90 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
                   {/* Trim margins */}
                   {sheet.trimLeft > 0 && (
-                    <rect width={sheet.trimLeft} height={sheet.height} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                    <g>
+                      <rect width={sheet.trimLeft} height={sheet.height} fill="#fee2e2" opacity="0.3" />
+                      <rect width={sheet.trimLeft} height={sheet.height} fill="url(#printTrimHatch)" />
+                      <rect width={sheet.trimLeft} height={sheet.height} stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" fill="none" />
+                      <text
+                        x={sheet.trimLeft / 2}
+                        y={sheet.height / 2}
+                        fill="#ef4444"
+                        fontSize="6"
+                        fontWeight="black"
+                        textAnchor="middle"
+                        transform={`rotate(-90, ${sheet.trimLeft / 2}, ${sheet.height / 2})`}
+                        stroke="#ffffff"
+                        strokeWidth="1.2"
+                        paintOrder="stroke fill"
+                        className="font-mono"
+                      >
+                        -{(sheet.trimLeft * 10).toFixed(0)} mm
+                      </text>
+                    </g>
                   )}
                   {sheet.trimRight > 0 && (
-                    <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                    <g>
+                      <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="#fee2e2" opacity="0.3" />
+                      <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="url(#printTrimHatch)" />
+                      <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" fill="none" />
+                      <text
+                        x={sheet.width - sheet.trimRight / 2}
+                        y={sheet.height / 2}
+                        fill="#ef4444"
+                        fontSize="6"
+                        fontWeight="black"
+                        textAnchor="middle"
+                        transform={`rotate(-90, ${sheet.width - sheet.trimRight / 2}, ${sheet.height / 2})`}
+                        stroke="#ffffff"
+                        strokeWidth="1.2"
+                        paintOrder="stroke fill"
+                        className="font-mono"
+                      >
+                        -{(sheet.trimRight * 10).toFixed(0)} mm
+                      </text>
+                    </g>
                   )}
                   {sheet.trimTop > 0 && (
-                    <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                    <g>
+                      <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="#fee2e2" opacity="0.3" />
+                      <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="url(#printTrimHatch)" />
+                      <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" fill="none" />
+                      <text
+                        x={sheet.width / 2}
+                        y={sheet.trimTop / 2 + 2}
+                        fill="#ef4444"
+                        fontSize="6"
+                        fontWeight="black"
+                        textAnchor="middle"
+                        stroke="#ffffff"
+                        strokeWidth="1.2"
+                        paintOrder="stroke fill"
+                        className="font-mono"
+                      >
+                        -{(sheet.trimTop * 10).toFixed(0)} mm
+                      </text>
+                    </g>
                   )}
                   {sheet.trimBottom > 0 && (
-                    <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                    <g>
+                      <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="#fee2e2" opacity="0.3" />
+                      <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="url(#printTrimHatch)" />
+                      <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" fill="none" />
+                      <text
+                        x={sheet.width / 2}
+                        y={sheet.height - sheet.trimBottom / 2 + 2}
+                        fill="#ef4444"
+                        fontSize="6"
+                        fontWeight="black"
+                        textAnchor="middle"
+                        stroke="#ffffff"
+                        strokeWidth="1.2"
+                        paintOrder="stroke fill"
+                        className="font-mono"
+                      >
+                        -{(sheet.trimBottom * 10).toFixed(0)} mm
+                      </text>
+                    </g>
                   )}
 
                   {/* Dashed line representing cutting boundary */}
