@@ -1299,7 +1299,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                         </text>
 
                         {/* Render placed parts */}
-                        {sheet.placedParts.map((part) => {
+                        {sheet.placedParts.map((part, idx) => {
                           const c = getPartColorForDimension(part.w, part.h);
 
                           // Determine grain texture overlay for individual part (rotates if part is rotated relative to master)
@@ -1355,7 +1355,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="select-none font-bold"
                                   >
-                                    {part.name}
+                                    {idx + 1}. {part.name}
                                   </text>
                                   <text
                                     x={part.x + part.w / 2}
@@ -1675,14 +1675,19 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {sheet.placedParts.map((p, idx) => (
                         <div key={idx} className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
-                          <div>
-                            <span className="block text-[10px] font-black text-slate-800 truncate">{p.name}</span>
-                            <span className="text-[9px] text-slate-400 font-bold">
-                              Masa: <span className="text-indigo-600 font-extrabold">{(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[12px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 min-w-[22px] text-center inline-block shrink-0">
+                              {idx + 1}
                             </span>
+                            <div className="min-w-0">
+                              <span className="block text-[10px] font-black text-slate-800 truncate">{p.name}</span>
+                              <span className="text-[9px] text-slate-400 font-bold block">
+                                Masa: <span className="text-indigo-600 font-extrabold">{(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm</span>
+                              </span>
+                            </div>
                           </div>
                           {p.rotated && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded shrink-0">
                               Rrotulluar
                             </span>
                           )}
@@ -1956,7 +1961,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   </text>
 
                   {/* Placed Parts */}
-                  {sheet.placedParts.map((part) => {
+                  {sheet.placedParts.map((part, idx) => {
                     const useVerticalGrain = (grainDirection === 'vertical' && !part.rotated) || (grainDirection === 'horizontal' && part.rotated);
                     const useHorizontalGrain = (grainDirection === 'horizontal' && !part.rotated) || (grainDirection === 'vertical' && part.rotated);
                     const pc = getPartColorForDimension(part.w, part.h);
@@ -2009,7 +2014,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           fontWeight="black"
                           textAnchor="middle"
                         >
-                          {part.name}
+                          {idx + 1}. {part.name}
                         </text>
                         <text
                           x={part.x + part.w / 2}
@@ -2020,7 +2025,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           textAnchor="middle"
                           className="font-bold"
                         >
-                          {part.name}
+                          {idx + 1}. {part.name}
                         </text>
 
                         {/* Size with White Halo */}
@@ -2230,13 +2235,20 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </div>
 
               {/* List of cuts with dimensions right next to the names */}
-              <div className="space-y-1 mt-1">
-                <p className="text-[9px] font-bold uppercase text-slate-500">Pjesët e vendosura në këtë panel:</p>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-[10px]">
+              <div className="space-y-1.5 mt-2">
+                <p className="text-[10px] font-black uppercase text-slate-800">Pjesët e vendosura në këtë panel:</p>
+                <div className="grid grid-cols-3 gap-x-5 gap-y-1.5 text-[11px]">
                   {sheet.placedParts.map((p, idx) => (
-                    <div key={idx} className="flex items-center border-b border-slate-200 pb-0.5 pr-1 font-medium text-slate-800">
-                      <span className="truncate mr-1">{idx + 1}. <strong>{p.name}</strong></span>
-                      <span className="font-mono text-slate-900 shrink-0 text-[10px]">({(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm){p.rotated ? ' ↻' : ''}</span>
+                    <div key={idx} className="flex items-center border-b border-slate-300 pb-1 pr-1 font-bold text-slate-900">
+                      <span className="truncate mr-1 flex items-center gap-1.5 min-w-0">
+                        <span className="text-[13px] font-black text-black bg-black text-white px-1.5 py-0.5 rounded min-w-[22px] text-center inline-block shrink-0 shadow-xs print:border print:border-black print:bg-white print:text-black">
+                          {idx + 1}
+                        </span>
+                        <strong className="text-black font-black text-[12px] truncate">{p.name}</strong>
+                      </span>
+                      <span className="font-mono text-black font-extrabold shrink-0 text-[11px] ml-auto">
+                        ({(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm){p.rotated ? ' ↻' : ''}
+                      </span>
                     </div>
                   ))}
                 </div>
