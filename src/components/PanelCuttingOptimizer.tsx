@@ -1,4 +1,5 @@
 import { useState, useMemo, FormEvent, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer } from 'lucide-react';
 
 interface CutPart {
@@ -1584,7 +1585,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
     </div>
 
     {/* Elegant A4 Landscape Printable Area */}
-    <div className="hidden print:block bg-white text-black p-6 space-y-8" id="print-area">
+    {typeof document !== 'undefined' && createPortal(
+      <div className="hidden print:block bg-white text-black p-6 space-y-8" id="print-area">
       <div className="border-b-2 border-black pb-4 text-center">
         <h2 className="text-xl font-bold uppercase tracking-wider text-slate-900">
           Skema e Optimizimit të Prerjes së Panelit (A4)
@@ -2026,7 +2028,9 @@ PANELI MASTER #${shLayout.sheetIndex}:
           </div>
         );
       })}
-    </div>
+    </div>,
+    document.body
+    )}
 
     <style dangerouslySetInnerHTML={{ __html: `
       @media print {
@@ -2035,9 +2039,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
           color: black !important;
         }
         /* Hide all outer content when printing */
-        #root > div:not(#print-area),
-        body > div:not(#print-area),
-        main > div:not(#print-area),
+        #root,
         .print\\:hidden {
           display: none !important;
         }
@@ -2047,6 +2049,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
           left: 0;
           top: 0;
           width: 100%;
+          background: white !important;
+          color: black !important;
         }
         .page-break-inside-avoid {
           page-break-inside: avoid;
