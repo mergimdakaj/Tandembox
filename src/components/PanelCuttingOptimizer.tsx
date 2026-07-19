@@ -108,10 +108,24 @@ export function PanelCuttingOptimizer() {
   // Cut parts list
   const [parts, setParts] = useState<CutPart[]>([]);
 
+  // Kitchen code / project name (e.g. 05/05)
+  const [kitchenCode, setKitchenCode] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('pc_kitchen_code') || '';
+    }
+    return '';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pc_kitchen_code', kitchenCode);
+    }
+  }, [kitchenCode]);
+
   // New part entry inputs
   const [newPartName, setNewPartName] = useState<string>('');
-  const [newPartWidth, setNewPartWidth] = useState<number | ''>(60);
-  const [newPartHeight, setNewPartHeight] = useState<number | ''>(20);
+  const [newPartWidth, setNewPartWidth] = useState<number | ''>(600);
+  const [newPartHeight, setNewPartHeight] = useState<number | ''>(200);
   const [newPartQty, setNewPartQty] = useState<number | ''>(2);
   const [newPartRotate, setNewPartRotate] = useState<boolean>(true);
 
@@ -134,18 +148,22 @@ export function PanelCuttingOptimizer() {
   // Add Part
   const addPart = (e: FormEvent) => {
     e.preventDefault();
-    const w = Number(newPartWidth);
-    const h = Number(newPartHeight);
+    const wMm = Number(newPartWidth);
+    const hMm = Number(newPartHeight);
     const qty = Number(newPartQty);
-    if (!newPartName.trim() || !w || w <= 0 || !h || h <= 0 || !qty || qty <= 0) return;
+    if (!newPartName.trim() || !wMm || wMm <= 0 || !hMm || hMm <= 0 || !qty || qty <= 0) return;
+    
+    // Convert mm inputs to internal cm values (divide by 10)
+    const wCm = wMm / 10;
+    const hCm = hMm / 10;
     
     setParts(prev => [
       ...prev,
       {
         id: Date.now().toString(),
         name: newPartName.trim(),
-        width: w,
-        height: h,
+        width: wCm,
+        height: hCm,
         quantity: qty,
         allowRotation: newPartRotate,
       }
@@ -156,7 +174,7 @@ export function PanelCuttingOptimizer() {
 
   // Quick action to add a leftover space as a new part
   const addPartFromLeftover = (w: number, h: number) => {
-    const name = `Raft ${w}x${h} cm`;
+    const name = `Raft ${(w * 10).toFixed(0)}x${(h * 10).toFixed(0)} mm`;
     const newPart: CutPart = {
       id: Date.now().toString(),
       name,
@@ -512,14 +530,15 @@ export function PanelCuttingOptimizer() {
 
     let text = `RAPORTI I OPTIMIZIMIT TË PRERJES SË PANELEVE
 ------------------------------------------------------
-Paneli Master: ${sw} x ${sh} cm
-Gjerësia e Sharrës (Kerf): ${bw} cm (${bw * 10}mm)
+Kodi i Kuzhinës: ${kitchenCode || 'I papërcaktuar'}
+Paneli Master: ${sw * 10} x ${sh * 10} mm
+Gjerësia e Sharrës (Kerf): ${bw * 10} mm
 ------------------------------------------------------
 Pastrimi i Teheve (Trimming):
-- Majtas: ${activeTrimLeft} cm (Mbrojtje anësore ${damageLeft ? '+5cm' : 'normal'})
-- Djathtas: ${activeTrimRight} cm (Mbrojtje anësore ${damageRight ? '+5cm' : 'normal'})
-- Sipër: ${activeTrimTop} cm (Mbrojtje anësore ${damageTop ? '+5cm' : 'normal'})
-- Poshtë: ${activeTrimBottom} cm (Mbrojtje anësore ${damageBottom ? '+5cm' : 'normal'})
+- Majtas: ${activeTrimLeft * 10} mm (Mbrojtje anësore ${damageLeft ? '+50mm' : 'normal'})
+- Djathtas: ${activeTrimRight * 10} mm (Mbrojtje anësore ${damageRight ? '+50mm' : 'normal'})
+- Sipër: ${activeTrimTop * 10} mm (Mbrojtje anësore ${damageTop ? '+50mm' : 'normal'})
+- Poshtë: ${activeTrimBottom * 10} mm (Mbrojtje anësore ${damageBottom ? '+50mm' : 'normal'})
 ------------------------------------------------------
 
 STATISTIKAT E PANELEVE TË PËRDORUR:
@@ -533,13 +552,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
 - Pjesë të vendosura (${shLayout.placedParts.length}):
 `;
       shLayout.placedParts.forEach((p, idx) => {
-        text += `  [${idx + 1}] ${p.name} - ${p.w}x${p.h} cm (Pozicioni: X:${p.x}, Y:${p.y})${p.rotated ? ' [E rrotulluar]' : ''}\n`;
+        text += `  [${idx + 1}] ${p.name} - ${(p.w * 10).toFixed(0)}x{(p.h * 10).toFixed(0)} mm (Pozicioni: X:${(p.x * 10).toFixed(0)}, Y:${(p.y * 10).toFixed(0)})${p.rotated ? ' [E rrotulluar]' : ''}\n`;
       });
       
       if (shLayout.leftovers.length > 0) {
         text += `\nHapësira të lira të pashfrytëzuara:\n`;
         shLayout.leftovers.forEach(l => {
-          text += `  - ${l.w} x ${l.h} cm në pozicionin (X:${l.x}, Y:${l.y})\n`;
+          text += `  - ${(l.w * 10).toFixed(0)} x ${(l.h * 10).toFixed(0)} mm në pozicionin (X:${(l.x * 10).toFixed(0)}, Y:${(l.y * 10).toFixed(0)})\n`;
         });
       }
 
@@ -549,7 +568,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
     if (calculatedResults.unplacedItems.length > 0) {
       text += `\n\nPJESËT QË NUK NXËNË (Masa më e madhe se paneli):`;
       calculatedResults.unplacedItems.forEach(item => {
-        text += `\n- ${item.part.name} (${item.w} x ${item.h} cm)`;
+        text += `\n- ${item.part.name} (${(item.w * 10).toFixed(0)} x ${(item.h * 10).toFixed(0)} mm)`;
       });
     }
 
@@ -571,8 +590,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
         <div className="flex items-center gap-3">
           <Grid className="w-6 h-6 text-indigo-600" />
           <div>
-            <h3 className="font-extrabold text-slate-800 text-base uppercase tracking-wider">
+            <h3 className="font-extrabold text-slate-800 text-base uppercase tracking-wider flex items-center gap-2 flex-wrap">
               Optimizimi i Prerjes së Paneleve
+              {kitchenCode && (
+                <span className="text-indigo-600 bg-indigo-50 border border-indigo-100 text-[10px] px-2.5 py-0.5 rounded-lg font-black uppercase tracking-normal">
+                  Kuzhina: {kitchenCode}
+                </span>
+              )}
             </h3>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
               Llogarit shfrytëzimin maksimal të panelit me trashësi sharre {(Number(bladeWidth) || 0.4) * 10}mm
@@ -816,6 +840,19 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </h4>
 
             <div className="space-y-1">
+              <label className="block text-[8px] font-black uppercase text-indigo-500 tracking-wider">
+                Kodi / Emri i Kuzhinës (p.sh. 05/05)
+              </label>
+              <input
+                type="text"
+                placeholder="Shkruaj kodin e kuzhinës..."
+                value={kitchenCode}
+                onChange={(e) => setKitchenCode(e.target.value)}
+                className="w-full text-xs font-bold bg-white p-2 rounded-xl border border-indigo-100 text-indigo-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="space-y-1">
               <label className="block text-[8px] font-black uppercase text-slate-400 tracking-wider">
                 Emri i Pjesës (p.sh. Pod, Shpinë, Faqe)
               </label>
@@ -831,7 +868,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="block text-[8px] font-black uppercase text-slate-400 tracking-wider mb-0.5">
-                  Gjatësi (cm)
+                  Gjatësi (mm)
                 </label>
                 <input
                   type="number"
@@ -841,12 +878,12 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     setNewPartWidth(val === '' ? '' : Number(val));
                   }}
                   className="w-full text-xs font-bold bg-white p-2 rounded-xl border border-slate-200 text-slate-800 text-center"
-                  placeholder="Gjatësi"
+                  placeholder="mm"
                 />
               </div>
               <div>
                 <label className="block text-[8px] font-black uppercase text-slate-400 tracking-wider mb-0.5">
-                  Gjerësi (cm)
+                  Gjerësi (mm)
                 </label>
                 <input
                   type="number"
@@ -856,7 +893,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     setNewPartHeight(val === '' ? '' : Number(val));
                   }}
                   className="w-full text-xs font-bold bg-white p-2 rounded-xl border border-slate-200 text-slate-800 text-center"
-                  placeholder="Gjerësi"
+                  placeholder="mm"
                 />
               </div>
               <div>
@@ -927,12 +964,12 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           backgroundColor: badgeColor.fill,
                           borderColor: badgeColor.stroke
                         }}
-                        title={`Dimensioni: ${Math.min(p.width, p.height)}x${Math.max(p.width, p.height)} cm`}
+                        title={`Dimensioni: ${Math.min(p.width * 10, p.height * 10).toFixed(0)}x${Math.max(p.width * 10, p.height * 10).toFixed(0)} mm`}
                       />
                       <div className="flex-1 min-w-0">
                         <span className="block text-xs font-extrabold text-slate-800 truncate">{p.name}</span>
                         <span className="text-[10px] text-slate-400 font-bold">
-                          {p.width} x {p.height} cm | Sasia: {p.quantity} copë
+                          {(p.width * 10).toFixed(0)} x {(p.height * 10).toFixed(0)} mm | Sasia: {p.quantity} copë
                         </span>
                       </div>
                     </div>
@@ -1013,7 +1050,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </p>
               <ul className="list-disc pl-4 text-[10px] font-bold text-rose-600 space-y-0.5">
                 {calculatedResults.unplacedItems.map((item, idx) => (
-                  <li key={idx}>{item.part.name} ({item.w} x {item.h} cm)</li>
+                  <li key={idx}>{item.part.name} ({(item.w * 10).toFixed(0)} x {(item.h * 10).toFixed(0)} mm)</li>
                 ))}
               </ul>
             </div>
@@ -1044,8 +1081,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
           <div className="space-y-8">
             {calculatedResults ? (
               calculatedResults.sheets.map((sheet) => {
-                const paddingLeft = 32;
-                const paddingTop = 32;
+                const paddingLeft = 35;
+                const paddingTop = 35;
                 const viewWidth = sheet.width + paddingLeft * 2;
                 const viewHeight = sheet.height + paddingTop * 2;
 
@@ -1160,7 +1197,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           textAnchor="middle"
                           className="font-mono"
                         >
-                          HORIZONTAL: {sheet.width} cm
+                          HORIZONTAL: {sheet.width * 10} mm
                         </text>
 
                         {/* Vertical left dimension indicator */}
@@ -1179,7 +1216,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           className="font-mono"
                           transform={`rotate(-90, -16, ${sheet.height / 2})`}
                         >
-                          VERTIKAL: {sheet.height} cm
+                          VERTIKAL: {sheet.height * 10} mm
                         </text>
 
                         {/* Render placed parts */}
@@ -1250,7 +1287,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="font-mono select-none"
                                   >
-                                    {part.w}x{part.h}cm
+                                    {(part.w * 10).toFixed(0)}x{(part.h * 10).toFixed(0)}mm
                                   </text>
                                 </>
                               ) : (
@@ -1263,7 +1300,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                   textAnchor="middle"
                                   className="font-mono select-none"
                                 >
-                                  {part.w}x{part.h}
+                                  {(part.w * 10).toFixed(0)}x{(part.h * 10).toFixed(0)}
                                 </text>
                               )}
 
@@ -1323,7 +1360,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="font-mono"
                                   >
-                                    {part.w} cm
+                                    {(part.w * 10).toFixed(0)} mm
                                   </text>
                                 </g>
                               ) : (
@@ -1346,7 +1383,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                       textAnchor="middle"
                                       className="font-mono"
                                     >
-                                      {part.w}
+                                      {(part.w * 10).toFixed(0)}
                                     </text>
                                   </g>
                                 )
@@ -1387,7 +1424,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="font-mono"
                                   >
-                                    {part.h} cm
+                                    {(part.h * 10).toFixed(0)} mm
                                   </text>
                                 </g>
                               ) : (
@@ -1410,7 +1447,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                       textAnchor="middle"
                                       className="font-mono"
                                     >
-                                      {part.h}
+                                      {(part.h * 10).toFixed(0)}
                                     </text>
                                   </g>
                                 )
@@ -1545,7 +1582,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               onClick={() => addPartFromLeftover(leftover.w, leftover.h)}
                               className="px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white border border-emerald-200 hover:border-emerald-600 text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 text-emerald-700 shadow-xs"
                             >
-                              + Shto Raft shtesë ({leftover.w} x {leftover.h} cm)
+                              + Shto Raft shtesë ({(leftover.w * 10).toFixed(0)} x {(leftover.h * 10).toFixed(0)} mm)
                             </button>
                           ))}
                         </div>
@@ -1559,7 +1596,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           <div>
                             <span className="block text-[10px] font-black text-slate-800 truncate">{p.name}</span>
                             <span className="text-[9px] text-slate-400 font-bold">
-                              Masa: <span className="text-indigo-600 font-extrabold">{p.w} x {p.h} cm</span>
+                              Masa: <span className="text-indigo-600 font-extrabold">{(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm</span>
                             </span>
                           </div>
                           {p.rotated && (
@@ -1603,8 +1640,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
     {typeof document !== 'undefined' && createPortal(
       <div className="hidden print:block bg-white text-black p-2 space-y-4" id="print-area">
         {calculatedResults?.sheets.map((sheet) => {
-          const paddingLeft = 20;
-          const paddingTop = 20;
+          const paddingLeft = 35;
+          const paddingTop = 35;
           const viewWidth = sheet.width + paddingLeft * 2;
           const viewHeight = sheet.height + paddingTop * 2;
 
@@ -1619,8 +1656,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
               {/* Sheet Page Header */}
               <div className="border-b-2 border-slate-300 pb-1.5 flex justify-between items-end">
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
                     Skema e Optimizimit të Prerjes së Panelit (A4)
+                    {kitchenCode && (
+                      <span className="text-indigo-600 bg-indigo-50 border border-indigo-200 text-[10px] px-2 py-0.5 rounded font-black uppercase ml-2 tracking-normal">
+                        Kuzhina: {kitchenCode}
+                      </span>
+                    )}
                   </h2>
                   <p className="text-[9px] font-medium text-slate-500 mt-0.5">
                     Tandembox Pro — MergimGroup | Data: {new Date().toLocaleDateString('sq-AL')}
@@ -1636,13 +1678,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
               {/* Compact Metadata Row */}
               <div className="grid grid-cols-4 gap-2 text-[9px] border border-slate-200 p-1.5 rounded-lg bg-slate-50">
                 <div>
-                  <span className="text-slate-500">Panel Master:</span> <strong className="text-slate-900">{sheetWidth} x {sheetHeight} cm</strong>
+                  <span className="text-slate-500">Panel Master:</span> <strong className="text-slate-900">{(Number(sheetWidth) * 10).toFixed(0)} x {(Number(sheetHeight) * 10).toFixed(0)} mm</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500">Sharra (Kerf):</span> <strong className="text-slate-900">{bladeWidth} cm</strong>
+                  <span className="text-slate-500">Sharra (Kerf):</span> <strong className="text-slate-900">{(Number(bladeWidth) * 10).toFixed(0)} mm</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500">Margjinat:</span> <strong className="text-slate-900">L:{activeTrimLeft} R:{activeTrimRight} T:{activeTrimTop} B:{activeTrimBottom}</strong>
+                  <span className="text-slate-500">Margjinat:</span> <strong className="text-slate-900">L:{activeTrimLeft * 10} R:{activeTrimRight * 10} T:{activeTrimTop * 10} B:{activeTrimBottom * 10} mm</strong>
                 </div>
                 <div>
                   <span className="text-slate-500">Shfrytëzimi:</span> <strong className="text-emerald-700 font-bold">{sheet.utilization}%</strong>
@@ -1730,7 +1772,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     textAnchor="middle"
                     className="font-mono font-bold"
                   >
-                    GJATËSIA: {sheet.width} cm
+                    HORIZONTAL: {sheet.width * 10} mm
                   </text>
 
                   {/* Vertical left dimension indicator */}
@@ -1749,7 +1791,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     className="font-mono font-bold"
                     transform={`rotate(-90, -18, ${sheet.height / 2})`}
                   >
-                    GJERËSIA: {sheet.height} cm
+                    VERTIKAL: {sheet.height * 10} mm
                   </text>
 
                   {/* Placed Parts */}
@@ -1833,7 +1875,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           fontWeight="black"
                           textAnchor="middle"
                         >
-                          {part.w} x {part.h} cm
+                          {(part.w * 10).toFixed(0)} x {(part.h * 10).toFixed(0)} mm
                         </text>
                         <text
                           x={part.x + part.w / 2}
@@ -1844,7 +1886,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           textAnchor="middle"
                           className="font-mono"
                         >
-                          {part.w} x {part.h} cm
+                          {(part.w * 10).toFixed(0)} x {(part.h * 10).toFixed(0)} mm
                         </text>
 
                         {/* Explicit cut dimensions on part borders with high-contrast CAD-style arrow lines */}
@@ -1889,7 +1931,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               textAnchor="middle"
                               className="font-mono"
                             >
-                              {part.w} cm
+                              {(part.w * 10).toFixed(0)} mm
                             </text>
                           </g>
                         ) : (
@@ -1914,7 +1956,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                 textAnchor="middle"
                                 className="font-mono"
                               >
-                                {part.w}
+                                {(part.w * 10).toFixed(0)}
                               </text>
                             </g>
                           )
@@ -1961,7 +2003,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               textAnchor="middle"
                               className="font-mono"
                             >
-                              {part.h} cm
+                              {(part.h * 10).toFixed(0)} mm
                             </text>
                           </g>
                         ) : (
@@ -1986,7 +2028,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                 textAnchor="middle"
                                 className="font-mono"
                               >
-                                {part.h}
+                                {(part.h * 10).toFixed(0)}
                               </text>
                             </g>
                           )
@@ -2018,7 +2060,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           fontWeight="bold"
                           textAnchor="middle"
                         >
-                          Tepricë {leftover.w}x{leftover.h}
+                          Tepricë {(leftover.w * 10).toFixed(0)}x{(leftover.h * 10).toFixed(0)} mm
                         </text>
                       )}
                     </g>
@@ -2033,7 +2075,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   {sheet.placedParts.map((p, idx) => (
                     <div key={idx} className="flex items-center border-b border-slate-200 pb-0.5 pr-1 font-medium text-slate-800">
                       <span className="truncate mr-1">{idx + 1}. <strong>{p.name}</strong></span>
-                      <span className="font-mono text-slate-900 shrink-0 text-[10px]">({p.w} x {p.h} cm){p.rotated ? ' ↻' : ''}</span>
+                      <span className="font-mono text-slate-900 shrink-0 text-[10px]">({(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm){p.rotated ? ' ↻' : ''}</span>
                     </div>
                   ))}
                 </div>
