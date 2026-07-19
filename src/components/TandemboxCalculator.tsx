@@ -1,6 +1,7 @@
 import { useState, useMemo, ReactNode } from 'react';
 import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maximize2, MoveRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { PanelCuttingOptimizer } from './PanelCuttingOptimizer';
 
 interface Dimensions {
   ballorjaKomplet?: number;
@@ -30,6 +31,7 @@ const ANTARO_HEIGHTS: Record<AntaroProfile, number> = {
 };
 
 export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState<'calculator' | 'planner'>('calculator');
   const [type, setType] = useState<CalculatorType>('fijoka-druri');
   const [kaca, setKaca] = useState<number>(90);
   const [llageri, setLlageri] = useState<number>(50);
@@ -198,7 +200,34 @@ Gjeneruar nga MergimGroup Tool
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* Tabs bar */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6 print:hidden">
+        <div className="bg-slate-100 p-1 rounded-2xl flex gap-2 w-full max-w-lg mx-auto md:mx-0">
+          <button
+            onClick={() => setActiveTab('calculator')}
+            className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'calculator'
+                ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/50'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Calculator className="w-4 h-4" /> Llogaritësi i Sirtarit
+          </button>
+          <button
+            onClick={() => setActiveTab('planner')}
+            className={`flex-1 py-2.5 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'planner'
+                ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/50'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" /> Optimizimi i Panelit
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'calculator' ? (
+        <main className="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Input */}
         <div className="lg:col-span-5 space-y-6 print:hidden">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
@@ -496,6 +525,11 @@ Gjeneruar nga MergimGroup Tool
           </div>
         </div>
       </main>
+      ) : (
+        <main className="max-w-7xl mx-auto p-4 md:p-8">
+          <PanelCuttingOptimizer />
+        </main>
+      )}
     </div>
   );
 }
