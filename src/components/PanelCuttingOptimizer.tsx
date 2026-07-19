@@ -106,12 +106,7 @@ export function PanelCuttingOptimizer() {
   const activeTrimBottom = useMemo(() => trimBottom + (damageBottom ? 5 : 0), [trimBottom, damageBottom]);
 
   // Cut parts list
-  const [parts, setParts] = useState<CutPart[]>([
-    { id: '1', name: 'Ballorja e Sirtarit', width: 80, height: 28.5, quantity: 4, allowRotation: true },
-    { id: '2', name: 'Anësoret M', width: 50, height: 14, quantity: 6, allowRotation: true },
-    { id: '3', name: 'Podi i Sirtarit', width: 78.4, height: 49, quantity: 3, allowRotation: false },
-    { id: '4', name: 'Shpina e Sirtarit', width: 78.4, height: 18, quantity: 3, allowRotation: true },
-  ]);
+  const [parts, setParts] = useState<CutPart[]>([]);
 
   // New part entry inputs
   const [newPartName, setNewPartName] = useState<string>('');
@@ -198,7 +193,7 @@ export function PanelCuttingOptimizer() {
     const sh = Number(sheetHeight) || 207;
     const bw = Number(bladeWidth) ?? 0.4;
 
-    const partsList = overrideParts || parts;
+    const partsList = Array.isArray(overrideParts) ? overrideParts : parts;
 
     // Collect all requested parts into individual items
     const rawItemsList: { part: CutPart; originalW: number; originalH: number }[] = [];
@@ -214,7 +209,27 @@ export function PanelCuttingOptimizer() {
     });
 
     if (rawItemsList.length === 0) {
-      setCalculatedResults({ sheets: [], unplacedItems: [] });
+      const trimmedW = sw - activeTrimLeft - activeTrimRight;
+      const trimmedH = sh - activeTrimTop - activeTrimBottom;
+      const emptySheet: SheetLayout = {
+        sheetIndex: 1,
+        width: sw,
+        height: sh,
+        trimmedWidth: trimmedW,
+        trimmedHeight: trimmedH,
+        trimLeft: activeTrimLeft,
+        trimRight: activeTrimRight,
+        trimTop: activeTrimTop,
+        trimBottom: activeTrimBottom,
+        placedParts: [],
+        leftovers: [
+          { id: 'empty-1', x: activeTrimLeft, y: activeTrimTop, w: trimmedW, h: trimmedH }
+        ],
+        utilization: 0,
+        wasteArea: sw * sh,
+        usedArea: 0
+      };
+      setCalculatedResults({ sheets: [emptySheet], unplacedItems: [] });
       setIsStale(false);
       return;
     }
@@ -1586,306 +1601,279 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
     {/* Elegant A4 Landscape Printable Area */}
     {typeof document !== 'undefined' && createPortal(
-      <div className="hidden print:block bg-white text-black p-6 space-y-8" id="print-area">
-      <div className="border-b-2 border-black pb-4 text-center">
-        <h2 className="text-xl font-bold uppercase tracking-wider text-slate-900">
-          Skema e Optimizimit të Prerjes së Panelit (A4)
-        </h2>
-        <p className="text-xs font-medium text-slate-500 mt-1">
-          Gjeneruar më: {new Date().toLocaleDateString('sq-AL')} | Tandembox Pro — MergimGroup
-        </p>
-      </div>
+      <div className="hidden print:block bg-white text-black p-2 space-y-4" id="print-area">
+        {calculatedResults?.sheets.map((sheet) => {
+          const paddingLeft = 20;
+          const paddingTop = 20;
+          const viewWidth = sheet.width + paddingLeft * 2;
+          const viewHeight = sheet.height + paddingTop * 2;
 
-      <div className="grid grid-cols-2 gap-4 text-xs border border-slate-300 p-3 rounded-lg bg-slate-50">
-        <div>
-          <p><strong>Dimensionet e Panelit Master:</strong> {sheetWidth} x {sheetHeight} cm</p>
-          <p><strong>Trashësia e Sharrës (Kerf):</strong> {bladeWidth} cm ({Number(bladeWidth || 0.4) * 10} mm)</p>
-          <p><strong>Drejtimi i Vijave të Drurit:</strong> {grainDirection === 'vertical' ? 'Vertikale ↕' : grainDirection === 'horizontal' ? 'Horizontale ↔' : 'MDF / Pa Vija'}</p>
-        </div>
-        <div>
-          <p><strong>Margjinat e Pastrimit:</strong> L:{activeTrimLeft} R:{activeTrimRight} T:{activeTrimTop} B:{activeTrimBottom} cm</p>
-          <p><strong>Panele Master të Nevojshëm:</strong> {calculatedResults?.sheets.length || 0} copë</p>
-        </div>
-      </div>
-
-      {calculatedResults?.sheets.map((sheet) => {
-        const paddingLeft = 32;
-        const paddingTop = 32;
-        const viewWidth = sheet.width + paddingLeft * 2;
-        const viewHeight = sheet.height + paddingTop * 2;
-
-        return (
-          <div
-            key={sheet.sheetIndex}
-            className={`space-y-4 border border-slate-300 p-6 rounded-xl bg-white flex flex-col justify-between page-break-inside-avoid ${
-              sheet.sheetIndex < (calculatedResults?.sheets.length || 0) ? 'page-break-after-always' : ''
-            }`}
-            style={{ boxSizing: 'border-box' }}
-          >
-            <div className="flex justify-between items-center border-b-2 border-slate-300 pb-3">
-              <div className="flex items-center gap-2.5">
-                <span className="bg-slate-900 text-white text-[11px] font-black px-3 py-1 rounded uppercase tracking-wider">
-                  PANELI {sheet.sheetIndex} (PRINTIMI {sheet.sheetIndex})
-                </span>
-                <h3 className="text-xs font-extrabold uppercase text-slate-800 tracking-tight">
-                  Dimensoni: {sheet.width} x {sheet.height} cm
-                </h3>
+          return (
+            <div
+              key={sheet.sheetIndex}
+              className={`h-[195mm] max-h-[195mm] border border-slate-300 p-4 rounded-xl bg-white flex flex-col justify-between page-break-inside-avoid ${
+                sheet.sheetIndex < (calculatedResults?.sheets.length || 0) ? 'page-break-after-always' : ''
+              }`}
+              style={{ boxSizing: 'border-box' }}
+            >
+              {/* Sheet Page Header */}
+              <div className="border-b-2 border-slate-300 pb-1.5 flex justify-between items-end">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+                    Skema e Optimizimit të Prerjes së Panelit (A4)
+                  </h2>
+                  <p className="text-[9px] font-medium text-slate-500 mt-0.5">
+                    Tandembox Pro — MergimGroup | Data: {new Date().toLocaleDateString('sq-AL')}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="bg-slate-900 text-white text-[9px] font-black px-2.5 py-1 rounded uppercase tracking-wider">
+                    PANELI {sheet.sheetIndex} nga {calculatedResults?.sheets.length}
+                  </span>
+                </div>
               </div>
-              <span className="text-xs font-black uppercase text-slate-700 tracking-wider">
-                SHFRYTËZIMI I PANELIT: <strong className="text-emerald-700 text-sm">{sheet.utilization}%</strong>
-              </span>
-            </div>
 
-            {/* Render the exact same SVG but styled beautifully for printing */}
-            <div className="flex items-center justify-center border border-slate-200 p-2 rounded-lg bg-white">
-              <svg
-                viewBox={`-${paddingLeft} -${paddingTop} ${viewWidth} ${viewHeight}`}
-                className="w-full h-auto max-h-[115mm]"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <pattern id="printGridPattern" width="10" height="10" patternUnits="userSpaceOnUse">
-                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e2e8f0" strokeWidth="0.2" />
-                  </pattern>
+              {/* Compact Metadata Row */}
+              <div className="grid grid-cols-4 gap-2 text-[9px] border border-slate-200 p-1.5 rounded-lg bg-slate-50">
+                <div>
+                  <span className="text-slate-500">Panel Master:</span> <strong className="text-slate-900">{sheetWidth} x {sheetHeight} cm</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Sharra (Kerf):</span> <strong className="text-slate-900">{bladeWidth} cm</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Margjinat:</span> <strong className="text-slate-900">L:{activeTrimLeft} R:{activeTrimRight} T:{activeTrimTop} B:{activeTrimBottom}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Shfrytëzimi:</span> <strong className="text-emerald-700 font-bold">{sheet.utilization}%</strong>
+                </div>
+              </div>
 
-                  {/* Print Vertical Grain */}
-                  <pattern id="printGrainVertical" width="15" height="120" patternUnits="userSpaceOnUse">
-                    <line x1="0" y1="0" x2="0" y2="120" stroke="#cccccc" strokeWidth="0.8" opacity="0.6" />
-                    <line x1="7.5" y1="0" x2="7.5" y2="120" stroke="#e2e8f0" strokeWidth="0.4" opacity="0.5" />
-                    <path d="M 3 20 Q 12 60 3 100" fill="none" stroke="#dddddd" strokeWidth="0.5" opacity="0.4" />
-                  </pattern>
-
-                  {/* Print Horizontal Grain */}
-                  <pattern id="printGrainHorizontal" width="120" height="15" patternUnits="userSpaceOnUse">
-                    <line x1="0" y1="0" x2="120" y2="0" stroke="#cccccc" strokeWidth="0.8" opacity="0.6" />
-                    <line x1="0" y1="7.5" x2="120" y2="7.5" stroke="#e2e8f0" strokeWidth="0.4" opacity="0.5" />
-                    <path d="M 20 3 Q 60 12 100 3" fill="none" stroke="#dddddd" strokeWidth="0.5" opacity="0.4" />
-                  </pattern>
-                </defs>
-
-                {/* White background and clean grid for printing */}
-                <rect width={sheet.width} height={sheet.height} fill="url(#printGridPattern)" />
-                <rect width={sheet.width} height={sheet.height} stroke="#000000" strokeWidth="1" fill="none" />
-
-                {/* Print grain texture on sheet if selected */}
-                {grainDirection === 'vertical' && (
-                  <rect width={sheet.width} height={sheet.height} fill="url(#printGrainVertical)" />
-                )}
-                {grainDirection === 'horizontal' && (
-                  <rect width={sheet.width} height={sheet.height} fill="url(#printGrainHorizontal)" />
-                )}
-
-                {/* Trim margins */}
-                {sheet.trimLeft > 0 && (
-                  <rect width={sheet.trimLeft} height={sheet.height} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
-                )}
-                {sheet.trimRight > 0 && (
-                  <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
-                )}
-                {sheet.trimTop > 0 && (
-                  <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
-                )}
-                {sheet.trimBottom > 0 && (
-                  <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
-                )}
-
-                {/* Dashed line representing cutting boundary */}
-                <rect
-                  x={sheet.trimLeft}
-                  y={sheet.trimTop}
-                  width={sheet.trimmedWidth}
-                  height={sheet.trimmedHeight}
-                  stroke="#475569"
-                  strokeWidth="0.5"
-                  strokeDasharray="1.5 1.5"
+              {/* Render the exact same SVG but styled beautifully for printing */}
+              <div className="flex-1 flex items-center justify-center border border-slate-200 p-1 rounded-lg bg-white overflow-hidden">
+                <svg
+                  viewBox={`-${paddingLeft} -${paddingTop} ${viewWidth} ${viewHeight}`}
+                  className="w-full h-full max-h-full"
                   fill="none"
-                />
-
-                {/* Horizontal top dimension indicator */}
-                <g stroke="#000000" strokeWidth="0.8">
-                  <line x1="0" y1="-12" x2={sheet.width} y2="-12" />
-                  <line x1="0" y1="-16" x2="0" y2="-8" />
-                  <line x1={sheet.width} y1="-16" x2={sheet.width} y2="-8" />
-                </g>
-                <text
-                  x={sheet.width / 2}
-                  y="-18"
-                  fill="#000000"
-                  fontSize="10"
-                  fontWeight="black"
-                  textAnchor="middle"
-                  className="font-mono font-bold"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  GJATËSIA: {sheet.width} cm
-                </text>
+                  <defs>
+                    <pattern id="printGridPattern" width="10" height="10" patternUnits="userSpaceOnUse">
+                      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e2e8f0" strokeWidth="0.2" />
+                    </pattern>
 
-                {/* Vertical left dimension indicator */}
-                <g stroke="#000000" strokeWidth="0.8">
-                  <line x1="-12" y1="0" x2="-12" y2={sheet.height} />
-                  <line x1="-16" y1="0" x2="-8" y2="0" />
-                  <line x1="-16" y1={sheet.height} x2="-8" y2={sheet.height} />
-                </g>
-                <text
-                  x="-18"
-                  y={sheet.height / 2}
-                  fill="#000000"
-                  fontSize="10"
-                  fontWeight="black"
-                  textAnchor="middle"
-                  className="font-mono font-bold"
-                  transform={`rotate(-90, -18, ${sheet.height / 2})`}
-                >
-                  GJERËSIA: {sheet.height} cm
-                </text>
+                    {/* Print Vertical Grain */}
+                    <pattern id="printGrainVertical" width="15" height="120" patternUnits="userSpaceOnUse">
+                      <line x1="0" y1="0" x2="0" y2="120" stroke="#cccccc" strokeWidth="0.8" opacity="0.6" />
+                      <line x1="7.5" y1="0" x2="7.5" y2="120" stroke="#e2e8f0" strokeWidth="0.4" opacity="0.5" />
+                      <path d="M 3 20 Q 12 60 3 100" fill="none" stroke="#dddddd" strokeWidth="0.5" opacity="0.4" />
+                    </pattern>
 
-                {/* Placed Parts */}
-                {sheet.placedParts.map((part) => {
-                  const useVerticalGrain = (grainDirection === 'vertical' && !part.rotated) || (grainDirection === 'horizontal' && part.rotated);
-                  const useHorizontalGrain = (grainDirection === 'horizontal' && !part.rotated) || (grainDirection === 'vertical' && part.rotated);
-                  const pc = getPartColorForDimension(part.w, part.h);
+                    {/* Print Horizontal Grain */}
+                    <pattern id="printGrainHorizontal" width="120" height="15" patternUnits="userSpaceOnUse">
+                      <line x1="0" y1="0" x2="120" y2="0" stroke="#cccccc" strokeWidth="0.8" opacity="0.6" />
+                      <line x1="0" y1="7.5" x2="120" y2="7.5" stroke="#e2e8f0" strokeWidth="0.4" opacity="0.5" />
+                      <path d="M 20 3 Q 60 12 100 3" fill="none" stroke="#dddddd" strokeWidth="0.5" opacity="0.4" />
+                    </pattern>
+                  </defs>
 
-                  return (
-                    <g key={part.id}>
-                      <rect
-                        x={part.x}
-                        y={part.y}
-                        width={part.w}
-                        height={part.h}
-                        fill={pc.fill}
-                        stroke="#000000"
-                        strokeWidth="0.8"
-                      />
+                  {/* White background and clean grid for printing */}
+                  <rect width={sheet.width} height={sheet.height} fill="url(#printGridPattern)" />
+                  <rect width={sheet.width} height={sheet.height} stroke="#000000" strokeWidth="1" fill="none" />
 
-                      {useVerticalGrain && (
+                  {/* Print grain texture on sheet if selected */}
+                  {grainDirection === 'vertical' && (
+                    <rect width={sheet.width} height={sheet.height} fill="url(#printGrainVertical)" />
+                  )}
+                  {grainDirection === 'horizontal' && (
+                    <rect width={sheet.width} height={sheet.height} fill="url(#printGrainHorizontal)" />
+                  )}
+
+                  {/* Trim margins */}
+                  {sheet.trimLeft > 0 && (
+                    <rect width={sheet.trimLeft} height={sheet.height} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                  )}
+                  {sheet.trimRight > 0 && (
+                    <rect x={sheet.width - sheet.trimRight} width={sheet.trimRight} height={sheet.height} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                  )}
+                  {sheet.trimTop > 0 && (
+                    <rect x={sheet.trimLeft} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimTop} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                  )}
+                  {sheet.trimBottom > 0 && (
+                    <rect x={sheet.trimLeft} y={sheet.height - sheet.trimBottom} width={sheet.width - sheet.trimLeft - sheet.trimRight} height={sheet.trimBottom} fill="#fee2e2" stroke="#ef4444" strokeWidth="0.3" strokeDasharray="1 1" />
+                  )}
+
+                  {/* Dashed line representing cutting boundary */}
+                  <rect
+                    x={sheet.trimLeft}
+                    y={sheet.trimTop}
+                    width={sheet.trimmedWidth}
+                    height={sheet.trimmedHeight}
+                    stroke="#475569"
+                    strokeWidth="0.5"
+                    strokeDasharray="1.5 1.5"
+                    fill="none"
+                  />
+
+                  {/* Horizontal top dimension indicator */}
+                  <g stroke="#000000" strokeWidth="0.8">
+                    <line x1="0" y1="-12" x2={sheet.width} y2="-12" />
+                    <line x1="0" y1="-16" x2="0" y2="-8" />
+                    <line x1={sheet.width} y1="-16" x2={sheet.width} y2="-8" />
+                  </g>
+                  <text
+                    x={sheet.width / 2}
+                    y="-18"
+                    fill="#000000"
+                    fontSize="10"
+                    fontWeight="black"
+                    textAnchor="middle"
+                    className="font-mono font-bold"
+                  >
+                    GJATËSIA: {sheet.width} cm
+                  </text>
+
+                  {/* Vertical left dimension indicator */}
+                  <g stroke="#000000" strokeWidth="0.8">
+                    <line x1="-12" y1="0" x2="-12" y2={sheet.height} />
+                    <line x1="-16" y1="0" x2="-8" y2="0" />
+                    <line x1="-16" y1={sheet.height} x2="-8" y2={sheet.height} />
+                  </g>
+                  <text
+                    x="-18"
+                    y={sheet.height / 2}
+                    fill="#000000"
+                    fontSize="10"
+                    fontWeight="black"
+                    textAnchor="middle"
+                    className="font-mono font-bold"
+                    transform={`rotate(-90, -18, ${sheet.height / 2})`}
+                  >
+                    GJERËSIA: {sheet.height} cm
+                  </text>
+
+                  {/* Placed Parts */}
+                  {sheet.placedParts.map((part) => {
+                    const useVerticalGrain = (grainDirection === 'vertical' && !part.rotated) || (grainDirection === 'horizontal' && part.rotated);
+                    const useHorizontalGrain = (grainDirection === 'horizontal' && !part.rotated) || (grainDirection === 'vertical' && part.rotated);
+                    const pc = getPartColorForDimension(part.w, part.h);
+
+                    return (
+                      <g key={part.id}>
                         <rect
                           x={part.x}
                           y={part.y}
                           width={part.w}
                           height={part.h}
-                          fill="url(#printGrainVertical)"
-                          opacity="0.5"
-                          pointerEvents="none"
+                          fill={pc.fill}
+                          stroke="#000000"
+                          strokeWidth="0.8"
                         />
-                      )}
-                      {useHorizontalGrain && (
-                        <rect
-                          x={part.x}
-                          y={part.y}
-                          width={part.w}
-                          height={part.h}
-                          fill="url(#printGrainHorizontal)"
-                          opacity="0.5"
-                          pointerEvents="none"
-                        />
-                      )}
 
-                      {/* Name with White Halo for maximum contrast in black & white printing */}
-                      <text
-                        x={part.x + part.w / 2}
-                        y={part.y + part.h / 2 - 2}
-                        fill="none"
-                        stroke="#ffffff"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fontSize="7"
-                        fontWeight="black"
-                        textAnchor="middle"
-                      >
-                        {part.name}
-                      </text>
-                      <text
-                        x={part.x + part.w / 2}
-                        y={part.y + part.h / 2 - 2}
-                        fill="#000000"
-                        fontSize="7"
-                        fontWeight="black"
-                        textAnchor="middle"
-                        className="font-bold"
-                      >
-                        {part.name}
-                      </text>
-
-                      {/* Size with White Halo */}
-                      <text
-                        x={part.x + part.w / 2}
-                        y={part.y + part.h / 2 + 5}
-                        fill="none"
-                        stroke="#ffffff"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fontSize="6"
-                        fontWeight="black"
-                        textAnchor="middle"
-                      >
-                        {part.w} x {part.h} cm
-                      </text>
-                      <text
-                        x={part.x + part.w / 2}
-                        y={part.y + part.h / 2 + 5}
-                        fill="#000000"
-                        fontSize="6"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        className="font-mono"
-                      >
-                        {part.w} x {part.h} cm
-                      </text>
-
-                      {/* Explicit cut dimensions on part borders with high-contrast CAD-style arrow lines */}
-                      {part.w > 18 ? (
-                        <g>
-                          {/* Horizontal line with arrows */}
-                          <line
-                            x1={part.x + 1.5}
-                            y1={part.y + 3.5}
-                            x2={part.x + part.w - 1.5}
-                            y2={part.y + 3.5}
-                            stroke="#000000"
-                            strokeWidth="0.5"
-                          />
-                          {/* Left Arrowhead */}
-                          <polygon
-                            points={`${part.x + 1.5},${part.y + 3.5} ${part.x + 4.5},${part.y + 2.3} ${part.x + 4.5},${part.y + 4.7}`}
-                            fill="#000000"
-                          />
-                          {/* Right Arrowhead */}
-                          <polygon
-                            points={`${part.x + part.w - 1.5},${part.y + 3.5} ${part.x + part.w - 4.5},${part.y + 2.3} ${part.x + part.w - 4.5},${part.y + 4.7}`}
-                            fill="#000000"
-                          />
-                          {/* Text background white mask */}
+                        {useVerticalGrain && (
                           <rect
-                            x={part.x + part.w / 2 - 10}
-                            y={part.y + 1.5}
-                            width="20"
-                            height="4"
-                            rx="0.5"
-                            fill="#ffffff"
-                            stroke="#000000"
-                            strokeWidth="0.3"
+                            x={part.x}
+                            y={part.y}
+                            width={part.w}
+                            height={part.h}
+                            fill="url(#printGrainVertical)"
+                            opacity="0.5"
+                            pointerEvents="none"
                           />
-                          <text
-                            x={part.x + part.w / 2}
-                            y={part.y + 4.6}
-                            fill="#000000"
-                            fontSize="3.8"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                            className="font-mono"
-                          >
-                            {part.w} cm
-                          </text>
-                        </g>
-                      ) : (
-                        part.w > 8 && (
+                        )}
+                        {useHorizontalGrain && (
+                          <rect
+                            x={part.x}
+                            y={part.y}
+                            width={part.w}
+                            height={part.h}
+                            fill="url(#printGrainHorizontal)"
+                            opacity="0.5"
+                            pointerEvents="none"
+                          />
+                        )}
+
+                        {/* Name with White Halo for maximum contrast in black & white printing */}
+                        <text
+                          x={part.x + part.w / 2}
+                          y={part.y + part.h / 2 - 2}
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fontSize="7"
+                          fontWeight="black"
+                          textAnchor="middle"
+                        >
+                          {part.name}
+                        </text>
+                        <text
+                          x={part.x + part.w / 2}
+                          y={part.y + part.h / 2 - 2}
+                          fill="#000000"
+                          fontSize="7"
+                          fontWeight="black"
+                          textAnchor="middle"
+                          className="font-bold"
+                        >
+                          {part.name}
+                        </text>
+
+                        {/* Size with White Halo */}
+                        <text
+                          x={part.x + part.w / 2}
+                          y={part.y + part.h / 2 + 5}
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fontSize="6"
+                          fontWeight="black"
+                          textAnchor="middle"
+                        >
+                          {part.w} x {part.h} cm
+                        </text>
+                        <text
+                          x={part.x + part.w / 2}
+                          y={part.y + part.h / 2 + 5}
+                          fill="#000000"
+                          fontSize="6"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                          className="font-mono"
+                        >
+                          {part.w} x {part.h} cm
+                        </text>
+
+                        {/* Explicit cut dimensions on part borders with high-contrast CAD-style arrow lines */}
+                        {part.w > 18 ? (
                           <g>
+                            {/* Horizontal line with arrows */}
+                            <line
+                              x1={part.x + 1.5}
+                              y1={part.y + 3.5}
+                              x2={part.x + part.w - 1.5}
+                              y2={part.y + 3.5}
+                              stroke="#000000"
+                              strokeWidth="0.5"
+                            />
+                            {/* Left Arrowhead */}
+                            <polygon
+                              points={`${part.x + 1.5},${part.y + 3.5} ${part.x + 4.5},${part.y + 2.3} ${part.x + 4.5},${part.y + 4.7}`}
+                              fill="#000000"
+                            />
+                            {/* Right Arrowhead */}
+                            <polygon
+                              points={`${part.x + part.w - 1.5},${part.y + 3.5} ${part.x + part.w - 4.5},${part.y + 2.3} ${part.x + part.w - 4.5},${part.y + 4.7}`}
+                              fill="#000000"
+                            />
+                            {/* Text background white mask */}
                             <rect
-                              x={part.x + part.w / 2 - 8}
+                              x={part.x + part.w / 2 - 10}
                               y={part.y + 1.5}
-                              width="16"
+                              width="20"
                               height="4"
                               rx="0.5"
                               fill="#ffffff"
@@ -1896,68 +1884,68 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               x={part.x + part.w / 2}
                               y={part.y + 4.6}
                               fill="#000000"
-                              fontSize="3.5"
+                              fontSize="3.8"
                               fontWeight="bold"
                               textAnchor="middle"
                               className="font-mono"
                             >
-                              {part.w}
+                              {part.w} cm
                             </text>
                           </g>
-                        )
-                      )}
+                        ) : (
+                          part.w > 8 && (
+                            <g>
+                              <rect
+                                x={part.x + part.w / 2 - 8}
+                                y={part.y + 1.5}
+                                width="16"
+                                height="4"
+                                rx="0.5"
+                                fill="#ffffff"
+                                stroke="#000000"
+                                strokeWidth="0.3"
+                              />
+                              <text
+                                x={part.x + part.w / 2}
+                                y={part.y + 4.6}
+                                fill="#000000"
+                                fontSize="3.5"
+                                fontWeight="bold"
+                                textAnchor="middle"
+                                className="font-mono"
+                              >
+                                {part.w}
+                              </text>
+                            </g>
+                          )
+                        )}
 
-                      {part.h > 15 ? (
-                        <g>
-                          {/* Vertical line with arrows */}
-                          <line
-                            x1={part.x + 3.5}
-                            y1={part.y + 1.5}
-                            x2={part.x + 3.5}
-                            y2={part.y + part.h - 1.5}
-                            stroke="#000000"
-                            strokeWidth="0.5"
-                          />
-                          {/* Top Arrowhead */}
-                          <polygon
-                            points={`${part.x + 3.5},${part.y + 1.5} ${part.x + 2.3},${part.y + 4.5} ${part.x + 4.7},${part.y + 4.5}`}
-                            fill="#000000"
-                          />
-                          {/* Bottom Arrowhead */}
-                          <polygon
-                            points={`${part.x + 3.5},${part.y + part.h - 1.5} ${part.x + 2.3},${part.y + part.h - 4.5} ${part.x + 4.7},${part.y + part.h - 4.5}`}
-                            fill="#000000"
-                          />
-                          {/* Text background white mask */}
-                          <rect
-                            x={part.x + 1}
-                            y={part.y + part.h / 2 - 2}
-                            width="18"
-                            height="4"
-                            rx="0.5"
-                            fill="#ffffff"
-                            stroke="#000000"
-                            strokeWidth="0.3"
-                          />
-                          <text
-                            x={part.x + 10}
-                            y={part.y + part.h / 2 + 1.1}
-                            fill="#000000"
-                            fontSize="3.8"
-                            fontWeight="bold"
-                            textAnchor="middle"
-                            className="font-mono"
-                          >
-                            {part.h} cm
-                          </text>
-                        </g>
-                      ) : (
-                        part.h > 8 && (
+                        {part.h > 15 ? (
                           <g>
+                            {/* Vertical line with arrows */}
+                            <line
+                              x1={part.x + 3.5}
+                              y1={part.y + 1.5}
+                              x2={part.x + 3.5}
+                              y2={part.y + part.h - 1.5}
+                              stroke="#000000"
+                              strokeWidth="0.5"
+                            />
+                            {/* Top Arrowhead */}
+                            <polygon
+                              points={`${part.x + 3.5},${part.y + 1.5} ${part.x + 2.3},${part.y + 4.5} ${part.x + 4.7},${part.y + 4.5}`}
+                              fill="#000000"
+                            />
+                            {/* Bottom Arrowhead */}
+                            <polygon
+                              points={`${part.x + 3.5},${part.y + part.h - 1.5} ${part.x + 2.3},${part.y + part.h - 4.5} ${part.x + 4.7},${part.y + part.h - 4.5}`}
+                              fill="#000000"
+                            />
+                            {/* Text background white mask */}
                             <rect
                               x={part.x + 1}
                               y={part.y + part.h / 2 - 2}
-                              width="11"
+                              width="18"
                               height="4"
                               rx="0.5"
                               fill="#ffffff"
@@ -1965,71 +1953,96 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               strokeWidth="0.3"
                             />
                             <text
-                              x={part.x + 6.5}
+                              x={part.x + 10}
                               y={part.y + part.h / 2 + 1.1}
                               fill="#000000"
-                              fontSize="3.5"
+                              fontSize="3.8"
                               fontWeight="bold"
                               textAnchor="middle"
                               className="font-mono"
                             >
-                              {part.h}
+                              {part.h} cm
                             </text>
                           </g>
-                        )
+                        ) : (
+                          part.h > 8 && (
+                            <g>
+                              <rect
+                                x={part.x + 1}
+                                y={part.y + part.h / 2 - 2}
+                                width="11"
+                                height="4"
+                                rx="0.5"
+                                fill="#ffffff"
+                                stroke="#000000"
+                                strokeWidth="0.3"
+                              />
+                              <text
+                                x={part.x + 6.5}
+                                y={part.y + part.h / 2 + 1.1}
+                                fill="#000000"
+                                fontSize="3.5"
+                                fontWeight="bold"
+                                textAnchor="middle"
+                                className="font-mono"
+                              >
+                                {part.h}
+                              </text>
+                            </g>
+                          )
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  {/* Leftovers in dotted patterns */}
+                  {sheet.leftovers.map((leftover) => (
+                    <g key={leftover.id}>
+                      <rect
+                        x={leftover.x}
+                        y={leftover.y}
+                        width={leftover.w}
+                        height={leftover.h}
+                        fill="#fef3c7"
+                        fillOpacity="0.2"
+                        stroke="#000000"
+                        strokeWidth="0.6"
+                        strokeDasharray="2 2"
+                      />
+                      {leftover.w > 18 && leftover.h > 15 && (
+                        <text
+                          x={leftover.x + leftover.w / 2}
+                          y={leftover.y + leftover.h / 2 + 1}
+                          fill="#78350f"
+                          fontSize="5.5"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          Tepricë {leftover.w}x{leftover.h}
+                        </text>
                       )}
                     </g>
-                  );
-                })}
+                  ))}
+                </svg>
+              </div>
 
-                {/* Leftovers in dotted patterns */}
-                {sheet.leftovers.map((leftover) => (
-                  <g key={leftover.id}>
-                    <rect
-                      x={leftover.x}
-                      y={leftover.y}
-                      width={leftover.w}
-                      height={leftover.h}
-                      fill="#fef3c7"
-                      fillOpacity="0.2"
-                      stroke="#000000"
-                      strokeWidth="0.6"
-                      strokeDasharray="2 2"
-                    />
-                    {leftover.w > 18 && leftover.h > 15 && (
-                      <text
-                        x={leftover.x + leftover.w / 2}
-                        y={leftover.y + leftover.h / 2 + 1}
-                        fill="#78350f"
-                        fontSize="5.5"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                      >
-                        Tepricë {leftover.w}x{leftover.h}
-                      </text>
-                    )}
-                  </g>
-                ))}
-              </svg>
-            </div>
-
-            {/* List of cuts */}
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase text-slate-500">Pjesët e vendosura në këtë panel:</p>
-              <div className="grid grid-cols-3 gap-2 text-[10px]">
-                {sheet.placedParts.map((p, idx) => (
-                  <div key={idx} className="flex justify-between border-b border-slate-100 pb-1 pr-2">
-                    <span>{idx + 1}. <strong>{p.name}</strong></span>
-                    <span className="font-mono font-semibold">{p.w} x {p.h} cm {p.rotated ? '(Rot)' : ''}</span>
-                  </div>
-                ))}
+              {/* List of cuts with dimensions right next to the names */}
+              <div className="space-y-1 mt-1">
+                <p className="text-[9px] font-bold uppercase text-slate-500">Pjesët e vendosura në këtë panel:</p>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-[10px]">
+                  {sheet.placedParts.map((p, idx) => (
+                    <div key={idx} className="flex items-center border-b border-slate-200 pb-0.5 pr-1 font-medium text-slate-800">
+                      <span className="truncate mr-1">{idx + 1}. <strong>{p.name}</strong></span>
+                      <span className="font-mono text-slate-900 shrink-0 text-[10px]">({p.w} x {p.h} cm){p.rotated ? ' ↻' : ''}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>,
-    document.body
+          );
+        })}
+      </div>,
+      document.body
     )}
 
     <style dangerouslySetInnerHTML={{ __html: `
@@ -2062,7 +2075,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
         }
         @page {
           size: A4 landscape;
-          margin: 10mm;
+          margin: 5mm;
         }
       }
     `}} />
