@@ -697,6 +697,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
                 </button>
                 <button
                   type="button"
+                  onClick={() => applySheetPreset(376, 186)}
+                  className="px-2.5 py-1 text-[10px] font-extrabold bg-indigo-50 border border-indigo-200 text-indigo-700 hover:border-indigo-400 hover:bg-white hover:text-indigo-600 rounded-lg transition-all"
+                >
+                  Bardh 22 (376x186 cm)
+                </button>
+                <button
+                  type="button"
                   onClick={() => applySheetPreset(288, 122)}
                   className="px-2.5 py-1 text-[10px] font-bold bg-white border border-slate-200 hover:border-indigo-400 hover:text-indigo-600 rounded-lg transition-all"
                 >
