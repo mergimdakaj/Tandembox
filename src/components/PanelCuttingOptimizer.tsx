@@ -98,12 +98,13 @@ export function PanelCuttingOptimizer() {
   const [damageRight, setDamageRight] = useState<boolean>(false);
   const [damageTop, setDamageTop] = useState<boolean>(false);
   const [damageBottom, setDamageBottom] = useState<boolean>(false);
+  const [cleaningAmount, setCleaningAmount] = useState<number>(5);
 
-  // If damage checkbox is checked, use exactly 5cm. If not checked, use the standard 1cm trim.
-  const activeTrimLeft = useMemo(() => (damageLeft ? 5 : trimLeft), [trimLeft, damageLeft]);
-  const activeTrimRight = useMemo(() => (damageRight ? 5 : trimRight), [trimRight, damageRight]);
-  const activeTrimTop = useMemo(() => (damageTop ? 5 : trimTop), [trimTop, damageTop]);
-  const activeTrimBottom = useMemo(() => (damageBottom ? 5 : trimBottom), [trimBottom, damageBottom]);
+  // If damage checkbox is checked, use the chosen cleaningAmount. If not checked, use the standard 1cm trim.
+  const activeTrimLeft = useMemo(() => (damageLeft ? cleaningAmount : trimLeft), [trimLeft, damageLeft, cleaningAmount]);
+  const activeTrimRight = useMemo(() => (damageRight ? cleaningAmount : trimRight), [trimRight, damageRight, cleaningAmount]);
+  const activeTrimTop = useMemo(() => (damageTop ? cleaningAmount : trimTop), [trimTop, damageTop, cleaningAmount]);
+  const activeTrimBottom = useMemo(() => (damageBottom ? cleaningAmount : trimBottom), [trimBottom, damageBottom, cleaningAmount]);
 
   // Cut parts list
   const [parts, setParts] = useState<CutPart[]>([]);
@@ -764,13 +765,51 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </div>
           </div>
 
-          {/* Damage Cleaning options (Trim side panels by 5cm if damaged) */}
-          <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100/70 space-y-3">
+          {/* Damage Cleaning options (Trim side panels by chosen amount if damaged) */}
+          <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100/70 space-y-3.5">
             <h4 className="text-[11px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-2">
               <Scissors className="w-3.5 h-3.5 text-amber-600" /> Pastrimi i Teheve ose Demtimet
             </h4>
+
+            {/* Masa e Pastrimit Selector */}
+            <div className="flex flex-col gap-1.5 pb-1">
+              <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">
+                Zgjidh masën e pastrimit:
+              </span>
+              <div className="grid grid-cols-2 gap-2 bg-amber-100/40 p-1 rounded-xl border border-amber-200/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCleaningAmount(2);
+                    setIsStale(true);
+                  }}
+                  className={`py-1.5 px-3 text-xs font-black rounded-lg transition-all duration-200 ${
+                    cleaningAmount === 2
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-amber-800 hover:bg-white/50'
+                  }`}
+                >
+                  20 mm (2 cm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCleaningAmount(5);
+                    setIsStale(true);
+                  }}
+                  className={`py-1.5 px-3 text-xs font-black rounded-lg transition-all duration-200 ${
+                    cleaningAmount === 5
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-amber-800 hover:bg-white/50'
+                  }`}
+                >
+                  50 mm (5 cm)
+                </button>
+              </div>
+            </div>
+
             <p className="text-[10px] text-amber-700/80 leading-relaxed font-medium">
-              Zgjidhni cilën anë të panelit dëshironi ta shkurtoni me <strong>50 mm</strong> për shkak të dëmtimeve ose pastrimit të makinës:
+              Zgjidhni cilën anë të panelit dëshironi ta shkurtoni me <strong className="text-amber-900 font-black">{cleaningAmount * 10} mm</strong> për shkak të dëmtimeve ose pastrimit të makinës:
             </p>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
@@ -784,7 +823,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Majtas (50 mm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Majtas ({cleaningAmount * 10} mm)</span>
               </label>
 
               <label className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:border-amber-200 cursor-pointer select-none">
@@ -797,7 +836,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Djathtas (50 mm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Djathtas ({cleaningAmount * 10} mm)</span>
               </label>
 
               <label className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:border-amber-200 cursor-pointer select-none">
@@ -810,7 +849,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Sipër (50 mm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Sipër ({cleaningAmount * 10} mm)</span>
               </label>
 
               <label className="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:border-amber-200 cursor-pointer select-none">
@@ -823,7 +862,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   }}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-[10px] font-bold text-slate-700">Poshtë (50 mm)</span>
+                <span className="text-[10px] font-bold text-slate-700">Poshtë ({cleaningAmount * 10} mm)</span>
               </label>
             </div>
 
