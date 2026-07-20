@@ -18,6 +18,8 @@ interface PlacedPart {
   y: number;
   w: number;
   h: number;
+  originalW?: number;
+  originalH?: number;
   rotated: boolean;
 }
 
@@ -82,6 +84,9 @@ export function PanelCuttingOptimizer() {
 
   // Blade width (kerf) - default 0.4 cm (4 mm)
   const [bladeWidth, setBladeWidth] = useState<number | ''>(0.4);
+
+  // Pre-milling / Edgebanding (+4mm automatic size adjustment) - default true
+  const [addPreMilling, setAddPreMilling] = useState<boolean>(true);
 
   // Grain direction for wood texture simulation
   // 'none' (solid color/MDF), 'vertical' (grain runs up/down), 'horizontal' (grain runs left/right)
@@ -315,6 +320,9 @@ export function PanelCuttingOptimizer() {
         const originalH = item.originalH;
         if (originalW <= 0 || originalH <= 0) return;
 
+        const effectiveW = addPreMilling ? originalW + 0.4 : originalW;
+        const effectiveH = addPreMilling ? originalH + 0.4 : originalH;
+
         let placed = false;
 
         // Try placing in existing sheets
@@ -326,9 +334,9 @@ export function PanelCuttingOptimizer() {
           const maxH = targetSheet.trimmedHeight;
 
           // Test both orientations to see which packs tighter!
-          const orientations = item.part.allowRotation && originalW !== originalH 
-            ? [{ w: originalW, h: originalH, rot: false }, { w: originalH, h: originalW, rot: true }]
-            : [{ w: originalW, h: originalH, rot: false }];
+          const orientations = item.part.allowRotation && effectiveW !== effectiveH 
+            ? [{ w: effectiveW, h: effectiveH, rot: false }, { w: effectiveH, h: effectiveW, rot: true }]
+            : [{ w: effectiveW, h: effectiveH, rot: false }];
 
           for (const orient of orientations) {
             const { w, h, rot } = orient;
@@ -353,6 +361,8 @@ export function PanelCuttingOptimizer() {
                   y: targetSheet.trimTop + shelf.y,
                   w,
                   h,
+                  originalW,
+                  originalH,
                   rotated: rot
                 });
 
@@ -383,6 +393,8 @@ export function PanelCuttingOptimizer() {
                 y: targetSheet.trimTop + neededY,
                 w,
                 h,
+                originalW,
+                originalH,
                 rotated: rot
               });
 
@@ -405,9 +417,9 @@ export function PanelCuttingOptimizer() {
           const maxW = currentSheet.trimmedWidth;
           const maxH = currentSheet.trimmedHeight;
 
-          const orientations = item.part.allowRotation && originalW !== originalH 
-            ? [{ w: originalW, h: originalH, rot: false }, { w: originalH, h: originalW, rot: true }]
-            : [{ w: originalW, h: originalH, rot: false }];
+          const orientations = item.part.allowRotation && effectiveW !== effectiveH 
+            ? [{ w: effectiveW, h: effectiveH, rot: false }, { w: effectiveH, h: effectiveW, rot: true }]
+            : [{ w: effectiveW, h: effectiveH, rot: false }];
 
           for (const orient of orientations) {
             const { w, h, rot } = orient;
@@ -426,6 +438,8 @@ export function PanelCuttingOptimizer() {
                 y: currentSheet.trimTop + 0,
                 w,
                 h,
+                originalW,
+                originalH,
                 rotated: rot
               });
               placed = true;
@@ -762,6 +776,27 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   cm (standard: {Number(bladeWidth || 0) * 10}mm)
                 </span>
               </div>
+            </div>
+
+            {/* Shto +4mm automatik per Kant (Edgebanding Pre-Milling) */}
+            <div className="pt-2 border-t border-slate-200/50">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={addPreMilling}
+                  onChange={(e) => {
+                    setAddPreMilling(e.target.checked);
+                    setIsStale(true);
+                  }}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 accent-indigo-600"
+                />
+                <span className="text-[10px] font-black uppercase text-slate-700 tracking-wide">
+                  Shto automatik +4mm për kant
+                </span>
+              </label>
+              <p className="text-[9px] text-slate-400 mt-1 pl-6 leading-relaxed font-semibold">
+                Shtohet automatikisht +4mm (0.4 cm) për prerje (për trak / kantim), por tregon dimensionet origjinale në hartë dhe printim për të shmangur ngatërresat.
+              </p>
             </div>
           </div>
 
@@ -1340,6 +1375,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
                         {/* Render placed parts */}
                         {sheet.placedParts.map((part, idx) => {
                           const c = getPartColorForDimension(part.w, part.h);
+                          const dispW = part.rotated ? (part.originalH ?? part.h) : (part.originalW ?? part.w);
+                          const dispH = part.rotated ? (part.originalW ?? part.w) : (part.originalH ?? part.h);
 
                           // Determine grain texture overlay for individual part (rotates if part is rotated relative to master)
                           const useVerticalGrain = (grainDirection === 'vertical' && !part.rotated) || (grainDirection === 'horizontal' && part.rotated);
@@ -1405,7 +1442,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="font-mono select-none"
                                   >
-                                    {(part.w * 10).toFixed(0)}x{(part.h * 10).toFixed(0)}mm
+                                    {(dispW * 10).toFixed(0)}x{(dispH * 10).toFixed(0)}mm
                                   </text>
                                 </>
                               ) : (
@@ -1418,7 +1455,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                   textAnchor="middle"
                                   className="font-mono select-none"
                                 >
-                                  {(part.w * 10).toFixed(0)}x{(part.h * 10).toFixed(0)}
+                                  {(dispW * 10).toFixed(0)}x{(dispH * 10).toFixed(0)}
                                 </text>
                               )}
 
@@ -1478,7 +1515,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="font-mono"
                                   >
-                                    {(part.w * 10).toFixed(0)} mm
+                                    {(dispW * 10).toFixed(0)} mm
                                   </text>
                                 </g>
                               ) : (
@@ -1501,7 +1538,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                       textAnchor="middle"
                                       className="font-mono"
                                     >
-                                      {(part.w * 10).toFixed(0)}
+                                      {(dispW * 10).toFixed(0)}
                                     </text>
                                   </g>
                                 )
@@ -1542,7 +1579,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                     textAnchor="middle"
                                     className="font-mono"
                                   >
-                                    {(part.h * 10).toFixed(0)} mm
+                                    {(dispH * 10).toFixed(0)} mm
                                   </text>
                                 </g>
                               ) : (
@@ -1565,7 +1602,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                       textAnchor="middle"
                                       className="font-mono"
                                     >
-                                      {(part.h * 10).toFixed(0)}
+                                      {(dispH * 10).toFixed(0)}
                                     </text>
                                   </g>
                                 )
@@ -1712,26 +1749,30 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
                     {/* Placed Parts list underneath */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {sheet.placedParts.map((p, idx) => (
-                        <div key={idx} className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[12px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 min-w-[22px] text-center inline-block shrink-0">
-                              {idx + 1}
-                            </span>
-                            <div className="min-w-0">
-                              <span className="block text-[10px] font-black text-slate-800 truncate">{p.name}</span>
-                              <span className="text-[9px] text-slate-400 font-bold block">
-                                Masa: <span className="text-indigo-600 font-extrabold">{(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm</span>
+                      {sheet.placedParts.map((p, idx) => {
+                        const origW = p.originalW ?? p.w;
+                        const origH = p.originalH ?? p.h;
+                        return (
+                          <div key={idx} className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[12px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 min-w-[22px] text-center inline-block shrink-0">
+                                {idx + 1}
                               </span>
+                              <div className="min-w-0">
+                                <span className="block text-[10px] font-black text-slate-800 truncate">{p.name}</span>
+                                <span className="text-[9px] text-slate-400 font-bold block">
+                                  Masa: <span className="text-indigo-600 font-extrabold">{(origW * 10).toFixed(0)} x {(origH * 10).toFixed(0)} mm</span>
+                                </span>
+                              </div>
                             </div>
+                            {p.rotated && (
+                              <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded shrink-0">
+                                Rrotulluar
+                              </span>
+                            )}
                           </div>
-                          {p.rotated && (
-                            <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded shrink-0">
-                              Rrotulluar
-                            </span>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -1774,7 +1815,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
           return (
             <div
               key={sheet.sheetIndex}
-              className={`h-[195mm] max-h-[195mm] border border-slate-300 p-4 rounded-xl bg-white flex flex-col justify-between page-break-inside-avoid ${
+              className={`h-[180mm] max-h-[180mm] border border-slate-300 p-3 rounded-xl bg-white flex flex-col justify-between page-break-inside-avoid ${
                 sheet.sheetIndex < (calculatedResults?.sheets.length || 0) ? 'page-break-after-always' : ''
               }`}
               style={{ boxSizing: 'border-box' }}
@@ -2004,6 +2045,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     const useVerticalGrain = (grainDirection === 'vertical' && !part.rotated) || (grainDirection === 'horizontal' && part.rotated);
                     const useHorizontalGrain = (grainDirection === 'horizontal' && !part.rotated) || (grainDirection === 'vertical' && part.rotated);
                     const pc = getPartColorForDimension(part.w, part.h);
+                    const dispW = part.rotated ? (part.originalH ?? part.h) : (part.originalW ?? part.w);
+                    const dispH = part.rotated ? (part.originalW ?? part.w) : (part.originalH ?? part.h);
 
                     return (
                       <g key={part.id}>
@@ -2080,7 +2123,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           fontWeight="black"
                           textAnchor="middle"
                         >
-                          {(part.w * 10).toFixed(0)} x {(part.h * 10).toFixed(0)} mm
+                          {(dispW * 10).toFixed(0)} x {(dispH * 10).toFixed(0)} mm
                         </text>
                         <text
                           x={part.x + part.w / 2}
@@ -2091,7 +2134,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           textAnchor="middle"
                           className="font-mono"
                         >
-                          {(part.w * 10).toFixed(0)} x {(part.h * 10).toFixed(0)} mm
+                          {(dispW * 10).toFixed(0)} x {(dispH * 10).toFixed(0)} mm
                         </text>
 
                         {/* Explicit cut dimensions on part borders with high-contrast CAD-style arrow lines */}
@@ -2136,7 +2179,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               textAnchor="middle"
                               className="font-mono"
                             >
-                              {(part.w * 10).toFixed(0)} mm
+                              {(dispW * 10).toFixed(0)} mm
                             </text>
                           </g>
                         ) : (
@@ -2161,7 +2204,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                 textAnchor="middle"
                                 className="font-mono"
                               >
-                                {(part.w * 10).toFixed(0)}
+                                {(dispW * 10).toFixed(0)}
                               </text>
                             </g>
                           )
@@ -2208,7 +2251,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               textAnchor="middle"
                               className="font-mono"
                             >
-                              {(part.h * 10).toFixed(0)} mm
+                              {(dispH * 10).toFixed(0)} mm
                             </text>
                           </g>
                         ) : (
@@ -2233,7 +2276,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                 textAnchor="middle"
                                 className="font-mono"
                               >
-                                {(part.h * 10).toFixed(0)}
+                                {(dispH * 10).toFixed(0)}
                               </text>
                             </g>
                           )
@@ -2274,22 +2317,26 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </div>
 
               {/* List of cuts with dimensions right next to the names */}
-              <div className="space-y-1.5 mt-2">
-                <p className="text-[10px] font-black uppercase text-slate-800">Pjesët e vendosura në këtë panel:</p>
-                <div className="grid grid-cols-3 gap-x-5 gap-y-1.5 text-[11px]">
-                  {sheet.placedParts.map((p, idx) => (
-                    <div key={idx} className="flex items-center border-b border-slate-300 pb-1 pr-1 font-bold text-slate-900">
-                      <span className="truncate mr-1 flex items-center gap-1.5 min-w-0">
-                        <span className="text-[13px] font-black text-black bg-black text-white px-1.5 py-0.5 rounded min-w-[22px] text-center inline-block shrink-0 shadow-xs print:border print:border-black print:bg-white print:text-black">
-                          {idx + 1}
+              <div className="space-y-1 mt-1">
+                <p className="text-[9px] font-black uppercase text-slate-800">Pjesët e vendosura në këtë panel:</p>
+                <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[10px]">
+                  {sheet.placedParts.map((p, idx) => {
+                    const origW = p.originalW ?? p.w;
+                    const origH = p.originalH ?? p.h;
+                    return (
+                      <div key={idx} className="flex items-center border-b border-slate-300 pb-0.5 pr-0.5 font-bold text-slate-900">
+                        <span className="truncate mr-1 flex items-center gap-1 min-w-0">
+                          <span className="text-[10px] font-black text-black bg-black text-white px-1 py-0.5 rounded min-w-[18px] text-center inline-block shrink-0 shadow-xs print:border print:border-black print:bg-white print:text-black">
+                            {idx + 1}
+                          </span>
+                          <strong className="text-black font-black text-[10px] truncate">{p.name}</strong>
                         </span>
-                        <strong className="text-black font-black text-[12px] truncate">{p.name}</strong>
-                      </span>
-                      <span className="font-mono text-black font-extrabold shrink-0 text-[11px] ml-auto">
-                        ({(p.w * 10).toFixed(0)} x {(p.h * 10).toFixed(0)} mm){p.rotated ? ' ↻' : ''}
-                      </span>
-                    </div>
-                  ))}
+                        <span className="font-mono text-black font-extrabold shrink-0 text-[9px] ml-auto">
+                          ({(origW * 10).toFixed(0)}x{(origH * 10).toFixed(0)}){p.rotated ? ' ↻' : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
