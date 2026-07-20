@@ -1139,7 +1139,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
           {/* Quick summary of required sheets */}
           {calculatedResults && (
-            <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex items-center justify-between gap-4">
+            <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Layers className="w-5 h-5 text-indigo-600" />
                 <div>
@@ -1151,9 +1151,14 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   </p>
                 </div>
               </div>
-              <div className="text-right text-[10px] text-slate-500 font-bold">
-                <p>Sharramania (Kerf): <span className="text-indigo-600">{(Number(bladeWidth) || 0.4)} cm</span></p>
+              <div className="text-right text-[10px] text-slate-500 font-bold space-y-0.5">
+                <p>Sharramania (Kerf): <span className="text-indigo-600">{(Number(bladeWidth) || 0.4)} cm ({(Number(bladeWidth) || 0.4) * 10} mm)</span></p>
                 <p>Margjinat: L:{activeTrimLeft} R:{activeTrimRight} T:{activeTrimTop} B:{activeTrimBottom} cm</p>
+                {addPreMilling && (
+                  <p className="text-emerald-700 text-[9px] font-black leading-tight max-w-sm ml-auto">
+                    * Harta bën hesap automatikisht +4 mm për kataric (shton panelin 0.4 cm më të madh dhe zbret çdo prerje përveç sharres, por tregon dimensionet origjinale në vizatim).
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -1850,12 +1855,15 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </div>
 
               {/* Compact Metadata Row */}
-              <div className="grid grid-cols-4 gap-2 text-[9px] border border-slate-200 p-1.5 rounded-lg bg-slate-50">
+              <div className="grid grid-cols-5 gap-2 text-[9px] border border-slate-200 p-1.5 rounded-lg bg-slate-50">
                 <div>
                   <span className="text-slate-500">Panel Master:</span> <strong className="text-slate-900">{(Number(sheetWidth) * 10).toFixed(0)} x {(Number(sheetHeight) * 10).toFixed(0)} mm</strong>
                 </div>
                 <div>
                   <span className="text-slate-500">Sharra (Kerf):</span> <strong className="text-slate-900">{(Number(bladeWidth) * 10).toFixed(0)} mm</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Kataric (Kant):</span> <strong className="text-emerald-700">{addPreMilling ? "+4 mm" : "Jo"}</strong>
                 </div>
                 <div>
                   <span className="text-slate-500">Margjinat:</span> <strong className="text-slate-900">L:{activeTrimLeft * 10} R:{activeTrimRight * 10} T:{activeTrimTop * 10} B:{activeTrimBottom * 10} mm</strong>
@@ -1864,6 +1872,12 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   <span className="text-slate-500">Shfrytëzimi:</span> <strong className="text-emerald-700 font-bold">{sheet.utilization}%</strong>
                 </div>
               </div>
+
+              {addPreMilling && (
+                <div className="text-[8px] leading-snug font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded px-2 py-0.5 mt-0.5">
+                  * Vërejtje: Harta e prerjes e bën hesap dhe e zbret çdo prerje duke shtuar automatikisht +4 mm (+0.4 cm) për kataric (pjesë/panel më i madh për kantim), por tregon dimensionet e pastra origjinale në vizatim për të shmangur ngatërresat.
+                </div>
+              )}
 
               {/* Render the exact same SVG but styled beautifully for printing */}
               <div className="flex-1 flex items-center justify-center border border-slate-200 p-1 rounded-lg bg-white overflow-hidden">
