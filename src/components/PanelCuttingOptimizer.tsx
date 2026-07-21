@@ -1,6 +1,6 @@
 import { useState, useMemo, FormEvent, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight, Lock, Unlock } from 'lucide-react';
+import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight, Lock, Unlock, Move } from 'lucide-react';
 
 interface CutPart {
   id: string;
@@ -140,6 +140,11 @@ export function PanelCuttingOptimizer() {
   const [newPartRotate, setNewPartRotate] = useState<boolean>(true);
   const [newPartOrientation, setNewPartOrientation] = useState<'auto' | 'fixed' | 'vertical' | 'horizontal'>('auto');
 
+  // Quick-drag dimensions (in mm)
+  const [quickWidth, setQuickWidth] = useState<number | ''>(1500);
+  const [quickHeight, setQuickHeight] = useState<number | ''>(625);
+  const [quickName, setQuickName] = useState<string>('tavolina');
+
   // Manual sheet assignment overrides per piece instanceId (e.g. "partId_inst_0" -> sheetIndex)
   const [manualSheetOverrides, setManualSheetOverrides] = useState<Record<string, number>>({});
   // Manual exact coordinates per piece instanceId
@@ -147,33 +152,7 @@ export function PanelCuttingOptimizer() {
   // Track part being moved manually
   const [movingPart, setMovingPart] = useState<{ part: PlacedPart; currentSheetIndex: number } | null>(null);
 
-  // Lock all placed parts to their current sheet indexes and coordinates
-  const lockAllParts = () => {
-    if (!calculatedResults) return;
-    const newOverrides: Record<string, number> = {};
-    const newPositions: Record<string, { sheetIndex: number; x: number; y: number; w: number; h: number; rotated: boolean }> = {};
-    calculatedResults.sheets.forEach(sheet => {
-      sheet.placedParts.forEach(p => {
-        if (p.instanceId) {
-          newOverrides[p.instanceId] = sheet.sheetIndex;
-          newPositions[p.instanceId] = {
-            sheetIndex: sheet.sheetIndex,
-            x: p.x,
-            y: p.y,
-            w: p.w,
-            h: p.h,
-            rotated: p.rotated || false
-          };
-        }
-      });
-    });
-    setManualSheetOverrides(newOverrides);
-    setManualPositions(newPositions);
-    setIsStale(true);
-    setTimeout(() => {
-      runOptimization(undefined, newOverrides, newPositions);
-    }, 50);
-  };
+
 
   // Unlock all parts so they can be arranged automatically
   const unlockAllParts = () => {
@@ -185,34 +164,33 @@ export function PanelCuttingOptimizer() {
     }, 50);
   };
 
-  // Move and place a single piece manually at a specific coordinate on a sheet, while locking others so they don't scramble
+  // Helper to clear manual positions for a specific part ID
+  const clearManualForPart = (partId: string) => {
+    setManualSheetOverrides(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(key => {
+        if (key.startsWith(partId + '_inst_')) {
+          delete next[key];
+        }
+      });
+      return next;
+    });
+    setManualPositions(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(key => {
+        if (key.startsWith(partId + '_inst_')) {
+          delete next[key];
+        }
+      });
+      return next;
+    });
+  };
+
+  // Move and place a single piece manually at a specific coordinate on a sheet
   const movePartToCoordinate = (instanceId: string, targetSheetIndex: number, x: number, y: number) => {
     const newOverrides = { ...manualSheetOverrides };
     const newPositions = { ...manualPositions };
     
-    // Auto-lock all other placed parts to their current sheet indices and coordinates so they don't scramble
-    if (calculatedResults) {
-      calculatedResults.sheets.forEach(sheet => {
-        sheet.placedParts.forEach(p => {
-          if (p.instanceId && p.instanceId !== instanceId) {
-            if (newOverrides[p.instanceId] === undefined) {
-              newOverrides[p.instanceId] = sheet.sheetIndex;
-            }
-            if (newPositions[p.instanceId] === undefined) {
-              newPositions[p.instanceId] = {
-                sheetIndex: sheet.sheetIndex,
-                x: p.x,
-                y: p.y,
-                w: p.w,
-                h: p.h,
-                rotated: p.rotated || false
-              };
-            }
-          }
-        });
-      });
-    }
-
     // Find the part size (or current rotation) to place it correctly
     let partW = 10;
     let partH = 10;
@@ -257,33 +235,10 @@ export function PanelCuttingOptimizer() {
     }, 50);
   };
 
-  // Move a single piece manually to a sheet, and auto-lock all other pieces to their current sheets and coordinates so they do not scramble!
+  // Move a single piece manually to a sheet
   const movePartToSheet = (instanceId: string, targetSheetIndex: number) => {
     const newOverrides = { ...manualSheetOverrides };
     const newPositions = { ...manualPositions };
-    
-    // Auto-lock all other placed parts to their current sheet indices and coordinates so they don't scramble
-    if (calculatedResults) {
-      calculatedResults.sheets.forEach(sheet => {
-        sheet.placedParts.forEach(p => {
-          if (p.instanceId && p.instanceId !== instanceId) {
-            if (newOverrides[p.instanceId] === undefined) {
-              newOverrides[p.instanceId] = sheet.sheetIndex;
-            }
-            if (newPositions[p.instanceId] === undefined) {
-              newPositions[p.instanceId] = {
-                sheetIndex: sheet.sheetIndex,
-                x: p.x,
-                y: p.y,
-                w: p.w,
-                h: p.h,
-                rotated: p.rotated || false
-              };
-            }
-          }
-        });
-      });
-    }
     
     // Set target sheet for the moved part
     newOverrides[instanceId] = targetSheetIndex;
@@ -301,34 +256,11 @@ export function PanelCuttingOptimizer() {
     }, 50);
   };
 
-  // Toggle rotation of a single piece manually on its sheet, keeping all other pieces locked
+  // Toggle rotation of a single piece manually on its sheet
   const togglePartRotation = (instanceId: string) => {
     const newOverrides = { ...manualSheetOverrides };
     const newPositions = { ...manualPositions };
     
-    // Auto-lock all other placed parts so they don't scramble
-    if (calculatedResults) {
-      calculatedResults.sheets.forEach(sheet => {
-        sheet.placedParts.forEach(p => {
-          if (p.instanceId && p.instanceId !== instanceId) {
-            if (newOverrides[p.instanceId] === undefined) {
-              newOverrides[p.instanceId] = sheet.sheetIndex;
-            }
-            if (newPositions[p.instanceId] === undefined) {
-              newPositions[p.instanceId] = {
-                sheetIndex: sheet.sheetIndex,
-                x: p.x,
-                y: p.y,
-                w: p.w,
-                h: p.h,
-                rotated: p.rotated || false
-              };
-            }
-          }
-        });
-      });
-    }
-
     // Get current position or current placed part to rotate
     let currentPos = newPositions[instanceId];
     if (!currentPos) {
@@ -1681,6 +1613,126 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </div>
           </form>
 
+          {/* Quick Dimension Drag & Drop Tool */}
+          <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200/60 space-y-3.5">
+            <h4 className="text-[11px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1.5">
+              <Move className="w-3.5 h-3.5 text-amber-650" />
+              Shkruaj Dimensionin & Tërhiqe (Drag & Drop)
+            </h4>
+            
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[8px] font-black uppercase text-amber-700 tracking-wider mb-0.5">
+                  Emri (opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Emri..."
+                  value={quickName}
+                  onChange={(e) => setQuickName(e.target.value)}
+                  className="w-full text-xs font-semibold bg-white p-2 rounded-xl border border-amber-200 text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[8px] font-black uppercase text-amber-700 tracking-wider mb-0.5">
+                  Gjatësi (mm)
+                </label>
+                <input
+                  type="number"
+                  placeholder="mm"
+                  value={quickWidth === '' ? '' : quickWidth}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setQuickWidth(val === '' ? '' : Number(val));
+                  }}
+                  className="w-full text-xs font-bold bg-white p-2 rounded-xl border border-amber-200 text-amber-900 text-center focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-[8px] font-black uppercase text-amber-700 tracking-wider mb-0.5">
+                  Gjerësi (mm)
+                </label>
+                <input
+                  type="number"
+                  placeholder="mm"
+                  value={quickHeight === '' ? '' : quickHeight}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setQuickHeight(val === '' ? '' : Number(val));
+                  }}
+                  className="w-full text-xs font-bold bg-white p-2 rounded-xl border border-amber-200 text-amber-900 text-center focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const w = quickWidth;
+                  const h = quickHeight;
+                  setQuickWidth(h);
+                  setQuickHeight(w);
+                }}
+                className="text-[9px] font-black text-amber-800 hover:text-amber-900 flex items-center gap-1 bg-amber-100/50 hover:bg-amber-100 px-2 py-1.5 rounded-lg border border-amber-250 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <ArrowLeftRight className="w-2.5 h-2.5" /> Ndërro W ↔ H
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!quickWidth || !quickHeight) return;
+                  const wCm = Number(quickWidth) / 10;
+                  const hCm = Number(quickHeight) / 10;
+                  const newPart: CutPart = {
+                    id: `part_${Date.now()}`,
+                    name: quickName || "Pjesë e re",
+                    width: wCm,
+                    height: hCm,
+                    quantity: 1,
+                    allowRotation: true,
+                    orientation: 'auto'
+                  };
+                  setParts(prev => [...prev, newPart]);
+                  setIsStale(true);
+                  setTimeout(() => {
+                    runOptimization([...parts, newPart]);
+                  }, 50);
+                }}
+                className="flex-1 text-[9px] font-black text-white bg-amber-650 hover:bg-amber-700 bg-indigo-650 hover:bg-indigo-700 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+              >
+                <Plus className="w-2.5 h-2.5" /> Shto Normalisht
+              </button>
+            </div>
+
+            {/* Draggable block */}
+            <div
+              draggable="true"
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/quick-drag-part", "true");
+                e.dataTransfer.setData("application/quick-drag-width", String(quickWidth || 1500));
+                e.dataTransfer.setData("application/quick-drag-height", String(quickHeight || 625));
+                e.dataTransfer.setData("application/quick-drag-name", quickName || "Pjesë e re");
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              className="bg-gradient-to-br from-amber-100 to-amber-200 border-2 border-dashed border-amber-400 p-4 rounded-xl flex flex-col items-center justify-center cursor-grab hover:shadow-md active:cursor-grabbing hover:bg-amber-200/50 transition-all text-amber-900 font-extrabold select-none gap-1 h-24"
+              title="Tërhiqeni këtë bllok me miun dhe lëshojeni direkt te paneli i dëshiruar!"
+            >
+              <Move className="w-5 h-5 text-amber-600 animate-bounce" />
+              <div className="text-sm font-black tracking-wide">
+                {quickWidth || 1500} x {quickHeight || 625} mm
+              </div>
+              <div className="text-[9px] text-amber-700/80 font-bold uppercase tracking-wider">
+                {quickName || "TAVOLINA"} • TËRHIQE MBI PANEL 🛠️
+              </div>
+            </div>
+            
+            <p className="text-[9px] text-amber-700/80 font-bold text-center italic">
+              * Shkruaj dimensionet, kap bllokun e verdhë sipër dhe lëshoje direkt te pjesa e zbrazët e ndonjë paneli në të djathtë!
+            </p>
+          </div>
+
           {/* List of current parts in layout with inline editing */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -1729,6 +1781,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                       onClick={() => {
                         const currentW = p.width;
                         const currentH = p.height;
+                        clearManualForPart(p.id);
                         setParts(prev => prev.map(item => item.id === p.id ? { ...item, width: currentH, height: currentW } : item));
                         setIsStale(true);
                       }}
@@ -1755,6 +1808,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                         else if (current === 'vertical') next = 'horizontal';
                         else next = 'auto';
 
+                        clearManualForPart(p.id);
                         setParts(prev => prev.map(item => item.id === p.id ? { ...item, orientation: next, allowRotation: next === 'auto' } : item));
                         setIsStale(true);
                       }}
@@ -1818,28 +1872,16 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </div>
 
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {calculatedResults && calculatedResults.sheets.length > 0 && (
-                Object.keys(manualSheetOverrides).length === 0 ? (
-                  <button
-                    type="button"
-                    onClick={lockAllParts}
-                    className="py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-amber-200 cursor-pointer"
-                    title="Kyç të gjitha pjesët në panelet e tyre aktuale për të mos lëvizur kur rregulloni diçka tjetër"
-                  >
-                    <Lock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                    Kyç të Gjitha ({calculatedResults.sheets.reduce((sum, s) => sum + s.placedParts.length, 0)})
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={unlockAllParts}
-                    className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-slate-200/80 cursor-pointer"
-                    title="Hiq të gjitha bllokimet manuale dhe ktheji në gjenerim automatik"
-                  >
-                    <Unlock className="w-3.5 h-3.5 text-indigo-600" />
-                    Zhblloko të Gjitha ({Object.keys(manualSheetOverrides).length})
-                  </button>
-                )
+              {calculatedResults && calculatedResults.sheets.length > 0 && Object.keys(manualSheetOverrides).length > 0 && (
+                <button
+                  type="button"
+                  onClick={unlockAllParts}
+                  className="py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-rose-200 cursor-pointer"
+                  title="Hiq të gjitha zhvendosjet manuale dhe kthehu në optimizim plotësisht automatik"
+                >
+                  <Unlock className="w-3.5 h-3.5 text-rose-600" />
+                  Rikohe Automatike ({Object.keys(manualSheetOverrides).length})
+                </button>
               )}
 
               <button
@@ -1917,12 +1959,6 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           <Layers className="w-3.5 h-3.5" />
                           Paneli #{sheet.sheetIndex} ({sheet.width}x{sheet.height}cm)
                         </span>
-                        {sheet.placedParts.some(p => p.instanceId && (manualPositions[p.instanceId] !== undefined || manualSheetOverrides[p.instanceId] !== undefined)) && (
-                          <span className="text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1" title="Pjesët në këtë panel janë të kyçura në pozicione manuale">
-                            <Lock className="w-3 h-3 text-amber-600" />
-                            Pozicione të Kyçura
-                          </span>
-                        )}
                       </div>
                       <span className="text-xs font-bold text-slate-500">
                         Shfrytëzimi: <strong className="text-emerald-600 text-sm font-black">{sheet.utilization}%</strong>
@@ -1942,6 +1978,76 @@ PANELI MASTER #${shLayout.sheetIndex}:
                       onDrop={(e) => {
                         e.preventDefault();
                         e.currentTarget.classList.remove("bg-slate-800", "border-indigo-500", "scale-[1.01]");
+                        
+                        const isQuickDrag = e.dataTransfer.getData("application/quick-drag-part") === "true";
+                        if (isQuickDrag) {
+                          const wMm = parseFloat(e.dataTransfer.getData("application/quick-drag-width")) || 1500;
+                          const hMm = parseFloat(e.dataTransfer.getData("application/quick-drag-height")) || 625;
+                          const name = e.dataTransfer.getData("application/quick-drag-name") || "Detaj i ri";
+                          
+                          const wCm = wMm / 10;
+                          const hCm = hMm / 10;
+                          
+                          // Create a new part ID and instance ID
+                          const newId = `part_${Date.now()}`;
+                          const newInstanceId = `${newId}_inst_0`;
+                          
+                          const newPart: CutPart = {
+                            id: newId,
+                            name: name,
+                            width: wCm,
+                            height: hCm,
+                            quantity: 1,
+                            allowRotation: true,
+                            orientation: 'auto'
+                          };
+                          
+                          const svgElement = e.currentTarget.querySelector("svg");
+                          let finalX = sheet.trimLeft;
+                          let finalY = sheet.trimTop;
+                          if (svgElement) {
+                            const rect = svgElement.getBoundingClientRect();
+                            const clientX = e.clientX - rect.left;
+                            const clientY = e.clientY - rect.top;
+                            const scaleX = viewWidth / rect.width;
+                            const scaleY = viewHeight / rect.height;
+                            
+                            finalX = -paddingLeft + clientX * scaleX - (wCm / 2);
+                            finalY = -paddingTop + clientY * scaleY - (hCm / 2);
+                            
+                            finalX = Math.max(sheet.trimLeft, Math.min(sheet.width - sheet.trimRight - wCm, finalX));
+                            finalY = Math.max(sheet.trimTop, Math.min(sheet.height - sheet.trimBottom - hCm, finalY));
+                          }
+                          
+                          setParts(prev => [...prev, newPart]);
+                          
+                          const updatedOverrides = {
+                            ...manualSheetOverrides,
+                            [newInstanceId]: sheet.sheetIndex
+                          };
+                          const updatedPositions = {
+                            ...manualPositions,
+                            [newInstanceId]: {
+                              sheetIndex: sheet.sheetIndex,
+                              x: Number(finalX.toFixed(2)),
+                              y: Number(finalY.toFixed(2)),
+                              w: wCm,
+                              h: hCm,
+                              rotated: false
+                            }
+                          };
+
+                          setManualSheetOverrides(updatedOverrides);
+                          setManualPositions(updatedPositions);
+                          setIsStale(true);
+                          
+                          setTimeout(() => {
+                            runOptimization([...parts, newPart], updatedOverrides, updatedPositions);
+                          }, 50);
+                          
+                          return;
+                        }
+
                         const instanceId = e.dataTransfer.getData("text/plain");
                         if (instanceId) {
                           const svgElement = e.currentTarget.querySelector("svg");
