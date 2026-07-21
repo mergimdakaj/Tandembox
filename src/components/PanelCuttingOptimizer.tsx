@@ -213,16 +213,30 @@ export function PanelCuttingOptimizer() {
       setIsStale(true);
       setMovingPart(null);
       
-      if (movingPart?.part.instanceId) {
-        setManualSheetOverrides(overrides => {
-          const copy = { ...overrides };
-          delete copy[movingPart.part.instanceId!];
-          return copy;
+      const deletedInstanceId = movingPart?.part.instanceId;
+      const newOverrides = { ...manualSheetOverrides };
+
+      // Auto-lock all other placed parts to their current sheet indices so they don't scramble
+      if (calculatedResults) {
+        calculatedResults.sheets.forEach(sheet => {
+          sheet.placedParts.forEach(p => {
+            if (p.instanceId && p.instanceId !== deletedInstanceId) {
+              if (newOverrides[p.instanceId] === undefined) {
+                newOverrides[p.instanceId] = sheet.sheetIndex;
+              }
+            }
+          });
         });
       }
+
+      if (deletedInstanceId) {
+        delete newOverrides[deletedInstanceId];
+      }
+
+      setManualSheetOverrides(newOverrides);
       
       setTimeout(() => {
-        runOptimization(updated);
+        runOptimization(updated, newOverrides);
       }, 50);
       
       return updated;
@@ -234,21 +248,35 @@ export function PanelCuttingOptimizer() {
     setParts(prev => {
       const updated = prev.filter(p => p.id !== partId);
       
-      setManualSheetOverrides(overrides => {
-        const copy = { ...overrides };
-        Object.keys(copy).forEach(k => {
-          if (k.startsWith(partId + '_inst_')) {
-            delete copy[k];
-          }
-        });
-        return copy;
-      });
-      
       setIsStale(true);
       setMovingPart(null);
+
+      const newOverrides = { ...manualSheetOverrides };
+
+      // Auto-lock all other placed parts to their current sheet indices so they don't scramble
+      if (calculatedResults) {
+        calculatedResults.sheets.forEach(sheet => {
+          sheet.placedParts.forEach(p => {
+            if (p.instanceId && !p.instanceId.startsWith(partId + '_inst_')) {
+              if (newOverrides[p.instanceId] === undefined) {
+                newOverrides[p.instanceId] = sheet.sheetIndex;
+              }
+            }
+          });
+        });
+      }
+
+      // Delete all overrides for the removed part dimensions
+      Object.keys(newOverrides).forEach(k => {
+        if (k.startsWith(partId + '_inst_')) {
+          delete newOverrides[k];
+        }
+      });
+
+      setManualSheetOverrides(newOverrides);
       
       setTimeout(() => {
-        runOptimization(updated);
+        runOptimization(updated, newOverrides);
       }, 50);
       
       return updated;
