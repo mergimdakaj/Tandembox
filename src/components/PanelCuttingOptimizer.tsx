@@ -1,6 +1,6 @@
 import { useState, useMemo, FormEvent, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight } from 'lucide-react';
+import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight, Lock, Unlock } from 'lucide-react';
 
 interface CutPart {
   id: string;
@@ -143,6 +143,89 @@ export function PanelCuttingOptimizer() {
   // Track part being moved manually
   const [movingPart, setMovingPart] = useState<{ part: PlacedPart; currentSheetIndex: number } | null>(null);
 
+  // Lock all placed parts to their current sheet indexes
+  const lockAllParts = () => {
+    if (!calculatedResults) return;
+    const newOverrides: Record<string, number> = {};
+    calculatedResults.sheets.forEach(sheet => {
+      sheet.placedParts.forEach(p => {
+        if (p.instanceId) {
+          newOverrides[p.instanceId] = sheet.sheetIndex;
+        }
+      });
+    });
+    setManualSheetOverrides(newOverrides);
+    setIsStale(true);
+    setTimeout(() => {
+      runOptimization(undefined, newOverrides);
+    }, 50);
+  };
+
+  // Unlock all parts so they can be arranged automatically
+  const unlockAllParts = () => {
+    setManualSheetOverrides({});
+    setIsStale(true);
+    setTimeout(() => {
+      runOptimization(undefined, {});
+    }, 50);
+  };
+
+  // Delete a specific piece instance (decrease quantity of that part by 1)
+  const deletePieceInstance = (partId: string) => {
+    setParts(prev => {
+      const updated = prev.map(p => {
+        if (p.id === partId) {
+          const newQty = Math.max(0, p.quantity - 1);
+          return { ...p, quantity: newQty };
+        }
+        return p;
+      }).filter(p => p.quantity > 0);
+      
+      setIsStale(true);
+      setMovingPart(null);
+      
+      if (movingPart?.part.instanceId) {
+        setManualSheetOverrides(overrides => {
+          const copy = { ...overrides };
+          delete copy[movingPart.part.instanceId!];
+          return copy;
+        });
+      }
+      
+      setTimeout(() => {
+        runOptimization(updated);
+      }, 50);
+      
+      return updated;
+    });
+  };
+
+  // Remove entire part dimension from the list
+  const removeEntireDimension = (partId: string) => {
+    setParts(prev => {
+      const updated = prev.filter(p => p.id !== partId);
+      
+      setManualSheetOverrides(overrides => {
+        const copy = { ...overrides };
+        Object.keys(copy).forEach(k => {
+          if (k.startsWith(partId + '_inst_')) {
+            delete copy[k];
+          }
+        });
+        return copy;
+      });
+      
+      setIsStale(true);
+      setMovingPart(null);
+      
+      setTimeout(() => {
+        runOptimization(updated);
+      }, 50);
+      
+      return updated;
+    });
+  };
+
   // Calculated layout results state
   const [calculatedResults, setCalculatedResults] = useState<{
     sheets: SheetLayout[];
@@ -220,10 +303,12 @@ export function PanelCuttingOptimizer() {
   };
 
   // High-performance multi-strategy nesting optimizer to achieve > 80% utilization
-  const runOptimization = (overrideParts?: CutPart[]) => {
+  const runOptimization = (overrideParts?: CutPart[], overrideManualSheetOverrides?: Record<string, number>) => {
     const sw = Number(sheetWidth) || 280;
     const sh = Number(sheetHeight) || 207;
     const bw = Number(bladeWidth) ?? 0.4;
+
+    const activeOverrides = overrideManualSheetOverrides !== undefined ? overrideManualSheetOverrides : manualSheetOverrides;
 
     const partsList = Array.isArray(overrideParts) ? overrideParts : parts;
 
@@ -360,8 +445,8 @@ export function PanelCuttingOptimizer() {
           return shLayout;
         };
 
-        const manualItems = sortedItems.filter(item => manualSheetOverrides[item.instanceId] !== undefined);
-        const automaticItems = sortedItems.filter(item => manualSheetOverrides[item.instanceId] === undefined);
+        const manualItems = sortedItems.filter(item => activeOverrides[item.instanceId] !== undefined);
+        const automaticItems = sortedItems.filter(item => activeOverrides[item.instanceId] === undefined);
 
         // 1. Place manual items first on their preferred sheets
         manualItems.forEach(item => {
@@ -373,7 +458,7 @@ export function PanelCuttingOptimizer() {
           const effectiveH = addPreMilling ? originalH + 0.4 : originalH;
 
           let placed = false;
-          const preferredSheetIdx = manualSheetOverrides[item.instanceId];
+          const preferredSheetIdx = activeOverrides[item.instanceId];
           const targetSheet = getOrCreateSheet(preferredSheetIdx);
           const maxW = targetSheet.trimmedWidth;
           const maxH = targetSheet.trimmedHeight;
@@ -1256,22 +1341,28 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </div>
 
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {Object.keys(manualSheetOverrides).length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setManualSheetOverrides({});
-                    setIsStale(true);
-                    setTimeout(() => {
-                      runOptimization();
-                    }, 50);
-                  }}
-                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-slate-200/80 cursor-pointer"
-                  title="Rivendos të gjitha pozicionet manuale në shpërndarje automatike"
-                >
-                  <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
-                  Rregullo Automatike ({Object.keys(manualSheetOverrides).length})
-                </button>
+              {calculatedResults && calculatedResults.sheets.length > 0 && (
+                Object.keys(manualSheetOverrides).length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={lockAllParts}
+                    className="py-3 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-amber-200 cursor-pointer"
+                    title="Kyç të gjitha pjesët në panelet e tyre aktuale për të mos lëvizur kur rregulloni diçka tjetër"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    Kyç të Gjitha ({calculatedResults.sheets.reduce((sum, s) => sum + s.placedParts.length, 0)})
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={unlockAllParts}
+                    className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-slate-200/80 cursor-pointer"
+                    title="Hiq të gjitha bllokimet manuale dhe ktheji në gjenerim automatik"
+                  >
+                    <Unlock className="w-3.5 h-3.5 text-indigo-600" />
+                    Zhblloko të Gjitha ({Object.keys(manualSheetOverrides).length})
+                  </button>
+                )
               )}
 
               <button
@@ -2140,6 +2231,50 @@ PANELI MASTER #${shLayout.sheetIndex}:
                 >
                   <Plus className="w-3.5 h-3.5 text-emerald-600" />
                   + Ri
+                </button>
+              </div>
+            </div>
+
+            {/* Opsionet e fshirjes */}
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest block">
+                Opsionet e fshirjes:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const partId = movingPart.part.instanceId ? movingPart.part.instanceId.split('_inst_')[0] : '';
+                    if (partId) {
+                      deletePieceInstance(partId);
+                    }
+                  }}
+                  className="p-3 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  title="Fshi vetëm këtë copë nga paneli (Sasia do të ulet me 1)"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                  <div className="text-left">
+                    <span className="block font-black text-[10px] uppercase leading-none">Fshi këtë Copë</span>
+                    <span className="text-[9px] text-rose-500 font-medium block mt-0.5">Sasia - 1</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const partId = movingPart.part.instanceId ? movingPart.part.instanceId.split('_inst_')[0] : '';
+                    if (partId) {
+                      removeEntireDimension(partId);
+                    }
+                  }}
+                  className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  title="Fshi të gjithë dimensionin tërësisht nga lista"
+                >
+                  <Trash2 className="w-4 h-4 text-white shrink-0" />
+                  <div className="text-left">
+                    <span className="block font-black text-[10px] uppercase leading-none text-white">Fshi masën</span>
+                    <span className="text-[9px] text-red-100 font-medium block mt-0.5">Hiq tërësisht</span>
+                  </div>
                 </button>
               </div>
             </div>
