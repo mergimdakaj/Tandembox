@@ -170,6 +170,35 @@ export function PanelCuttingOptimizer() {
     }, 50);
   };
 
+  // Move a single piece manually to a sheet, and auto-lock all other pieces to their current sheets so they do not scramble!
+  const movePartToSheet = (instanceId: string, targetSheetIndex: number) => {
+    const newOverrides = { ...manualSheetOverrides };
+    
+    // Auto-lock all other placed parts to their current sheet indices
+    if (calculatedResults) {
+      calculatedResults.sheets.forEach(sheet => {
+        sheet.placedParts.forEach(p => {
+          if (p.instanceId && p.instanceId !== instanceId) {
+            if (newOverrides[p.instanceId] === undefined) {
+              newOverrides[p.instanceId] = sheet.sheetIndex;
+            }
+          }
+        });
+      });
+    }
+    
+    // Set target sheet for the moved part
+    newOverrides[instanceId] = targetSheetIndex;
+    
+    setManualSheetOverrides(newOverrides);
+    setIsStale(true);
+    setMovingPart(null);
+    
+    setTimeout(() => {
+      runOptimization(undefined, newOverrides);
+    }, 50);
+  };
+
   // Delete a specific piece instance (decrease quantity of that part by 1)
   const deletePieceInstance = (partId: string) => {
     setParts(prev => {
@@ -1444,7 +1473,24 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     </div>
 
                     {/* SVG Container representing the board with dimensions outside */}
-                    <div className="relative bg-slate-900 rounded-2xl p-4 overflow-hidden shadow-sm flex items-center justify-center">
+                    <div 
+                      className="relative bg-slate-900 rounded-2xl p-4 overflow-hidden shadow-sm flex items-center justify-center transition-all duration-200 border-2 border-transparent hover:border-indigo-500/50"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add("bg-slate-800", "border-indigo-500", "scale-[1.01]");
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.classList.remove("bg-slate-800", "border-indigo-500", "scale-[1.01]");
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove("bg-slate-800", "border-indigo-500", "scale-[1.01]");
+                        const instanceId = e.dataTransfer.getData("text/plain");
+                        if (instanceId) {
+                          movePartToSheet(instanceId, sheet.sheetIndex);
+                        }
+                      }}
+                    >
                       <svg
                         viewBox={`-${paddingLeft} -${paddingTop} ${viewWidth} ${viewHeight}`}
                         className="w-full h-auto max-h-[450px]"
@@ -1657,14 +1703,21 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           return (
                             <g 
                               key={part.id} 
-                              className="cursor-pointer group select-none"
+                              className="cursor-grab active:cursor-grabbing group select-none"
+                              draggable="true"
+                              onDragStart={(e) => {
+                                if (part.instanceId) {
+                                  e.dataTransfer.setData("text/plain", part.instanceId);
+                                  e.dataTransfer.effectAllowed = "move";
+                                }
+                              }}
                               onClick={() => {
                                 setMovingPart({ part, currentSheetIndex: sheet.sheetIndex });
                               }}
                             >
                               <title>
                                 {part.name} ({(dispW * 10).toFixed(0)} x {(dispH * 10).toFixed(0)} mm)
-                                {"\n"}Paneli #{sheet.sheetIndex} - Kliko për ta lëvizur ose ndryshuar!
+                                {"\n"}Paneli #{sheet.sheetIndex} - Tërhiqe (Drag & Drop) ose kliko për ta lëvizur / fshirë!
                               </title>
                               {/* Background Part */}
                               <rect
@@ -2185,16 +2238,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                       type="button"
                       onClick={() => {
                         if (movingPart.part.instanceId) {
-                          setManualSheetOverrides(prev => ({
-                            ...prev,
-                            [movingPart.part.instanceId!]: sheetNum
-                          }));
-                          setIsStale(true);
-                          setMovingPart(null);
-                          // instant rerun to show immediate update!
-                          setTimeout(() => {
-                            runOptimization();
-                          }, 50);
+                          movePartToSheet(movingPart.part.instanceId, sheetNum);
                         }
                       }}
                       className={`p-2.5 rounded-xl border font-black text-xs transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
@@ -2215,15 +2259,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   onClick={() => {
                     if (movingPart.part.instanceId) {
                       const newSheetNum = (calculatedResults?.sheets.length ?? 0) + 1;
-                      setManualSheetOverrides(prev => ({
-                        ...prev,
-                        [movingPart.part.instanceId!]: newSheetNum
-                      }));
-                      setIsStale(true);
-                      setMovingPart(null);
-                      setTimeout(() => {
-                        runOptimization();
-                      }, 50);
+                      movePartToSheet(movingPart.part.instanceId, newSheetNum);
                     }
                   }}
                   className="p-2.5 rounded-xl border border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 font-black text-xs transition-all hover:bg-emerald-100 flex flex-col items-center justify-center gap-1 cursor-pointer"
@@ -2287,15 +2323,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
                 type="button"
                 onClick={() => {
                   if (movingPart.part.instanceId) {
-                    setManualSheetOverrides(prev => {
-                      const copy = { ...prev };
-                      delete copy[movingPart.part.instanceId!];
-                      return copy;
-                    });
+                    const updatedOverrides = { ...manualSheetOverrides };
+                    delete updatedOverrides[movingPart.part.instanceId];
+                    setManualSheetOverrides(updatedOverrides);
                     setIsStale(true);
                     setMovingPart(null);
                     setTimeout(() => {
-                      runOptimization();
+                      runOptimization(undefined, updatedOverrides);
                     }, 50);
                   }
                 }}
