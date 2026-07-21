@@ -1098,8 +1098,63 @@ export function PanelCuttingOptimizer() {
 
     const bestResult = candidates[0];
     if (bestResult) {
+      // Re-index sheets so they are contiguous (1, 2, 3, ...) and update state overrides/positions to match
+      const reindexedSheets = bestResult.sheets.map((sheet, idx) => {
+        return {
+          ...sheet,
+          sheetIndex: idx + 1
+        };
+      });
+
+      const newOverrides = { ...activeOverrides };
+      const newPositions = { ...activePositions };
+      let updatedAnything = false;
+
+      // Map old sheetIndex to new sheetIndex to update coordinates and overrides
+      bestResult.sheets.forEach((sheet, idx) => {
+        const oldIdx = sheet.sheetIndex;
+        const newIdx = idx + 1;
+        if (oldIdx !== newIdx) {
+          updatedAnything = true;
+          // Find any parts that were placed on oldIdx and update their override & position indexes
+          sheet.placedParts.forEach(part => {
+            if (part.instanceId) {
+              if (newOverrides[part.instanceId] !== undefined) {
+                newOverrides[part.instanceId] = newIdx;
+              }
+              if (newPositions[part.instanceId]) {
+                newPositions[part.instanceId] = {
+                  ...newPositions[part.instanceId],
+                  sheetIndex: newIdx
+                };
+              }
+            }
+          });
+        }
+      });
+
+      // Prune overrides/positions for instance IDs that are no longer in rawItemsList
+      const activeInstanceIds = new Set(rawItemsList.map(item => item.instanceId));
+      Object.keys(newOverrides).forEach(key => {
+        if (!activeInstanceIds.has(key)) {
+          delete newOverrides[key];
+          updatedAnything = true;
+        }
+      });
+      Object.keys(newPositions).forEach(key => {
+        if (!activeInstanceIds.has(key)) {
+          delete newPositions[key];
+          updatedAnything = true;
+        }
+      });
+
+      if (updatedAnything) {
+        setManualSheetOverrides(newOverrides);
+        setManualPositions(newPositions);
+      }
+
       setCalculatedResults({
-        sheets: bestResult.sheets,
+        sheets: reindexedSheets,
         unplacedItems: bestResult.unplacedItems
       });
     }
@@ -2857,8 +2912,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
               
               {/* Dynamic panel selection grid */}
               <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-1 bg-slate-50 rounded-2xl border border-slate-100">
-                {Array.from({ length: (calculatedResults?.sheets.length ?? 1) }).map((_, i) => {
-                  const sheetNum = i + 1;
+                {(calculatedResults?.sheets ?? []).map((sheet) => {
+                  const sheetNum = sheet.sheetIndex;
                   const isSelected = movingPart.currentSheetIndex === sheetNum;
                   return (
                     <button
@@ -2886,7 +2941,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   type="button"
                   onClick={() => {
                     if (movingPart.part.instanceId) {
-                      const newSheetNum = (calculatedResults?.sheets.length ?? 0) + 1;
+                      const maxSheetIndex = (calculatedResults?.sheets ?? []).reduce((max, s) => Math.max(max, s.sheetIndex), 0);
+                      const newSheetNum = maxSheetIndex + 1;
                       movePartToSheet(movingPart.part.instanceId, newSheetNum);
                     }
                   }}
