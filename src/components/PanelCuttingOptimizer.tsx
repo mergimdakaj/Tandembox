@@ -1,6 +1,6 @@
 import { useState, useMemo, FormEvent, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer } from 'lucide-react';
+import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight } from 'lucide-react';
 
 interface CutPart {
   id: string;
@@ -994,6 +994,21 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </div>
             </div>
 
+            <div className="flex justify-end pr-1 -mt-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const w = newPartWidth;
+                  const h = newPartHeight;
+                  setNewPartWidth(h);
+                  setNewPartHeight(w);
+                }}
+                className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50/50 hover:bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 transition-all cursor-pointer"
+              >
+                <ArrowLeftRight className="w-2.5 h-2.5" /> Ndërro Gjatësi ↔ Gjerësi
+              </button>
+            </div>
+
             <div className="flex items-center justify-between pt-1">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
@@ -1056,6 +1071,19 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     </div>
                   
                   <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      title="Ndërro Gjatësi ↔ Gjerësi"
+                      onClick={() => {
+                        const currentW = p.width;
+                        const currentH = p.height;
+                        setParts(prev => prev.map(item => item.id === p.id ? { ...item, width: currentH, height: currentW } : item));
+                        setIsStale(true);
+                      }}
+                      className="p-1 rounded-lg border bg-slate-50 text-slate-500 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all cursor-pointer"
+                    >
+                      <ArrowLeftRight className="w-3 h-3 rotate-90" />
+                    </button>
                     <button
                       type="button"
                       title="Ndrysho lejen e rrotullimit"
@@ -1761,30 +1789,62 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
                     {/* Placed Parts list underneath */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {sheet.placedParts.map((p, idx) => {
-                        const origW = p.originalW ?? p.w;
-                        const origH = p.originalH ?? p.h;
-                        return (
-                          <div key={idx} className="p-2.5 bg-white rounded-xl border border-slate-100 flex items-center justify-between">
+                      {(() => {
+                        const groups: {
+                          name: string;
+                          origW: number;
+                          origH: number;
+                          count: number;
+                          rotated: boolean;
+                          partIndices: number[];
+                        }[] = [];
+
+                        sheet.placedParts.forEach((p, idx) => {
+                          const origW = p.originalW ?? p.w;
+                          const origH = p.originalH ?? p.h;
+                          const existing = groups.find(g => g.name === p.name && g.origW === origW && g.origH === origH);
+                          if (existing) {
+                            existing.count += 1;
+                            existing.partIndices.push(idx + 1);
+                            if (p.rotated) {
+                              existing.rotated = true;
+                            }
+                          } else {
+                            groups.push({
+                              name: p.name,
+                              origW,
+                              origH,
+                              count: 1,
+                              rotated: p.rotated,
+                              partIndices: [idx + 1]
+                            });
+                          }
+                        });
+
+                        return groups.map((g, idx) => (
+                          <div key={idx} className="p-2 bg-white rounded-xl border border-slate-100 flex items-center justify-between shadow-xs">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[12px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 min-w-[22px] text-center inline-block shrink-0">
-                                {idx + 1}
+                              <span className="text-[12px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-1.5 py-0.5 min-w-[24px] text-center inline-block shrink-0 shadow-sm">
+                                {g.count}x
                               </span>
                               <div className="min-w-0">
-                                <span className="block text-[10px] font-black text-slate-800 truncate">{p.name}</span>
-                                <span className="text-[9px] text-slate-400 font-bold block">
-                                  Masa: <span className="text-indigo-600 font-extrabold">{(origW * 10).toFixed(0)} x {(origH * 10).toFixed(0)} mm</span>
+                                <span className="block text-[11px] font-extrabold text-slate-900 truncate leading-tight">{g.name}</span>
+                                <span className="text-[10px] text-indigo-600 font-extrabold block leading-tight">
+                                  {(g.origW * 10).toFixed(0)} x {(g.origH * 10).toFixed(0)} mm
+                                </span>
+                                <span className="text-[8px] text-slate-400 font-bold block leading-none mt-0.5">
+                                  Pjesët: {g.partIndices.join(', ')}
                                 </span>
                               </div>
                             </div>
-                            {p.rotated && (
+                            {g.rotated && (
                               <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded shrink-0">
-                                Rrotulluar
+                                ↻
                               </span>
                             )}
                           </div>
-                        );
-                      })}
+                        ));
+                      })()}
                     </div>
                   </div>
                 );
@@ -2340,24 +2400,54 @@ PANELI MASTER #${shLayout.sheetIndex}:
               {/* List of cuts with dimensions right next to the names */}
               <div className="space-y-1 mt-1">
                 <p className="text-[9px] font-black uppercase text-slate-800">Pjesët e vendosura në këtë panel:</p>
-                <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[10px]">
-                  {sheet.placedParts.map((p, idx) => {
-                    const origW = p.originalW ?? p.w;
-                    const origH = p.originalH ?? p.h;
-                    return (
+                <div className="grid grid-cols-4 gap-x-3 gap-y-1 text-[10px]">
+                  {(() => {
+                    const groups: {
+                      name: string;
+                      origW: number;
+                      origH: number;
+                      count: number;
+                      rotated: boolean;
+                      partIndices: number[];
+                    }[] = [];
+
+                    sheet.placedParts.forEach((p, idx) => {
+                      const origW = p.originalW ?? p.w;
+                      const origH = p.originalH ?? p.h;
+                      const existing = groups.find(g => g.name === p.name && g.origW === origW && g.origH === origH);
+                      if (existing) {
+                        existing.count += 1;
+                        existing.partIndices.push(idx + 1);
+                        if (p.rotated) {
+                          existing.rotated = true;
+                        }
+                      } else {
+                        groups.push({
+                          name: p.name,
+                          origW,
+                          origH,
+                          count: 1,
+                          rotated: p.rotated,
+                          partIndices: [idx + 1]
+                        });
+                      }
+                    });
+
+                    return groups.map((g, idx) => (
                       <div key={idx} className="flex items-center border-b border-slate-300 pb-0.5 pr-0.5 font-bold text-slate-900">
                         <span className="truncate mr-1 flex items-center gap-1 min-w-0">
-                          <span className="text-[10px] font-black text-black bg-black text-white px-1 py-0.5 rounded min-w-[18px] text-center inline-block shrink-0 shadow-xs print:border print:border-black print:bg-white print:text-black">
-                            {idx + 1}
+                          <span className="text-[9px] font-black text-white bg-black px-1.5 py-0.5 rounded min-w-[18px] text-center inline-block shrink-0 print:border print:border-black print:bg-black">
+                            {g.count}x
                           </span>
-                          <strong className="text-black font-black text-[10px] truncate">{p.name}</strong>
+                          <strong className="text-black font-black text-[10px] truncate">{g.name}</strong>
+                          <span className="text-[7px] text-slate-500 font-semibold truncate ml-0.5">({g.partIndices.join(',')})</span>
                         </span>
                         <span className="font-mono text-black font-extrabold shrink-0 text-[9px] ml-auto">
-                          ({(origW * 10).toFixed(0)}x{(origH * 10).toFixed(0)}){p.rotated ? ' ↻' : ''}
+                          ({(g.origW * 10).toFixed(0)}x{(g.origH * 10).toFixed(0)}){g.rotated ? ' ↻' : ''}
                         </span>
                       </div>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
