@@ -183,6 +183,78 @@ export function PanelCuttingOptimizer() {
     }, 50);
   };
 
+  // Move and place a single piece manually at a specific coordinate on a sheet, while locking others so they don't scramble
+  const movePartToCoordinate = (instanceId: string, targetSheetIndex: number, x: number, y: number) => {
+    const newOverrides = { ...manualSheetOverrides };
+    const newPositions = { ...manualPositions };
+    
+    // Auto-lock all other placed parts to their current sheet indices and coordinates so they don't scramble
+    if (calculatedResults) {
+      calculatedResults.sheets.forEach(sheet => {
+        sheet.placedParts.forEach(p => {
+          if (p.instanceId && p.instanceId !== instanceId) {
+            if (newOverrides[p.instanceId] === undefined) {
+              newOverrides[p.instanceId] = sheet.sheetIndex;
+            }
+            if (newPositions[p.instanceId] === undefined) {
+              newPositions[p.instanceId] = {
+                sheetIndex: sheet.sheetIndex,
+                x: p.x,
+                y: p.y,
+                w: p.w,
+                h: p.h,
+                rotated: p.rotated || false
+              };
+            }
+          }
+        });
+      });
+    }
+
+    // Find the part size (or current rotation) to place it correctly
+    let partW = 10;
+    let partH = 10;
+    let rotated = false;
+    
+    let foundPart: PlacedPart | null = null;
+    calculatedResults?.sheets.forEach(sheet => {
+      const p = sheet.placedParts.find(x => x.instanceId === instanceId);
+      if (p) foundPart = p;
+    });
+
+    if (foundPart) {
+      partW = (foundPart as PlacedPart).w;
+      partH = (foundPart as PlacedPart).h;
+      rotated = (foundPart as PlacedPart).rotated || false;
+    }
+
+    // If we have manualPositions for it, retrieve dimensions
+    if (manualPositions[instanceId]) {
+      partW = manualPositions[instanceId].w;
+      partH = manualPositions[instanceId].h;
+      rotated = manualPositions[instanceId].rotated;
+    }
+
+    // Set target sheet and precise coordinates
+    newOverrides[instanceId] = targetSheetIndex;
+    newPositions[instanceId] = {
+      sheetIndex: targetSheetIndex,
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+      w: partW,
+      h: partH,
+      rotated: rotated
+    };
+
+    setManualSheetOverrides(newOverrides);
+    setManualPositions(newPositions);
+    setIsStale(true);
+    
+    setTimeout(() => {
+      runOptimization(undefined, newOverrides, newPositions);
+    }, 50);
+  };
+
   // Move a single piece manually to a sheet, and auto-lock all other pieces to their current sheets and coordinates so they do not scramble!
   const movePartToSheet = (instanceId: string, targetSheetIndex: number) => {
     const newOverrides = { ...manualSheetOverrides };
@@ -225,6 +297,84 @@ export function PanelCuttingOptimizer() {
     setTimeout(() => {
       runOptimization(undefined, newOverrides, newPositions);
     }, 50);
+  };
+
+  // Toggle rotation of a single piece manually on its sheet, keeping all other pieces locked
+  const togglePartRotation = (instanceId: string) => {
+    const newOverrides = { ...manualSheetOverrides };
+    const newPositions = { ...manualPositions };
+    
+    // Auto-lock all other placed parts so they don't scramble
+    if (calculatedResults) {
+      calculatedResults.sheets.forEach(sheet => {
+        sheet.placedParts.forEach(p => {
+          if (p.instanceId && p.instanceId !== instanceId) {
+            if (newOverrides[p.instanceId] === undefined) {
+              newOverrides[p.instanceId] = sheet.sheetIndex;
+            }
+            if (newPositions[p.instanceId] === undefined) {
+              newPositions[p.instanceId] = {
+                sheetIndex: sheet.sheetIndex,
+                x: p.x,
+                y: p.y,
+                w: p.w,
+                h: p.h,
+                rotated: p.rotated || false
+              };
+            }
+          }
+        });
+      });
+    }
+
+    // Get current position or current placed part to rotate
+    let currentPos = newPositions[instanceId];
+    if (!currentPos) {
+      let foundPart: PlacedPart | null = null;
+      let foundSheetIdx = 1;
+      calculatedResults?.sheets.forEach(sheet => {
+        const p = sheet.placedParts.find(x => x.instanceId === instanceId);
+        if (p) {
+          foundPart = p;
+          foundSheetIdx = sheet.sheetIndex;
+        }
+      });
+
+      if (foundPart) {
+        currentPos = {
+          sheetIndex: foundSheetIdx,
+          x: (foundPart as PlacedPart).x,
+          y: (foundPart as PlacedPart).y,
+          w: (foundPart as PlacedPart).w,
+          h: (foundPart as PlacedPart).h,
+          rotated: (foundPart as PlacedPart).rotated || false
+        };
+      }
+    }
+
+    if (currentPos) {
+      // Swap dimensions and toggle rotated flag
+      const newW = currentPos.h;
+      const newH = currentPos.w;
+      const newRotated = !currentPos.rotated;
+
+      newPositions[instanceId] = {
+        ...currentPos,
+        w: newW,
+        h: newH,
+        rotated: newRotated
+      };
+      newOverrides[instanceId] = currentPos.sheetIndex;
+
+      setManualSheetOverrides(newOverrides);
+      setManualPositions(newPositions);
+      setIsStale(true);
+      setMovingPart(null);
+      
+      setTimeout(() => {
+        runOptimization(undefined, newOverrides, newPositions);
+      }, 50);
+    }
   };
 
   // Delete a specific piece instance (decrease quantity of that part by 1)
@@ -665,17 +815,36 @@ export function PanelCuttingOptimizer() {
 
               if (placed) break;
 
-              // Scan-search for a free spot on the panel
+              // High-precision fast corner-point scan-search for a free spot on the panel
               let foundX = 0;
               let foundY = 0;
               let found = false;
-              const stepY = 0.5;
-              const stepX = 0.5;
 
-              for (let y = 0; y <= maxH - h; y += stepY) {
-                for (let x = 0; x <= maxW - w; x += stepX) {
-                  const absX = targetSheet.trimLeft + x;
-                  const absY = targetSheet.trimTop + y;
+              // Collect candidate relative X and Y positions
+              const candidateXs = new Set<number>([0]);
+              const candidateYs = new Set<number>([0]);
+              
+              targetSheet.placedParts.forEach(other => {
+                const relRight = other.x + other.w + bw - targetSheet.trimLeft;
+                const relBottom = other.y + other.h + bw - targetSheet.trimTop;
+                if (relRight >= 0 && relRight <= maxW - w) {
+                  candidateXs.add(Number(relRight.toFixed(4)));
+                }
+                if (relBottom >= 0 && relBottom <= maxH - h) {
+                  candidateYs.add(Number(relBottom.toFixed(4)));
+                }
+              });
+
+              const sortedXs = Array.from(candidateXs).sort((a, b) => a - b);
+              const sortedYs = Array.from(candidateYs).sort((a, b) => a - b);
+
+              for (const yVal of sortedYs) {
+                if (yVal + h > maxH) continue;
+                for (const xVal of sortedXs) {
+                  if (xVal + w > maxW) continue;
+
+                  const absX = targetSheet.trimLeft + xVal;
+                  const absY = targetSheet.trimTop + yVal;
 
                   let hasOverlap = false;
                   for (const other of targetSheet.placedParts) {
@@ -686,8 +855,8 @@ export function PanelCuttingOptimizer() {
                   }
 
                   if (!hasOverlap) {
-                    foundX = x;
-                    foundY = y;
+                    foundX = xVal;
+                    foundY = yVal;
                     found = true;
                     break;
                   }
@@ -811,17 +980,36 @@ export function PanelCuttingOptimizer() {
 
               if (placed) break;
 
-              // Try scan position
+              // High-precision fast corner-point scan-search for a free spot on the panel
               let foundX = 0;
               let foundY = 0;
               let found = false;
-              const stepY = 0.5;
-              const stepX = 0.5;
 
-              for (let y = 0; y <= maxH - h; y += stepY) {
-                for (let x = 0; x <= maxW - w; x += stepX) {
-                  const absX = targetSheet.trimLeft + x;
-                  const absY = targetSheet.trimTop + y;
+              // Collect candidate relative X and Y positions
+              const candidateXs = new Set<number>([0]);
+              const candidateYs = new Set<number>([0]);
+              
+              targetSheet.placedParts.forEach(other => {
+                const relRight = other.x + other.w + bw - targetSheet.trimLeft;
+                const relBottom = other.y + other.h + bw - targetSheet.trimTop;
+                if (relRight >= 0 && relRight <= maxW - w) {
+                  candidateXs.add(Number(relRight.toFixed(4)));
+                }
+                if (relBottom >= 0 && relBottom <= maxH - h) {
+                  candidateYs.add(Number(relBottom.toFixed(4)));
+                }
+              });
+
+              const sortedXs = Array.from(candidateXs).sort((a, b) => a - b);
+              const sortedYs = Array.from(candidateYs).sort((a, b) => a - b);
+
+              for (const yVal of sortedYs) {
+                if (yVal + h > maxH) continue;
+                for (const xVal of sortedXs) {
+                  if (xVal + w > maxW) continue;
+
+                  const absX = targetSheet.trimLeft + xVal;
+                  const absY = targetSheet.trimTop + yVal;
 
                   let hasOverlap = false;
                   for (const other of targetSheet.placedParts) {
@@ -832,8 +1020,8 @@ export function PanelCuttingOptimizer() {
                   }
 
                   if (!hasOverlap) {
-                    foundX = x;
-                    foundY = y;
+                    foundX = xVal;
+                    foundY = yVal;
                     found = true;
                     break;
                   }
@@ -1664,9 +1852,18 @@ PANELI MASTER #${shLayout.sheetIndex}:
                 return (
                   <div key={sheet.sheetIndex} className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-black uppercase text-indigo-700 bg-indigo-100 px-3 py-1 rounded-lg">
-                        Paneli #{sheet.sheetIndex} ({sheet.width}x{sheet.height}cm)
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black uppercase text-indigo-700 bg-indigo-100 px-3 py-1 rounded-lg flex items-center gap-1">
+                          <Layers className="w-3.5 h-3.5" />
+                          Paneli #{sheet.sheetIndex} ({sheet.width}x{sheet.height}cm)
+                        </span>
+                        {sheet.placedParts.some(p => p.instanceId && (manualPositions[p.instanceId] !== undefined || manualSheetOverrides[p.instanceId] !== undefined)) && (
+                          <span className="text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1" title="Pjesët në këtë panel janë të kyçura në pozicione manuale">
+                            <Lock className="w-3 h-3 text-amber-600" />
+                            Pozicione të Kyçura
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-bold text-slate-500">
                         Shfrytëzimi: <strong className="text-emerald-600 text-sm font-black">{sheet.utilization}%</strong>
                       </span>
@@ -1687,7 +1884,62 @@ PANELI MASTER #${shLayout.sheetIndex}:
                         e.currentTarget.classList.remove("bg-slate-800", "border-indigo-500", "scale-[1.01]");
                         const instanceId = e.dataTransfer.getData("text/plain");
                         if (instanceId) {
-                          movePartToSheet(instanceId, sheet.sheetIndex);
+                          const svgElement = e.currentTarget.querySelector("svg");
+                          if (svgElement) {
+                            const rect = svgElement.getBoundingClientRect();
+                            const clientX = e.clientX - rect.left;
+                            const clientY = e.clientY - rect.top;
+                            
+                            // Calculate scale factor from client pixels to SVG coordinate space
+                            const scaleX = viewWidth / rect.width;
+                            const scaleY = viewHeight / rect.height;
+                            
+                            // Retrieve grab offset if available
+                            const grabOffsetXStr = e.dataTransfer.getData("application/grab-offset-x");
+                            const grabOffsetYStr = e.dataTransfer.getData("application/grab-offset-y");
+                            
+                            let finalX = -paddingLeft + clientX * scaleX;
+                            let finalY = -paddingTop + clientY * scaleY;
+                            
+                            if (grabOffsetXStr && grabOffsetYStr) {
+                              const grabOffsetX = parseFloat(grabOffsetXStr) * scaleX;
+                              const grabOffsetY = parseFloat(grabOffsetYStr) * scaleY;
+                              finalX -= grabOffsetX;
+                              finalY -= grabOffsetY;
+                            } else {
+                              // Fallback: center the part on the mouse
+                              let partW = 10;
+                              let partH = 10;
+                              let foundPart = sheet.placedParts.find(p => p.instanceId === instanceId);
+                              if (foundPart) {
+                                partW = foundPart.w;
+                                partH = foundPart.h;
+                              }
+                              finalX -= partW / 2;
+                              finalY -= partH / 2;
+                            }
+                            
+                            // Find the part dimensions to constrain the drop coordinate inside trimmed area
+                            let partW = 10;
+                            let partH = 10;
+                            let foundPart = sheet.placedParts.find(p => p.instanceId === instanceId);
+                            if (foundPart) {
+                              partW = foundPart.w;
+                              partH = foundPart.h;
+                            }
+                            if (manualPositions[instanceId]) {
+                              partW = manualPositions[instanceId].w;
+                              partH = manualPositions[instanceId].h;
+                            }
+                            
+                            // Constrain to sheet boundaries
+                            finalX = Math.max(sheet.trimLeft, Math.min(sheet.width - sheet.trimRight - partW, finalX));
+                            finalY = Math.max(sheet.trimTop, Math.min(sheet.height - sheet.trimBottom - partH, finalY));
+                            
+                            movePartToCoordinate(instanceId, sheet.sheetIndex, finalX, finalY);
+                          } else {
+                            movePartToSheet(instanceId, sheet.sheetIndex);
+                          }
                         }
                       }}
                     >
@@ -1908,6 +2160,16 @@ PANELI MASTER #${shLayout.sheetIndex}:
                               onDragStart={(e) => {
                                 if (part.instanceId) {
                                   e.dataTransfer.setData("text/plain", part.instanceId);
+                                  
+                                  // Capture exact cursor offsets relative to the part boundary to drop exactly where the mouse let go
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const offsetX = e.clientX - rect.left;
+                                  const offsetY = e.clientY - rect.top;
+                                  e.dataTransfer.setData("application/grab-offset-x", offsetX.toString());
+                                  e.dataTransfer.setData("application/grab-offset-y", offsetY.toString());
+                                  e.dataTransfer.setData("application/grab-rect-width", rect.width.toString());
+                                  e.dataTransfer.setData("application/grab-rect-height", rect.height.toString());
+                                  
                                   e.dataTransfer.effectAllowed = "move";
                                 }
                               }}
@@ -2469,6 +2731,31 @@ PANELI MASTER #${shLayout.sheetIndex}:
                   + Ri
                 </button>
               </div>
+            </div>
+
+            {/* Rrotullimi i detajit */}
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest block">
+                Rrotullimi i detajit:
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (movingPart.part.instanceId) {
+                    togglePartRotation(movingPart.part.instanceId);
+                  }
+                }}
+                className="w-full p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                title="Rrotullo këtë pjesë 90 shkallë në këtë panel"
+              >
+                <RotateCw className="w-4 h-4 text-indigo-600 shrink-0" />
+                <div className="text-left">
+                  <span className="block font-black text-[10px] uppercase leading-none">Rrotullo Pjesën ↻</span>
+                  <span className="text-[9px] text-indigo-500 font-medium block mt-0.5">
+                    Ndrysho nga {((movingPart.part.originalW ?? movingPart.part.w) * 10).toFixed(0)} x {((movingPart.part.originalH ?? movingPart.part.h) * 10).toFixed(0)} mm në {((movingPart.part.originalH ?? movingPart.part.h) * 10).toFixed(0)} x {((movingPart.part.originalW ?? movingPart.part.w) * 10).toFixed(0)} mm
+                  </span>
+                </div>
+              </button>
             </div>
 
             {/* Opsionet e fshirjes */}
