@@ -13,6 +13,7 @@ interface CutPart {
 
 interface PlacedPart {
   id: string;
+  instanceId?: string;
   name: string;
   x: number;
   y: number;
@@ -21,6 +22,8 @@ interface PlacedPart {
   originalW?: number;
   originalH?: number;
   rotated: boolean;
+  manual?: boolean;
+  doesNotFit?: boolean;
 }
 
 interface LeftoverSpace {
@@ -135,6 +138,11 @@ export function PanelCuttingOptimizer() {
   const [newPartQty, setNewPartQty] = useState<number | ''>(2);
   const [newPartRotate, setNewPartRotate] = useState<boolean>(true);
 
+  // Manual sheet assignment overrides per piece instanceId (e.g. "partId_inst_0" -> sheetIndex)
+  const [manualSheetOverrides, setManualSheetOverrides] = useState<Record<string, number>>({});
+  // Track part being moved manually
+  const [movingPart, setMovingPart] = useState<{ part: PlacedPart; currentSheetIndex: number } | null>(null);
+
   // Calculated layout results state
   const [calculatedResults, setCalculatedResults] = useState<{
     sheets: SheetLayout[];
@@ -219,12 +227,13 @@ export function PanelCuttingOptimizer() {
 
     const partsList = Array.isArray(overrideParts) ? overrideParts : parts;
 
-    // Collect all requested parts into individual items
-    const rawItemsList: { part: CutPart; originalW: number; originalH: number }[] = [];
+    // Collect all requested parts into individual items with stable instance IDs
+    const rawItemsList: { instanceId: string; part: CutPart; originalW: number; originalH: number }[] = [];
     partsList.forEach(p => {
       const qty = Number(p.quantity) || 0;
       for (let i = 0; i < qty; i++) {
         rawItemsList.push({
+          instanceId: `${p.id}_inst_${i}`,
           part: p,
           originalW: Number(p.width) || 0,
           originalH: Number(p.height) || 0
@@ -317,38 +326,45 @@ export function PanelCuttingOptimizer() {
         const sheets: SheetLayout[] = [];
         const unplacedItems: { part: CutPart; w: number; h: number }[] = [];
 
-        const createNewSheet = (index: number): SheetLayout => {
-          const trimmedW = sw - activeTrimLeft - activeTrimRight;
-          const trimmedH = sh - activeTrimTop - activeTrimBottom;
-          return {
-            sheetIndex: index,
-            width: sw,
-            height: sh,
-            trimmedWidth: trimmedW,
-            trimmedHeight: trimmedH,
-            trimLeft: activeTrimLeft,
-            trimRight: activeTrimRight,
-            trimTop: activeTrimTop,
-            trimBottom: activeTrimBottom,
-            placedParts: [],
-            leftovers: [],
-            utilization: 0,
-            wasteArea: 0,
-            usedArea: 0
-          };
-        };
-
-        let currentSheetIndex = 1;
-        let currentSheet = createNewSheet(currentSheetIndex);
-
         interface Shelf {
           y: number;
           h: number;
           usedX: number;
         }
-        const sheetShelves: Record<number, Shelf[]> = { 1: [] };
+        const sheetShelves: Record<number, Shelf[]> = {};
 
-        sortedItems.forEach(item => {
+        const getOrCreateSheet = (idx: number): SheetLayout => {
+          let shLayout = sheets.find(s => s.sheetIndex === idx);
+          if (!shLayout) {
+            const trimmedW = sw - activeTrimLeft - activeTrimRight;
+            const trimmedH = sh - activeTrimTop - activeTrimBottom;
+            shLayout = {
+              sheetIndex: idx,
+              width: sw,
+              height: sh,
+              trimmedWidth: trimmedW,
+              trimmedHeight: trimmedH,
+              trimLeft: activeTrimLeft,
+              trimRight: activeTrimRight,
+              trimTop: activeTrimTop,
+              trimBottom: activeTrimBottom,
+              placedParts: [],
+              leftovers: [],
+              utilization: 0,
+              wasteArea: 0,
+              usedArea: 0
+            };
+            sheets.push(shLayout);
+            sheetShelves[idx] = [];
+          }
+          return shLayout;
+        };
+
+        const manualItems = sortedItems.filter(item => manualSheetOverrides[item.instanceId] !== undefined);
+        const automaticItems = sortedItems.filter(item => manualSheetOverrides[item.instanceId] === undefined);
+
+        // 1. Place manual items first on their preferred sheets
+        manualItems.forEach(item => {
           const originalW = item.originalW;
           const originalH = item.originalH;
           if (originalW <= 0 || originalH <= 0) return;
@@ -357,16 +373,117 @@ export function PanelCuttingOptimizer() {
           const effectiveH = addPreMilling ? originalH + 0.4 : originalH;
 
           let placed = false;
+          const preferredSheetIdx = manualSheetOverrides[item.instanceId];
+          const targetSheet = getOrCreateSheet(preferredSheetIdx);
+          const maxW = targetSheet.trimmedWidth;
+          const maxH = targetSheet.trimmedHeight;
 
-          // Try placing in existing sheets
-          for (let sIdx = 1; sIdx <= currentSheetIndex; sIdx++) {
-            const targetSheet = sIdx === currentSheetIndex ? currentSheet : sheets.find(sh => sh.sheetIndex === sIdx);
-            if (!targetSheet) continue;
+          const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
 
+          for (const orient of orientations) {
+            const { w, h, rot } = orient;
+            if (w > maxW || h > maxH) continue;
+
+            let shelves = sheetShelves[preferredSheetIdx];
+            if (!shelves) {
+              sheetShelves[preferredSheetIdx] = [];
+              shelves = sheetShelves[preferredSheetIdx];
+            }
+
+            // Try existing shelves
+            for (let shelf of shelves) {
+              const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
+              if (neededX <= maxW && h <= shelf.h) {
+                const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
+                targetSheet.placedParts.push({
+                  id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                  instanceId: item.instanceId,
+                  name: item.part.name,
+                  x: targetSheet.trimLeft + posX,
+                  y: targetSheet.trimTop + shelf.y,
+                  w,
+                  h,
+                  originalW,
+                  originalH,
+                  rotated: rot,
+                  manual: true
+                });
+
+                shelf.usedX = posX + w;
+                placed = true;
+                break;
+              }
+            }
+
+            if (placed) break;
+
+            // Try new shelf
+            const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
+            const neededY = currentShelvesHeight === 0 ? 0 : currentShelvesHeight;
+
+            if (neededY + h <= maxH) {
+              const newShelf: Shelf = {
+                y: neededY,
+                h: h,
+                usedX: w
+              };
+              shelves.push(newShelf);
+
+              targetSheet.placedParts.push({
+                id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                instanceId: item.instanceId,
+                name: item.part.name,
+                x: targetSheet.trimLeft + 0,
+                y: targetSheet.trimTop + neededY,
+                w,
+                h,
+                originalW,
+                originalH,
+                rotated: rot,
+                manual: true
+              });
+
+              placed = true;
+              break;
+            }
+          }
+
+          if (!placed) {
+            // Force-place anyway (even if overflow) so they can see it and get feedback
+            const orient = orientations[0] || { w: effectiveW, h: effectiveH, rot: false };
+            targetSheet.placedParts.push({
+              id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+              instanceId: item.instanceId,
+              name: item.part.name,
+              x: targetSheet.trimLeft,
+              y: targetSheet.trimTop,
+              w: orient.w,
+              h: orient.h,
+              originalW,
+              originalH,
+              rotated: orient.rot,
+              manual: true,
+              doesNotFit: true
+            });
+          }
+        });
+
+        // 2. Place automatic items
+        automaticItems.forEach(item => {
+          const originalW = item.originalW;
+          const originalH = item.originalH;
+          if (originalW <= 0 || originalH <= 0) return;
+
+          const effectiveW = addPreMilling ? originalW + 0.4 : originalW;
+          const effectiveH = addPreMilling ? originalH + 0.4 : originalH;
+
+          let placed = false;
+          let sIdx = 1;
+          while (true) {
+            const targetSheet = getOrCreateSheet(sIdx);
             const maxW = targetSheet.trimmedWidth;
             const maxH = targetSheet.trimmedHeight;
 
-            // Test orientations based on the selected strategy to find best fit
             const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
 
             for (const orient of orientations) {
@@ -379,14 +496,14 @@ export function PanelCuttingOptimizer() {
                 shelves = sheetShelves[sIdx];
               }
 
-              // Find first shelf that fits
+              // Try existing shelves
               for (let shelf of shelves) {
                 const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
-                
                 if (neededX <= maxW && h <= shelf.h) {
                   const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
                   targetSheet.placedParts.push({
                     id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                    instanceId: item.instanceId,
                     name: item.part.name,
                     x: targetSheet.trimLeft + posX,
                     y: targetSheet.trimTop + shelf.y,
@@ -405,7 +522,7 @@ export function PanelCuttingOptimizer() {
 
               if (placed) break;
 
-              // If no existing shelf can take it, try spawning a new shelf on this sheet
+              // Try new shelf
               const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
               const neededY = currentShelvesHeight === 0 ? 0 : currentShelvesHeight;
 
@@ -419,6 +536,7 @@ export function PanelCuttingOptimizer() {
 
                 targetSheet.placedParts.push({
                   id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                  instanceId: item.instanceId,
                   name: item.part.name,
                   x: targetSheet.trimLeft + 0,
                   y: targetSheet.trimTop + neededY,
@@ -435,66 +553,31 @@ export function PanelCuttingOptimizer() {
             }
 
             if (placed) break;
-          }
+            sIdx++;
 
-          // If still not placed, make a brand new sheet
-          if (!placed) {
-            sheets.push(currentSheet);
-
-            currentSheetIndex++;
-            currentSheet = createNewSheet(currentSheetIndex);
-            sheetShelves[currentSheetIndex] = [];
-
-            const maxW = currentSheet.trimmedWidth;
-            const maxH = currentSheet.trimmedHeight;
-
-            const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
-
-            for (const orient of orientations) {
-              const { w, h, rot } = orient;
-              if (w <= maxW && h <= maxH) {
-                const newShelf: Shelf = {
-                  y: 0,
-                  h: h,
-                  usedX: w
-                };
-                sheetShelves[currentSheetIndex].push(newShelf);
-
-                currentSheet.placedParts.push({
-                  id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
-                  name: item.part.name,
-                  x: currentSheet.trimLeft + 0,
-                  y: currentSheet.trimTop + 0,
-                  w,
-                  h,
-                  originalW,
-                  originalH,
-                  rotated: rot
-                });
-                placed = true;
-                break;
-              }
-            }
-
-            if (!placed) {
+            // Failsafe
+            if (sIdx > 100) {
               unplacedItems.push({
                 part: item.part,
                 w: originalW,
                 h: originalH
               });
+              break;
             }
           }
         });
 
-        if (currentSheet.placedParts.length > 0 || sheets.length === 0) {
-          sheets.push(currentSheet);
-        }
+        // Filter empty sheets but keep at least sheet 1, and sort them
+        const activeSheets = sheets.filter(sh => sh.placedParts.length > 0 || sh.sheetIndex === 1);
+        activeSheets.sort((a, b) => a.sheetIndex - b.sheetIndex);
+
+        const processedSheets = activeSheets;
 
         // Compute leftovers and statistics for this candidate layout
         let totalUtilization = 0;
         const totalRawArea = sw * sh;
 
-        sheets.forEach(shLayout => {
+        processedSheets.forEach(shLayout => {
           const usedArea = shLayout.placedParts.reduce((sum, p) => sum + (p.w * p.h), 0);
           shLayout.usedArea = Number(usedArea.toFixed(1));
           shLayout.utilization = Number(((usedArea / totalRawArea) * 100).toFixed(1));
@@ -532,10 +615,10 @@ export function PanelCuttingOptimizer() {
           }
         });
 
-        const avgUtilization = sheets.length > 0 ? (totalUtilization / sheets.length) : 0;
+        const avgUtilization = processedSheets.length > 0 ? (totalUtilization / processedSheets.length) : 0;
 
         candidates.push({
-          sheets,
+          sheets: processedSheets,
           unplacedItems,
           avgUtilization
         });
@@ -1172,18 +1255,38 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={runOptimization}
-              className={`py-3 px-5 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                isStale
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100 scale-102 hover:scale-105 active:scale-95'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-100'
-              }`}
-            >
-              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
-              Gjenero Skemën
-            </button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {Object.keys(manualSheetOverrides).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualSheetOverrides({});
+                    setIsStale(true);
+                    setTimeout(() => {
+                      runOptimization();
+                    }, 50);
+                  }}
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-slate-200/80 cursor-pointer"
+                  title="Rivendos të gjitha pozicionet manuale në shpërndarje automatike"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-slate-500" />
+                  Rregullo Automatike ({Object.keys(manualSheetOverrides).length})
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={runOptimization}
+                className={`py-3 px-5 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                  isStale
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100 scale-102 hover:scale-105 active:scale-95 cursor-pointer'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-100 cursor-pointer'
+                }`}
+              >
+                <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+                Gjenero Skemën
+              </button>
+            </div>
           </div>
 
           {/* Warn about unplaced parts */}
@@ -1461,16 +1564,28 @@ PANELI MASTER #${shLayout.sheetIndex}:
                           const useHorizontalGrain = (grainDirection === 'horizontal' && !part.rotated) || (grainDirection === 'vertical' && part.rotated);
 
                           return (
-                            <g key={part.id}>
+                            <g 
+                              key={part.id} 
+                              className="cursor-pointer group select-none"
+                              onClick={() => {
+                                setMovingPart({ part, currentSheetIndex: sheet.sheetIndex });
+                              }}
+                            >
+                              <title>
+                                {part.name} ({(dispW * 10).toFixed(0)} x {(dispH * 10).toFixed(0)} mm)
+                                {"\n"}Paneli #{sheet.sheetIndex} - Kliko për ta lëvizur ose ndryshuar!
+                              </title>
                               {/* Background Part */}
                               <rect
                                 x={part.x}
                                 y={part.y}
                                 width={part.w}
                                 height={part.h}
-                                fill={c.fill}
-                                stroke="#1e293b"
-                                strokeWidth="0.8"
+                                fill={part.doesNotFit ? "#fee2e2" : c.fill}
+                                stroke={part.doesNotFit ? "#ef4444" : part.manual ? "#4f46e5" : "#1e293b"}
+                                strokeWidth={part.doesNotFit ? "1.5" : part.manual ? "1.2" : "0.8"}
+                                strokeDasharray={part.doesNotFit ? "2 1" : undefined}
+                                className="transition-all hover:brightness-95 group-hover:stroke-indigo-600 group-hover:stroke-[1.5]"
                               />
 
                               {/* Part texture wood pattern simulation */}
@@ -1912,6 +2027,162 @@ PANELI MASTER #${shLayout.sheetIndex}:
         </div>
       </div>
     </div>
+
+    {/* Elegant Manual Repositioning Modal */}
+    {movingPart && (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="bg-indigo-600 px-6 py-5 text-white flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowLeftRight className="w-5 h-5 text-indigo-100" />
+              <div>
+                <h3 className="font-black text-xs uppercase tracking-wider text-indigo-100">
+                  Pozicionimi Manual
+                </h3>
+                <h2 className="text-base font-bold text-white leading-tight">
+                  Ndërro Panelin e Detajit
+                </h2>
+              </div>
+            </div>
+            <button
+              onClick={() => setMovingPart(null)}
+              className="p-1 rounded-full hover:bg-indigo-700/60 text-indigo-100 hover:text-white transition-all cursor-pointer"
+            >
+              <Plus className="w-5 h-5 rotate-45" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-6">
+            {/* Part Card info */}
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-4">
+              <div
+                className="w-3 h-10 rounded-full border shrink-0"
+                style={{
+                  backgroundColor: getPartColorForDimension(movingPart.part.w, movingPart.part.h).fill,
+                  borderColor: getPartColorForDimension(movingPart.part.w, movingPart.part.h).stroke,
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <span className="block text-xs font-black text-slate-800 uppercase tracking-tight truncate">
+                  {movingPart.part.name}
+                </span>
+                <span className="text-[11px] text-slate-500 font-bold block mt-0.5">
+                  Dimensioni: {((movingPart.part.originalW ?? movingPart.part.w) * 10).toFixed(0)} x {((movingPart.part.originalH ?? movingPart.part.h) * 10).toFixed(0)} mm
+                </span>
+                <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-black px-1.5 py-0.5 rounded uppercase mt-1.5 inline-block">
+                  Aktualisht: Paneli {movingPart.currentSheetIndex}
+                </span>
+              </div>
+            </div>
+
+            {/* Select Target Panel */}
+            <div className="space-y-2">
+              <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest block">
+                Zgjidh Panelin ku dëshiron ta vendosësh:
+              </label>
+              
+              {/* Dynamic panel selection grid */}
+              <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto p-1 bg-slate-50 rounded-2xl border border-slate-100">
+                {Array.from({ length: (calculatedResults?.sheets.length ?? 1) }).map((_, i) => {
+                  const sheetNum = i + 1;
+                  const isSelected = movingPart.currentSheetIndex === sheetNum;
+                  return (
+                    <button
+                      key={sheetNum}
+                      type="button"
+                      onClick={() => {
+                        if (movingPart.part.instanceId) {
+                          setManualSheetOverrides(prev => ({
+                            ...prev,
+                            [movingPart.part.instanceId!]: sheetNum
+                          }));
+                          setIsStale(true);
+                          setMovingPart(null);
+                          // instant rerun to show immediate update!
+                          setTimeout(() => {
+                            runOptimization();
+                          }, 50);
+                        }
+                      }}
+                      className={`p-2.5 rounded-xl border font-black text-xs transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-100'
+                          : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50'
+                      }`}
+                    >
+                      <Layers className={`w-3.5 h-3.5 ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`} />
+                      P {sheetNum}
+                    </button>
+                  );
+                })}
+
+                {/* Plus button to force a new panel */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (movingPart.part.instanceId) {
+                      const newSheetNum = (calculatedResults?.sheets.length ?? 0) + 1;
+                      setManualSheetOverrides(prev => ({
+                        ...prev,
+                        [movingPart.part.instanceId!]: newSheetNum
+                      }));
+                      setIsStale(true);
+                      setMovingPart(null);
+                      setTimeout(() => {
+                        runOptimization();
+                      }, 50);
+                    }
+                  }}
+                  className="p-2.5 rounded-xl border border-dashed border-emerald-300 bg-emerald-50 text-emerald-700 font-black text-xs transition-all hover:bg-emerald-100 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                  title="Vendos në një Panel të ri bosh"
+                >
+                  <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                  + Ri
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+            {manualSheetOverrides[movingPart.part.instanceId ?? ''] !== undefined ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (movingPart.part.instanceId) {
+                    setManualSheetOverrides(prev => {
+                      const copy = { ...prev };
+                      delete copy[movingPart.part.instanceId!];
+                      return copy;
+                    });
+                    setIsStale(true);
+                    setMovingPart(null);
+                    setTimeout(() => {
+                      runOptimization();
+                    }, 50);
+                  }
+                }}
+                className="py-2.5 px-4 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                Kthe në Automatik
+              </button>
+            ) : (
+              <div />
+            )}
+
+            <button
+              type="button"
+              onClick={() => setMovingPart(null)}
+              className="py-2.5 px-5 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all cursor-pointer"
+            >
+              Mbyll
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Elegant A4 Landscape Printable Area */}
     {typeof document !== 'undefined' && createPortal(
