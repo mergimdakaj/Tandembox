@@ -140,47 +140,71 @@ export function PanelCuttingOptimizer() {
 
   // Manual sheet assignment overrides per piece instanceId (e.g. "partId_inst_0" -> sheetIndex)
   const [manualSheetOverrides, setManualSheetOverrides] = useState<Record<string, number>>({});
+  // Manual exact coordinates per piece instanceId
+  const [manualPositions, setManualPositions] = useState<Record<string, { sheetIndex: number; x: number; y: number; w: number; h: number; rotated: boolean }>>({});
   // Track part being moved manually
   const [movingPart, setMovingPart] = useState<{ part: PlacedPart; currentSheetIndex: number } | null>(null);
 
-  // Lock all placed parts to their current sheet indexes
+  // Lock all placed parts to their current sheet indexes and coordinates
   const lockAllParts = () => {
     if (!calculatedResults) return;
     const newOverrides: Record<string, number> = {};
+    const newPositions: Record<string, { sheetIndex: number; x: number; y: number; w: number; h: number; rotated: boolean }> = {};
     calculatedResults.sheets.forEach(sheet => {
       sheet.placedParts.forEach(p => {
         if (p.instanceId) {
           newOverrides[p.instanceId] = sheet.sheetIndex;
+          newPositions[p.instanceId] = {
+            sheetIndex: sheet.sheetIndex,
+            x: p.x,
+            y: p.y,
+            w: p.w,
+            h: p.h,
+            rotated: p.rotated || false
+          };
         }
       });
     });
     setManualSheetOverrides(newOverrides);
+    setManualPositions(newPositions);
     setIsStale(true);
     setTimeout(() => {
-      runOptimization(undefined, newOverrides);
+      runOptimization(undefined, newOverrides, newPositions);
     }, 50);
   };
 
   // Unlock all parts so they can be arranged automatically
   const unlockAllParts = () => {
     setManualSheetOverrides({});
+    setManualPositions({});
     setIsStale(true);
     setTimeout(() => {
-      runOptimization(undefined, {});
+      runOptimization(undefined, {}, {});
     }, 50);
   };
 
-  // Move a single piece manually to a sheet, and auto-lock all other pieces to their current sheets so they do not scramble!
+  // Move a single piece manually to a sheet, and auto-lock all other pieces to their current sheets and coordinates so they do not scramble!
   const movePartToSheet = (instanceId: string, targetSheetIndex: number) => {
     const newOverrides = { ...manualSheetOverrides };
+    const newPositions = { ...manualPositions };
     
-    // Auto-lock all other placed parts to their current sheet indices
+    // Auto-lock all other placed parts to their current sheet indices and coordinates so they don't scramble
     if (calculatedResults) {
       calculatedResults.sheets.forEach(sheet => {
         sheet.placedParts.forEach(p => {
           if (p.instanceId && p.instanceId !== instanceId) {
             if (newOverrides[p.instanceId] === undefined) {
               newOverrides[p.instanceId] = sheet.sheetIndex;
+            }
+            if (newPositions[p.instanceId] === undefined) {
+              newPositions[p.instanceId] = {
+                sheetIndex: sheet.sheetIndex,
+                x: p.x,
+                y: p.y,
+                w: p.w,
+                h: p.h,
+                rotated: p.rotated || false
+              };
             }
           }
         });
@@ -190,12 +214,16 @@ export function PanelCuttingOptimizer() {
     // Set target sheet for the moved part
     newOverrides[instanceId] = targetSheetIndex;
     
+    // Since it's moved to a new sheet, clear its exact coordinates so it can seek a free spot there
+    delete newPositions[instanceId];
+    
     setManualSheetOverrides(newOverrides);
+    setManualPositions(newPositions);
     setIsStale(true);
     setMovingPart(null);
     
     setTimeout(() => {
-      runOptimization(undefined, newOverrides);
+      runOptimization(undefined, newOverrides, newPositions);
     }, 50);
   };
 
@@ -215,14 +243,25 @@ export function PanelCuttingOptimizer() {
       
       const deletedInstanceId = movingPart?.part.instanceId;
       const newOverrides = { ...manualSheetOverrides };
+      const newPositions = { ...manualPositions };
 
-      // Auto-lock all other placed parts to their current sheet indices so they don't scramble
+      // Auto-lock all other placed parts to their current sheet indices and coordinates so they don't scramble
       if (calculatedResults) {
         calculatedResults.sheets.forEach(sheet => {
           sheet.placedParts.forEach(p => {
             if (p.instanceId && p.instanceId !== deletedInstanceId) {
               if (newOverrides[p.instanceId] === undefined) {
                 newOverrides[p.instanceId] = sheet.sheetIndex;
+              }
+              if (newPositions[p.instanceId] === undefined) {
+                newPositions[p.instanceId] = {
+                  sheetIndex: sheet.sheetIndex,
+                  x: p.x,
+                  y: p.y,
+                  w: p.w,
+                  h: p.h,
+                  rotated: p.rotated || false
+                };
               }
             }
           });
@@ -231,12 +270,14 @@ export function PanelCuttingOptimizer() {
 
       if (deletedInstanceId) {
         delete newOverrides[deletedInstanceId];
+        delete newPositions[deletedInstanceId];
       }
 
       setManualSheetOverrides(newOverrides);
+      setManualPositions(newPositions);
       
       setTimeout(() => {
-        runOptimization(updated, newOverrides);
+        runOptimization(updated, newOverrides, newPositions);
       }, 50);
       
       return updated;
@@ -252,14 +293,25 @@ export function PanelCuttingOptimizer() {
       setMovingPart(null);
 
       const newOverrides = { ...manualSheetOverrides };
+      const newPositions = { ...manualPositions };
 
-      // Auto-lock all other placed parts to their current sheet indices so they don't scramble
+      // Auto-lock all other placed parts to their current sheet indices and coordinates so they don't scramble
       if (calculatedResults) {
         calculatedResults.sheets.forEach(sheet => {
           sheet.placedParts.forEach(p => {
             if (p.instanceId && !p.instanceId.startsWith(partId + '_inst_')) {
               if (newOverrides[p.instanceId] === undefined) {
                 newOverrides[p.instanceId] = sheet.sheetIndex;
+              }
+              if (newPositions[p.instanceId] === undefined) {
+                newPositions[p.instanceId] = {
+                  sheetIndex: sheet.sheetIndex,
+                  x: p.x,
+                  y: p.y,
+                  w: p.w,
+                  h: p.h,
+                  rotated: p.rotated || false
+                };
               }
             }
           });
@@ -270,13 +322,15 @@ export function PanelCuttingOptimizer() {
       Object.keys(newOverrides).forEach(k => {
         if (k.startsWith(partId + '_inst_')) {
           delete newOverrides[k];
+          delete newPositions[k];
         }
       });
 
       setManualSheetOverrides(newOverrides);
+      setManualPositions(newPositions);
       
       setTimeout(() => {
-        runOptimization(updated, newOverrides);
+        runOptimization(updated, newOverrides, newPositions);
       }, 50);
       
       return updated;
@@ -343,7 +397,7 @@ export function PanelCuttingOptimizer() {
     
     // Instantly optimize the layout with the new parts list
     setTimeout(() => {
-      runOptimization(updatedParts);
+      runOptimization(updatedParts, manualSheetOverrides, manualPositions);
     }, 50);
   };
 
@@ -360,14 +414,33 @@ export function PanelCuttingOptimizer() {
   };
 
   // High-performance multi-strategy nesting optimizer to achieve > 80% utilization
-  const runOptimization = (overrideParts?: CutPart[], overrideManualSheetOverrides?: Record<string, number>) => {
+  const runOptimization = (
+    overrideParts?: CutPart[], 
+    overrideManualSheetOverrides?: Record<string, number>,
+    overrideManualPositions?: Record<string, { sheetIndex: number; x: number; y: number; w: number; h: number; rotated: boolean }>
+  ) => {
     const sw = Number(sheetWidth) || 280;
     const sh = Number(sheetHeight) || 207;
     const bw = Number(bladeWidth) ?? 0.4;
 
     const activeOverrides = overrideManualSheetOverrides !== undefined ? overrideManualSheetOverrides : manualSheetOverrides;
+    const activePositions = overrideManualPositions !== undefined ? overrideManualPositions : manualPositions;
 
     const partsList = Array.isArray(overrideParts) ? overrideParts : parts;
+
+    // Helper for overlap checking
+    const checkOverlap = (
+      x1: number, y1: number, w1: number, h1: number,
+      x2: number, y2: number, w2: number, h2: number,
+      spacing: number
+    ): boolean => {
+      return !(
+        x1 + w1 + spacing <= x2 ||
+        x2 + w2 + spacing <= x1 ||
+        y1 + h1 + spacing <= y2 ||
+        y2 + h2 + spacing <= y1
+      );
+    };
 
     // Collect all requested parts into individual items with stable instance IDs
     const rawItemsList: { instanceId: string; part: CutPart; originalW: number; originalH: number }[] = [];
@@ -520,29 +593,115 @@ export function PanelCuttingOptimizer() {
           const maxW = targetSheet.trimmedWidth;
           const maxH = targetSheet.trimmedHeight;
 
-          const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
+          // Check if this manual item has saved coordinates!
+          const savedPos = activePositions[item.instanceId];
+          if (savedPos && savedPos.sheetIndex === preferredSheetIdx) {
+            targetSheet.placedParts.push({
+              id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+              instanceId: item.instanceId,
+              name: item.part.name,
+              x: savedPos.x,
+              y: savedPos.y,
+              w: savedPos.w,
+              h: savedPos.h,
+              originalW,
+              originalH,
+              rotated: savedPos.rotated,
+              manual: true
+            });
+            placed = true;
+          } else {
+            // Otherwise, pack it into the target sheet dynamically while checking for overlaps!
+            const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
 
-          for (const orient of orientations) {
-            const { w, h, rot } = orient;
-            if (w > maxW || h > maxH) continue;
+            for (const orient of orientations) {
+              const { w, h, rot } = orient;
+              if (w > maxW || h > maxH) continue;
 
-            let shelves = sheetShelves[preferredSheetIdx];
-            if (!shelves) {
-              sheetShelves[preferredSheetIdx] = [];
-              shelves = sheetShelves[preferredSheetIdx];
-            }
+              let shelves = sheetShelves[preferredSheetIdx];
+              if (!shelves) {
+                sheetShelves[preferredSheetIdx] = [];
+                shelves = sheetShelves[preferredSheetIdx];
+              }
 
-            // Try existing shelves
-            for (let shelf of shelves) {
-              const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
-              if (neededX <= maxW && h <= shelf.h) {
-                const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
+              // Try existing shelves
+              for (let shelf of shelves) {
+                const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
+                if (neededX <= maxW && h <= shelf.h) {
+                  const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
+                  const absX = targetSheet.trimLeft + posX;
+                  const absY = targetSheet.trimTop + shelf.y;
+
+                  // Overlap protection
+                  let hasOverlap = false;
+                  for (const other of targetSheet.placedParts) {
+                    if (checkOverlap(absX, absY, w, h, other.x, other.y, other.w, other.h, bw)) {
+                      hasOverlap = true;
+                      break;
+                    }
+                  }
+
+                  if (!hasOverlap) {
+                    targetSheet.placedParts.push({
+                      id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                      instanceId: item.instanceId,
+                      name: item.part.name,
+                      x: absX,
+                      y: absY,
+                      w,
+                      h,
+                      originalW,
+                      originalH,
+                      rotated: rot,
+                      manual: true
+                    });
+
+                    shelf.usedX = posX + w;
+                    placed = true;
+                    break;
+                  }
+                }
+              }
+
+              if (placed) break;
+
+              // Scan-search for a free spot on the panel
+              let foundX = 0;
+              let foundY = 0;
+              let found = false;
+              const stepY = 0.5;
+              const stepX = 0.5;
+
+              for (let y = 0; y <= maxH - h; y += stepY) {
+                for (let x = 0; x <= maxW - w; x += stepX) {
+                  const absX = targetSheet.trimLeft + x;
+                  const absY = targetSheet.trimTop + y;
+
+                  let hasOverlap = false;
+                  for (const other of targetSheet.placedParts) {
+                    if (checkOverlap(absX, absY, w, h, other.x, other.y, other.w, other.h, bw)) {
+                      hasOverlap = true;
+                      break;
+                    }
+                  }
+
+                  if (!hasOverlap) {
+                    foundX = x;
+                    foundY = y;
+                    found = true;
+                    break;
+                  }
+                }
+                if (found) break;
+              }
+
+              if (found) {
                 targetSheet.placedParts.push({
                   id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
                   instanceId: item.instanceId,
                   name: item.part.name,
-                  x: targetSheet.trimLeft + posX,
-                  y: targetSheet.trimTop + shelf.y,
+                  x: targetSheet.trimLeft + foundX,
+                  y: targetSheet.trimTop + foundY,
                   w,
                   h,
                   originalW,
@@ -551,47 +710,21 @@ export function PanelCuttingOptimizer() {
                   manual: true
                 });
 
-                shelf.usedX = posX + w;
+                shelves.push({
+                  y: foundY,
+                  h: h,
+                  usedX: foundX + w
+                });
+
                 placed = true;
                 break;
               }
-            }
-
-            if (placed) break;
-
-            // Try new shelf
-            const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
-            const neededY = currentShelvesHeight === 0 ? 0 : currentShelvesHeight;
-
-            if (neededY + h <= maxH) {
-              const newShelf: Shelf = {
-                y: neededY,
-                h: h,
-                usedX: w
-              };
-              shelves.push(newShelf);
-
-              targetSheet.placedParts.push({
-                id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
-                instanceId: item.instanceId,
-                name: item.part.name,
-                x: targetSheet.trimLeft + 0,
-                y: targetSheet.trimTop + neededY,
-                w,
-                h,
-                originalW,
-                originalH,
-                rotated: rot,
-                manual: true
-              });
-
-              placed = true;
-              break;
             }
           }
 
           if (!placed) {
             // Force-place anyway (even if overflow) so they can see it and get feedback
+            const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
             const orient = orientations[0] || { w: effectiveW, h: effectiveH, rot: false };
             targetSheet.placedParts.push({
               id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
@@ -643,50 +776,89 @@ export function PanelCuttingOptimizer() {
                 const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
                 if (neededX <= maxW && h <= shelf.h) {
                   const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
-                  targetSheet.placedParts.push({
-                    id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
-                    instanceId: item.instanceId,
-                    name: item.part.name,
-                    x: targetSheet.trimLeft + posX,
-                    y: targetSheet.trimTop + shelf.y,
-                    w,
-                    h,
-                    originalW,
-                    originalH,
-                    rotated: rot
-                  });
+                  const absX = targetSheet.trimLeft + posX;
+                  const absY = targetSheet.trimTop + shelf.y;
 
-                  shelf.usedX = posX + w;
-                  placed = true;
-                  break;
+                  // Check overlaps with placed manual parts or automatic parts
+                  let hasOverlap = false;
+                  for (const other of targetSheet.placedParts) {
+                    if (checkOverlap(absX, absY, w, h, other.x, other.y, other.w, other.h, bw)) {
+                      hasOverlap = true;
+                      break;
+                    }
+                  }
+
+                  if (!hasOverlap) {
+                    targetSheet.placedParts.push({
+                      id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                      instanceId: item.instanceId,
+                      name: item.part.name,
+                      x: absX,
+                      y: absY,
+                      w,
+                      h,
+                      originalW,
+                      originalH,
+                      rotated: rot
+                    });
+
+                    shelf.usedX = posX + w;
+                    placed = true;
+                    break;
+                  }
                 }
               }
 
               if (placed) break;
 
-              // Try new shelf
-              const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
-              const neededY = currentShelvesHeight === 0 ? 0 : currentShelvesHeight;
+              // Try scan position
+              let foundX = 0;
+              let foundY = 0;
+              let found = false;
+              const stepY = 0.5;
+              const stepX = 0.5;
 
-              if (neededY + h <= maxH) {
-                const newShelf: Shelf = {
-                  y: neededY,
-                  h: h,
-                  usedX: w
-                };
-                shelves.push(newShelf);
+              for (let y = 0; y <= maxH - h; y += stepY) {
+                for (let x = 0; x <= maxW - w; x += stepX) {
+                  const absX = targetSheet.trimLeft + x;
+                  const absY = targetSheet.trimTop + y;
 
+                  let hasOverlap = false;
+                  for (const other of targetSheet.placedParts) {
+                    if (checkOverlap(absX, absY, w, h, other.x, other.y, other.w, other.h, bw)) {
+                      hasOverlap = true;
+                      break;
+                    }
+                  }
+
+                  if (!hasOverlap) {
+                    foundX = x;
+                    foundY = y;
+                    found = true;
+                    break;
+                  }
+                }
+                if (found) break;
+              }
+
+              if (found) {
                 targetSheet.placedParts.push({
                   id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
                   instanceId: item.instanceId,
                   name: item.part.name,
-                  x: targetSheet.trimLeft + 0,
-                  y: targetSheet.trimTop + neededY,
+                  x: targetSheet.trimLeft + foundX,
+                  y: targetSheet.trimTop + foundY,
                   w,
                   h,
                   originalW,
                   originalH,
                   rotated: rot
+                });
+
+                shelves.push({
+                  y: foundY,
+                  h: h,
+                  usedX: foundX + w
                 });
 
                 placed = true;
@@ -1424,7 +1596,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
               <button
                 type="button"
-                onClick={runOptimization}
+                onClick={() => runOptimization()}
                 className={`py-3 px-5 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
                   isStale
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100 scale-102 hover:scale-105 active:scale-95 cursor-pointer'
@@ -2354,10 +2526,13 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     const updatedOverrides = { ...manualSheetOverrides };
                     delete updatedOverrides[movingPart.part.instanceId];
                     setManualSheetOverrides(updatedOverrides);
+                    const updatedPositions = { ...manualPositions };
+                    delete updatedPositions[movingPart.part.instanceId];
+                    setManualPositions(updatedPositions);
                     setIsStale(true);
                     setMovingPart(null);
                     setTimeout(() => {
-                      runOptimization(undefined, updatedOverrides);
+                      runOptimization(undefined, updatedOverrides, updatedPositions);
                     }, 50);
                   }
                 }}
