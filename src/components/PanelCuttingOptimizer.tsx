@@ -270,6 +270,38 @@ export function PanelCuttingOptimizer() {
       (a: any, b: any) => b.originalH - a.originalH,
     ];
 
+    const orientationStrategies = [
+      'normal',
+      'rotated',
+      'short-edge-horizontal',
+      'long-edge-horizontal',
+    ];
+
+    const getOrientations = (part: CutPart, ew: number, eh: number, strategy: string) => {
+      if (!part.allowRotation || ew === eh) {
+        return [{ w: ew, h: eh, rot: false }];
+      }
+      switch (strategy) {
+        case 'rotated':
+          return [{ w: eh, h: ew, rot: true }, { w: ew, h: eh, rot: false }];
+        case 'short-edge-horizontal':
+          if (ew <= eh) {
+            return [{ w: ew, h: eh, rot: false }, { w: eh, h: ew, rot: true }];
+          } else {
+            return [{ w: eh, h: ew, rot: true }, { w: ew, h: eh, rot: false }];
+          }
+        case 'long-edge-horizontal':
+          if (ew >= eh) {
+            return [{ w: ew, h: eh, rot: false }, { w: eh, h: ew, rot: true }];
+          } else {
+            return [{ w: eh, h: ew, rot: true }, { w: ew, h: eh, rot: false }];
+          }
+        case 'normal':
+        default:
+          return [{ w: ew, h: eh, rot: false }, { w: eh, h: ew, rot: true }];
+      }
+    };
+
     interface CandidateResult {
       sheets: SheetLayout[];
       unplacedItems: { part: CutPart; w: number; h: number }[];
@@ -279,86 +311,117 @@ export function PanelCuttingOptimizer() {
     const candidates: CandidateResult[] = [];
 
     sortingStrategies.forEach((sortFn) => {
-      const sortedItems = [...rawItemsList].sort(sortFn);
-      
-      const sheets: SheetLayout[] = [];
-      const unplacedItems: { part: CutPart; w: number; h: number }[] = [];
+      orientationStrategies.forEach((orientStrategy) => {
+        const sortedItems = [...rawItemsList].sort(sortFn);
+        
+        const sheets: SheetLayout[] = [];
+        const unplacedItems: { part: CutPart; w: number; h: number }[] = [];
 
-      const createNewSheet = (index: number): SheetLayout => {
-        const trimmedW = sw - activeTrimLeft - activeTrimRight;
-        const trimmedH = sh - activeTrimTop - activeTrimBottom;
-        return {
-          sheetIndex: index,
-          width: sw,
-          height: sh,
-          trimmedWidth: trimmedW,
-          trimmedHeight: trimmedH,
-          trimLeft: activeTrimLeft,
-          trimRight: activeTrimRight,
-          trimTop: activeTrimTop,
-          trimBottom: activeTrimBottom,
-          placedParts: [],
-          leftovers: [],
-          utilization: 0,
-          wasteArea: 0,
-          usedArea: 0
+        const createNewSheet = (index: number): SheetLayout => {
+          const trimmedW = sw - activeTrimLeft - activeTrimRight;
+          const trimmedH = sh - activeTrimTop - activeTrimBottom;
+          return {
+            sheetIndex: index,
+            width: sw,
+            height: sh,
+            trimmedWidth: trimmedW,
+            trimmedHeight: trimmedH,
+            trimLeft: activeTrimLeft,
+            trimRight: activeTrimRight,
+            trimTop: activeTrimTop,
+            trimBottom: activeTrimBottom,
+            placedParts: [],
+            leftovers: [],
+            utilization: 0,
+            wasteArea: 0,
+            usedArea: 0
+          };
         };
-      };
 
-      let currentSheetIndex = 1;
-      let currentSheet = createNewSheet(currentSheetIndex);
+        let currentSheetIndex = 1;
+        let currentSheet = createNewSheet(currentSheetIndex);
 
-      interface Shelf {
-        y: number;
-        h: number;
-        usedX: number;
-      }
-      const sheetShelves: Record<number, Shelf[]> = { 1: [] };
+        interface Shelf {
+          y: number;
+          h: number;
+          usedX: number;
+        }
+        const sheetShelves: Record<number, Shelf[]> = { 1: [] };
 
-      sortedItems.forEach(item => {
-        const originalW = item.originalW;
-        const originalH = item.originalH;
-        if (originalW <= 0 || originalH <= 0) return;
+        sortedItems.forEach(item => {
+          const originalW = item.originalW;
+          const originalH = item.originalH;
+          if (originalW <= 0 || originalH <= 0) return;
 
-        const effectiveW = addPreMilling ? originalW + 0.4 : originalW;
-        const effectiveH = addPreMilling ? originalH + 0.4 : originalH;
+          const effectiveW = addPreMilling ? originalW + 0.4 : originalW;
+          const effectiveH = addPreMilling ? originalH + 0.4 : originalH;
 
-        let placed = false;
+          let placed = false;
 
-        // Try placing in existing sheets
-        for (let sIdx = 1; sIdx <= currentSheetIndex; sIdx++) {
-          const targetSheet = sIdx === currentSheetIndex ? currentSheet : sheets.find(sh => sh.sheetIndex === sIdx);
-          if (!targetSheet) continue;
+          // Try placing in existing sheets
+          for (let sIdx = 1; sIdx <= currentSheetIndex; sIdx++) {
+            const targetSheet = sIdx === currentSheetIndex ? currentSheet : sheets.find(sh => sh.sheetIndex === sIdx);
+            if (!targetSheet) continue;
 
-          const maxW = targetSheet.trimmedWidth;
-          const maxH = targetSheet.trimmedHeight;
+            const maxW = targetSheet.trimmedWidth;
+            const maxH = targetSheet.trimmedHeight;
 
-          // Test both orientations to see which packs tighter!
-          const orientations = item.part.allowRotation && effectiveW !== effectiveH 
-            ? [{ w: effectiveW, h: effectiveH, rot: false }, { w: effectiveH, h: effectiveW, rot: true }]
-            : [{ w: effectiveW, h: effectiveH, rot: false }];
+            // Test orientations based on the selected strategy to find best fit
+            const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
 
-          for (const orient of orientations) {
-            const { w, h, rot } = orient;
-            if (w > maxW || h > maxH) continue;
+            for (const orient of orientations) {
+              const { w, h, rot } = orient;
+              if (w > maxW || h > maxH) continue;
 
-            let shelves = sheetShelves[sIdx];
-            if (!shelves) {
-              sheetShelves[sIdx] = [];
-              shelves = sheetShelves[sIdx];
-            }
+              let shelves = sheetShelves[sIdx];
+              if (!shelves) {
+                sheetShelves[sIdx] = [];
+                shelves = sheetShelves[sIdx];
+              }
 
-            // Find first shelf that fits
-            for (let shelf of shelves) {
-              const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
-              
-              if (neededX <= maxW && h <= shelf.h) {
-                const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
+              // Find first shelf that fits
+              for (let shelf of shelves) {
+                const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
+                
+                if (neededX <= maxW && h <= shelf.h) {
+                  const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
+                  targetSheet.placedParts.push({
+                    id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                    name: item.part.name,
+                    x: targetSheet.trimLeft + posX,
+                    y: targetSheet.trimTop + shelf.y,
+                    w,
+                    h,
+                    originalW,
+                    originalH,
+                    rotated: rot
+                  });
+
+                  shelf.usedX = posX + w;
+                  placed = true;
+                  break;
+                }
+              }
+
+              if (placed) break;
+
+              // If no existing shelf can take it, try spawning a new shelf on this sheet
+              const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
+              const neededY = currentShelvesHeight === 0 ? 0 : currentShelvesHeight;
+
+              if (neededY + h <= maxH) {
+                const newShelf: Shelf = {
+                  y: neededY,
+                  h: h,
+                  usedX: w
+                };
+                shelves.push(newShelf);
+
                 targetSheet.placedParts.push({
                   id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
                   name: item.part.name,
-                  x: targetSheet.trimLeft + posX,
-                  y: targetSheet.trimTop + shelf.y,
+                  x: targetSheet.trimLeft + 0,
+                  y: targetSheet.trimTop + neededY,
                   w,
                   h,
                   originalW,
@@ -366,156 +429,131 @@ export function PanelCuttingOptimizer() {
                   rotated: rot
                 });
 
-                shelf.usedX = posX + w;
                 placed = true;
                 break;
               }
             }
 
             if (placed) break;
-
-            // If no existing shelf can take it, try spawning a new shelf on this sheet
-            const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
-            const neededY = currentShelvesHeight === 0 ? 0 : currentShelvesHeight;
-
-            if (neededY + h <= maxH) {
-              const newShelf: Shelf = {
-                y: neededY,
-                h: h,
-                usedX: w
-              };
-              shelves.push(newShelf);
-
-              targetSheet.placedParts.push({
-                id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
-                name: item.part.name,
-                x: targetSheet.trimLeft + 0,
-                y: targetSheet.trimTop + neededY,
-                w,
-                h,
-                originalW,
-                originalH,
-                rotated: rot
-              });
-
-              placed = true;
-              break;
-            }
           }
 
-          if (placed) break;
-        }
-
-        // If still not placed, make a brand new sheet
-        if (!placed) {
-          sheets.push(currentSheet);
-
-          currentSheetIndex++;
-          currentSheet = createNewSheet(currentSheetIndex);
-          sheetShelves[currentSheetIndex] = [];
-
-          const maxW = currentSheet.trimmedWidth;
-          const maxH = currentSheet.trimmedHeight;
-
-          const orientations = item.part.allowRotation && effectiveW !== effectiveH 
-            ? [{ w: effectiveW, h: effectiveH, rot: false }, { w: effectiveH, h: effectiveW, rot: true }]
-            : [{ w: effectiveW, h: effectiveH, rot: false }];
-
-          for (const orient of orientations) {
-            const { w, h, rot } = orient;
-            if (w <= maxW && h <= maxH) {
-              const newShelf: Shelf = {
-                y: 0,
-                h: h,
-                usedX: w
-              };
-              sheetShelves[currentSheetIndex].push(newShelf);
-
-              currentSheet.placedParts.push({
-                id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
-                name: item.part.name,
-                x: currentSheet.trimLeft + 0,
-                y: currentSheet.trimTop + 0,
-                w,
-                h,
-                originalW,
-                originalH,
-                rotated: rot
-              });
-              placed = true;
-              break;
-            }
-          }
-
+          // If still not placed, make a brand new sheet
           if (!placed) {
-            unplacedItems.push({
-              part: item.part,
-              w: originalW,
-              h: originalH
-            });
+            sheets.push(currentSheet);
+
+            currentSheetIndex++;
+            currentSheet = createNewSheet(currentSheetIndex);
+            sheetShelves[currentSheetIndex] = [];
+
+            const maxW = currentSheet.trimmedWidth;
+            const maxH = currentSheet.trimmedHeight;
+
+            const orientations = getOrientations(item.part, effectiveW, effectiveH, orientStrategy);
+
+            for (const orient of orientations) {
+              const { w, h, rot } = orient;
+              if (w <= maxW && h <= maxH) {
+                const newShelf: Shelf = {
+                  y: 0,
+                  h: h,
+                  usedX: w
+                };
+                sheetShelves[currentSheetIndex].push(newShelf);
+
+                currentSheet.placedParts.push({
+                  id: item.part.id + '_' + Math.random().toString(36).substr(2, 5),
+                  name: item.part.name,
+                  x: currentSheet.trimLeft + 0,
+                  y: currentSheet.trimTop + 0,
+                  w,
+                  h,
+                  originalW,
+                  originalH,
+                  rotated: rot
+                });
+                placed = true;
+                break;
+              }
+            }
+
+            if (!placed) {
+              unplacedItems.push({
+                part: item.part,
+                w: originalW,
+                h: originalH
+              });
+            }
           }
+        });
+
+        if (currentSheet.placedParts.length > 0 || sheets.length === 0) {
+          sheets.push(currentSheet);
         }
-      });
 
-      if (currentSheet.placedParts.length > 0 || sheets.length === 0) {
-        sheets.push(currentSheet);
-      }
+        // Compute leftovers and statistics for this candidate layout
+        let totalUtilization = 0;
+        const totalRawArea = sw * sh;
 
-      // Compute leftovers and statistics for this candidate layout
-      let totalUtilization = 0;
-      const totalRawArea = sw * sh;
+        sheets.forEach(shLayout => {
+          const usedArea = shLayout.placedParts.reduce((sum, p) => sum + (p.w * p.h), 0);
+          shLayout.usedArea = Number(usedArea.toFixed(1));
+          shLayout.utilization = Number(((usedArea / totalRawArea) * 100).toFixed(1));
+          shLayout.wasteArea = Number((totalRawArea - usedArea).toFixed(1));
+          totalUtilization += shLayout.utilization;
 
-      sheets.forEach(shLayout => {
-        const usedArea = shLayout.placedParts.reduce((sum, p) => sum + (p.w * p.h), 0);
-        shLayout.usedArea = Number(usedArea.toFixed(1));
-        shLayout.utilization = Number(((usedArea / totalRawArea) * 100).toFixed(1));
-        shLayout.wasteArea = Number((totalRawArea - usedArea).toFixed(1));
-        totalUtilization += shLayout.utilization;
+          // Calculate actual leftovers (useful empty spaces) on shelves & remaining sheet space
+          const shelves = sheetShelves[shLayout.sheetIndex] || [];
+          
+          // 1. Leftover space at the end of each shelf
+          shelves.forEach(shelf => {
+            const remW = shLayout.trimmedWidth - shelf.usedX;
+            if (remW > 10 && shelf.h > 10) { // minimum useful size 10x10 cm
+              shLayout.leftovers.push({
+                id: `leftover_shelf_${shelf.y}`,
+                x: shLayout.trimLeft + shelf.usedX,
+                y: shLayout.trimTop + shelf.y,
+                w: Number(remW.toFixed(1)),
+                h: Number(shelf.h.toFixed(1))
+              });
+            }
+          });
 
-        // Calculate actual leftovers (useful empty spaces) on shelves & remaining sheet space
-        const shelves = sheetShelves[shLayout.sheetIndex] || [];
-        
-        // 1. Leftover space at the end of each shelf
-        shelves.forEach(shelf => {
-          const remW = shLayout.trimmedWidth - shelf.usedX;
-          if (remW > 10 && shelf.h > 10) { // minimum useful size 10x10 cm
+          // 2. Large leftover block at the top/bottom of the sheet if not fully height-packed
+          const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
+          const remH = shLayout.trimmedHeight - currentShelvesHeight;
+          if (remH > 10) {
             shLayout.leftovers.push({
-              id: `leftover_shelf_${shelf.y}`,
-              x: shLayout.trimLeft + shelf.usedX,
-              y: shLayout.trimTop + shelf.y,
-              w: Number(remW.toFixed(1)),
-              h: Number(shelf.h.toFixed(1))
+              id: 'leftover_top_block',
+              x: shLayout.trimLeft,
+              y: shLayout.trimTop + currentShelvesHeight,
+              w: Number(shLayout.trimmedWidth.toFixed(1)),
+              h: Number(remH.toFixed(1))
             });
           }
         });
 
-        // 2. Large leftover block at the top/bottom of the sheet if not fully height-packed
-        const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
-        const remH = shLayout.trimmedHeight - currentShelvesHeight;
-        if (remH > 10) {
-          shLayout.leftovers.push({
-            id: 'leftover_top_block',
-            x: shLayout.trimLeft,
-            y: shLayout.trimTop + currentShelvesHeight,
-            w: Number(shLayout.trimmedWidth.toFixed(1)),
-            h: Number(remH.toFixed(1))
-          });
-        }
-      });
+        const avgUtilization = sheets.length > 0 ? (totalUtilization / sheets.length) : 0;
 
-      const avgUtilization = sheets.length > 0 ? (totalUtilization / sheets.length) : 0;
-
-      candidates.push({
-        sheets,
-        unplacedItems,
-        avgUtilization
+        candidates.push({
+          sheets,
+          unplacedItems,
+          avgUtilization
+        });
       });
     });
 
-    // Pick the absolute best candidate (prioritizes fewest sheets, then highest average utilization)
+    // Pick the absolute best candidate (prioritizes fewest unplaced items, then fewest sheets, then sum of squares of utilization to pack earlier sheets tighter)
     candidates.sort((a, b) => {
+      if (a.unplacedItems.length !== b.unplacedItems.length) {
+        return a.unplacedItems.length - b.unplacedItems.length;
+      }
       if (a.sheets.length !== b.sheets.length) {
         return a.sheets.length - b.sheets.length;
+      }
+      const sumSqA = a.sheets.reduce((sum, s) => sum + (s.utilization * s.utilization), 0);
+      const sumSqB = b.sheets.reduce((sum, s) => sum + (s.utilization * s.utilization), 0);
+      if (Math.abs(sumSqA - sumSqB) > 0.1) {
+        return sumSqB - sumSqA; // Descending order of sum of squares
       }
       return b.avgUtilization - a.avgUtilization;
     });
