@@ -9,6 +9,7 @@ interface CutPart {
   height: number; // in cm
   quantity: number;
   allowRotation: boolean;
+  orientation?: 'auto' | 'fixed' | 'vertical' | 'horizontal';
 }
 
 interface PlacedPart {
@@ -137,6 +138,7 @@ export function PanelCuttingOptimizer() {
   const [newPartHeight, setNewPartHeight] = useState<number | ''>(200);
   const [newPartQty, setNewPartQty] = useState<number | ''>(2);
   const [newPartRotate, setNewPartRotate] = useState<boolean>(true);
+  const [newPartOrientation, setNewPartOrientation] = useState<'auto' | 'fixed' | 'vertical' | 'horizontal'>('auto');
 
   // Manual sheet assignment overrides per piece instanceId (e.g. "partId_inst_0" -> sheetIndex)
   const [manualSheetOverrides, setManualSheetOverrides] = useState<Record<string, number>>({});
@@ -524,6 +526,7 @@ export function PanelCuttingOptimizer() {
         height: hCm,
         quantity: qty,
         allowRotation: newPartRotate,
+        orientation: newPartOrientation,
       }
     ]);
     setNewPartName('');
@@ -539,7 +542,8 @@ export function PanelCuttingOptimizer() {
       width: w,
       height: h,
       quantity: 1,
-      allowRotation: true
+      allowRotation: true,
+      orientation: 'auto'
     };
     const updatedParts = [...parts, newPart];
     setParts(updatedParts);
@@ -652,9 +656,26 @@ export function PanelCuttingOptimizer() {
     ];
 
     const getOrientations = (part: CutPart, ew: number, eh: number, strategy: string) => {
-      if (!part.allowRotation || ew === eh) {
+      const orientation = part.orientation || (part.allowRotation ? 'auto' : 'fixed');
+      
+      if (orientation === 'fixed' || ew === eh) {
         return [{ w: ew, h: eh, rot: false }];
       }
+      
+      if (orientation === 'vertical') {
+        const w = Math.min(ew, eh);
+        const h = Math.max(ew, eh);
+        const rot = (ew < eh ? false : true);
+        return [{ w, h, rot }];
+      }
+      
+      if (orientation === 'horizontal') {
+        const w = Math.max(ew, eh);
+        const h = Math.min(ew, eh);
+        const rot = (ew > eh ? false : true);
+        return [{ w, h, rot }];
+      }
+
       switch (strategy) {
         case 'rotated':
           return [{ w: eh, h: ew, rot: true }, { w: ew, h: eh, rot: false }];
@@ -1632,20 +1653,28 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={newPartRotate}
-                  onChange={(e) => setNewPartRotate(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                />
-                <span className="text-[10px] font-bold text-slate-500">Lejo Rrotullimin</span>
-              </label>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-500">Orientimi:</span>
+                <select
+                  value={newPartOrientation}
+                  onChange={(e) => {
+                    const val = e.target.value as 'auto' | 'fixed' | 'vertical' | 'horizontal';
+                    setNewPartOrientation(val);
+                    setNewPartRotate(val === 'auto');
+                  }}
+                  className="text-[10px] font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="auto">Auto (Rrotullim i Lirë)</option>
+                  <option value="fixed">Fiksuar (Pa Rrotullim)</option>
+                  <option value="vertical">Forco Vertikalisht (Lartësi)</option>
+                  <option value="horizontal">Forco Horizontalisht (Gjerësi)</option>
+                </select>
+              </div>
               
               <button
                 type="submit"
-                className="py-1.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold uppercase rounded-lg flex items-center gap-1.5 transition-all"
+                className="py-1.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold uppercase rounded-lg flex items-center gap-1.5 transition-all self-end sm:self-auto"
               >
                 <Plus className="w-3.5 h-3.5" /> Shto Detaj
               </button>
@@ -1709,13 +1738,44 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     </button>
                     <button
                       type="button"
-                      title="Ndrysho lejen e rrotullimit"
-                      onClick={() => updatePartField(p.id, 'allowRotation', !p.allowRotation)}
-                      className={`p-1 rounded-lg border transition-all ${
-                        p.allowRotation ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-50 text-slate-400 border-slate-200'
+                      title={
+                        p.orientation === 'fixed'
+                          ? "Orientimi: Pa rrotullim (Fiks). Kliko për të ndryshuar."
+                          : p.orientation === 'vertical'
+                          ? "Orientimi: Forco Vertikalisht. Kliko për të ndryshuar."
+                          : p.orientation === 'horizontal'
+                          ? "Orientimi: Forco Horizontalisht. Kliko për të ndryshuar."
+                          : "Orientimi: Auto (Rrotullim i Lirë). Kliko për të ndryshuar."
+                      }
+                      onClick={() => {
+                        const current = p.orientation || (p.allowRotation ? 'auto' : 'fixed');
+                        let next: 'auto' | 'fixed' | 'vertical' | 'horizontal' = 'auto';
+                        if (current === 'auto') next = 'fixed';
+                        else if (current === 'fixed') next = 'vertical';
+                        else if (current === 'vertical') next = 'horizontal';
+                        else next = 'auto';
+
+                        setParts(prev => prev.map(item => item.id === p.id ? { ...item, orientation: next, allowRotation: next === 'auto' } : item));
+                        setIsStale(true);
+                      }}
+                      className={`p-1 rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
+                        (p.orientation || (p.allowRotation ? 'auto' : 'fixed')) === 'auto'
+                          ? 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100/80'
+                          : (p.orientation === 'vertical' || p.orientation === 'horizontal')
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100/80'
+                          : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       <RotateCw className="w-3 h-3" />
+                      <span className="text-[8px] font-black uppercase px-0.5">
+                        {(p.orientation || (p.allowRotation ? 'auto' : 'fixed')) === 'auto'
+                          ? 'Auto'
+                          : p.orientation === 'vertical'
+                          ? 'Vert'
+                          : p.orientation === 'horizontal'
+                          ? 'Horiz'
+                          : 'Fiks'}
+                      </span>
                     </button>
                     <button
                       type="button"
