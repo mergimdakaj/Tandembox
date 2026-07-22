@@ -3,6 +3,7 @@ import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maxi
 import { motion } from 'motion/react';
 import { PanelCuttingOptimizer } from './PanelCuttingOptimizer';
 import { GlassProfileCalculator } from './GlassProfileCalculator';
+import { LOGO_DATA_URL } from '../assets/logo';
 
 interface Dimensions {
   ballorjaKomplet?: number;
@@ -192,7 +193,7 @@ Gjeneruar nga MergimGroup Tool
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-600 rounded-full overflow-hidden text-white flex items-center justify-center border-2 border-indigo-400/50 shadow-md">
               <img 
-                src="/logo.jpeg" 
+                src={LOGO_DATA_URL} 
                 alt="Logo" 
                 className="w-full h-full object-cover rounded-full"
                 style={{ animation: 'spin 10s linear infinite' }}

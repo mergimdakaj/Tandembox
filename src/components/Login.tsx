@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Mail, AlertCircle, ArrowLeft, Database, Download } from 'lucide-react';
 import { useAuth } from '../App';
+import { LOGO_DATA_URL } from '../assets/logo';
 
 interface LoginProps {
   onBack?: () => void;
@@ -120,7 +121,7 @@ export function Login({ onBack }: LoginProps) {
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 bg-indigo-600 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4 border-2 border-indigo-500">
             <img 
-              src="/logo.jpeg" 
+              src={LOGO_DATA_URL} 
               alt="MergimGroup Logo" 
               className="w-full h-full object-cover rounded-full"
               style={{ animation: 'spin 10s linear infinite' }}

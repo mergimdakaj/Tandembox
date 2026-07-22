@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Briefcase, Calculator, ArrowRight } from 'lucide-react';
+import { LOGO_DATA_URL } from '../assets/logo';
 
 interface LandingProps {
   onSelectWork: () => void;
@@ -22,7 +23,7 @@ export function Landing({ onSelectWork, onSelectCalc }: LandingProps) {
         <div className="mb-12 inline-flex items-center justify-center p-3 bg-transparent">
           <div className="w-20 h-20 bg-indigo-600 rounded-full overflow-hidden flex items-center justify-center text-white text-3xl font-black border-2 border-indigo-400/60 shadow-lg shadow-indigo-500/30">
             <img 
-              src="/logo.jpeg" 
+              src={LOGO_DATA_URL} 
               alt="MergimGroup Logo" 
               className="w-full h-full object-cover rounded-full"
               style={{ animation: 'spin 10s linear infinite' }}

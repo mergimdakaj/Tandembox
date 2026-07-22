@@ -25,6 +25,7 @@ import { NotificationsView } from './components/NotificationsView';
 import { Login } from './components/Login';
 import { Landing } from './components/Landing';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
+import { LOGO_DATA_URL } from './assets/logo';
 import { DashboardChart } from './components/DashboardChart';
 import { cn } from './lib/utils';
 import { format, addDays } from 'date-fns';
@@ -397,7 +398,7 @@ export default function App() {
                   title="Kthehu në portal"
                 >
                   <img 
-                    src="/logo.jpeg" 
+                    src={LOGO_DATA_URL} 
                     alt="Logo" 
                     className="w-full h-full object-cover rounded-full"
                     style={{ animation: 'spin 10s linear infinite' }}
