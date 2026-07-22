@@ -118,7 +118,14 @@ export function Login({ onBack }: LoginProps) {
         className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative z-10 p-8"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4">MG</div>
+          <div className="w-20 h-20 bg-indigo-600 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-3xl shadow-lg mb-4 border-2 border-indigo-500">
+            <img 
+              src="/logo.jpeg" 
+              alt="MergimGroup Logo" 
+              className="w-full h-full object-cover rounded-full"
+              style={{ animation: 'spin 10s linear infinite' }}
+            />
+          </div>
           <h1 className="text-2xl font-bold text-slate-800">MergimGroup</h1>
           <p className="text-slate-500 mt-1">Sistemi i Menaxhimit</p>
         </div>

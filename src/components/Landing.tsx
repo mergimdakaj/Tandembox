@@ -19,9 +19,14 @@ export function Landing({ onSelectWork, onSelectCalc }: LandingProps) {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-2xl w-full text-center relative z-10"
       >
-        <div className="mb-12 inline-flex items-center justify-center p-4 bg-white/5 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-2xl">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-3xl font-black">
-            MG
+        <div className="mb-12 inline-flex items-center justify-center p-3 bg-transparent">
+          <div className="w-20 h-20 bg-indigo-600 rounded-full overflow-hidden flex items-center justify-center text-white text-3xl font-black border-2 border-indigo-400/60 shadow-lg shadow-indigo-500/30">
+            <img 
+              src="/logo.jpeg" 
+              alt="MergimGroup Logo" 
+              className="w-full h-full object-cover rounded-full"
+              style={{ animation: 'spin 10s linear infinite' }}
+            />
           </div>
         </div>
 
@@ -65,8 +70,8 @@ export function Landing({ onSelectWork, onSelectCalc }: LandingProps) {
             <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-emerald-500/20">
               <Calculator className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Llogaritësi</h2>
-            <p className="text-slate-400 text-sm mb-6">Llogaritësi i masave për Tandembox dhe fioka.</p>
+            <h2 className="text-2xl font-bold text-white mb-2">Mergim Pro</h2>
+            <p className="text-slate-400 text-sm mb-6">Llogaritësi i masave për Mergim Pro, fioka dhe profila xhami.</p>
             <div className="mt-auto flex items-center gap-2 text-emerald-400 font-bold text-sm uppercase tracking-widest">
               Hap mjetin <ArrowRight className="w-4 h-4" />
             </div>

@@ -288,7 +288,7 @@ export function WorkNotesSection({ selectedDate }: WorkNotesSectionProps) {
     { text: 'Prerje MDF 18mm', type: 'cut' as const, label: '✂️ Prerje MDF' },
     { text: 'Prerje Fletëza druri', type: 'cut' as const, label: '✂️ Fletëza' },
     { text: 'Prerje Melaminë', type: 'cut' as const, label: '✂️ Melaminë' },
-    { text: 'Montim Tandembox / Sirtarë', type: 'work' as const, label: '⚙️ Tandembox' },
+    { text: 'Montim Mergim Pro / Sirtarë', type: 'work' as const, label: '⚙️ Mergim Pro' },
     { text: 'Prerje profile alumini', type: 'cut' as const, label: '✂️ Alumini' },
     { text: 'Veshje skajesh (Kantin)', type: 'work' as const, label: '🪵 Kantin' },
   ];

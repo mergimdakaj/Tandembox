@@ -25,3 +25,21 @@
   @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
 }
 
+/* Custom Left-to-Right Logo Animation */
+@keyframes logoLeftRight {
+  0% {
+    transform: perspective(500px) translateX(-8px) rotateY(-16deg);
+  }
+  50% {
+    transform: perspective(500px) translateX(8px) rotateY(16deg);
+  }
+  100% {
+    transform: perspective(500px) translateX(-8px) rotateY(-16deg);
+  }
+}
+
+.logo-animate-lr {
+  animation: logoLeftRight 3.5s ease-in-out infinite;
+  will-change: transform;
+}
+

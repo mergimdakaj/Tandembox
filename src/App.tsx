@@ -390,13 +390,18 @@ export default function App() {
             {/* Top Shell Row Layout (Icon, title, buttons) */}
             <div className="flex items-center justify-between pb-4">
               <div className="flex items-center gap-3">
-                {/* Logo Indigo Square */}
+                {/* Logo Indigo Circle with Spinning Face */}
                 <div 
                   onClick={() => setAppMode('portal')}
-                  className="w-11 h-11 bg-[#4239b3] rounded-2xl flex items-center justify-center text-white border-2 border-indigo-500 shadow-md transform hover:scale-105 active:scale-95 transition-all cursor-pointer font-black text-sm tracking-tighter"
+                  className="w-11 h-11 bg-[#4239b3] rounded-full overflow-hidden flex items-center justify-center text-white border-2 border-indigo-500 shadow-md transform hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   title="Kthehu në portal"
                 >
-                  MG
+                  <img 
+                    src="/logo.jpeg" 
+                    alt="Logo" 
+                    className="w-full h-full object-cover rounded-full"
+                    style={{ animation: 'spin 10s linear infinite' }}
+                  />
                 </div>
                 <div>
                   <h1 className="text-[#131131] text-base font-black tracking-tight leading-snug">Menaxhimi i Punës</h1>

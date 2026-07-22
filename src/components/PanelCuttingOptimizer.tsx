@@ -263,7 +263,7 @@ export function PanelCuttingOptimizer() {
     if (!nameToUse) return;
 
     const totalSheetsCount = calculatedResults?.sheets?.length || 0;
-    const avgUtilization = calculatedResults ? Number(calculatedResults.averageUtilization.toFixed(1)) : 0;
+    const avgUtilization = calcAvgUtilization;
     const totalPartsPlaced = calculatedResults?.sheets?.reduce((acc, s) => acc + s.placedParts.length, 0) || 0;
     const totalPartsRequested = parts.reduce((acc, p) => acc + p.quantity, 0);
 
@@ -607,6 +607,13 @@ export function PanelCuttingOptimizer() {
     sheets: SheetLayout[];
     unplacedItems: { part: CutPart; w: number; h: number }[];
   } | null>(null);
+
+  // Safely compute average utilization of all sheets
+  const calcAvgUtilization = useMemo(() => {
+    if (!calculatedResults?.sheets?.length) return 0;
+    const totalUtil = calculatedResults.sheets.reduce((acc, s) => acc + (s.utilization || 0), 0);
+    return Number((totalUtil / calculatedResults.sheets.length).toFixed(1));
+  }, [calculatedResults]);
 
   // Indicator to show that details or sizes have changed and need regeneration
   const [isStale, setIsStale] = useState<boolean>(true);
@@ -1445,7 +1452,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
       });
     }
 
-    text += `\n\nGjeneruar nga Tandembox Pro - MergimGroup`;
+    text += `\n\nGjeneruar nga Mergim Pro - MergimGroup`;
 
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -3349,7 +3356,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                     )}
                   </h2>
                   <p className="text-[9px] font-medium text-slate-500 mt-0.5">
-                    Tandembox Pro — MergimGroup | Data: {new Date().toLocaleDateString('sq-AL')}
+                    Mergim Pro — MergimGroup | Data: {new Date().toLocaleDateString('sq-AL')}
                   </p>
                 </div>
                 <div className="text-right">
@@ -3956,7 +3963,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
               </div>
               <div className="flex justify-between font-bold">
                 <span>Shfrytëzimi Mesatar:</span>
-                <span className="text-emerald-700">{calculatedResults?.averageUtilization.toFixed(1) || 0}%</span>
+                <span className="text-emerald-700">{calcAvgUtilization}%</span>
               </div>
             </div>
           </div>
