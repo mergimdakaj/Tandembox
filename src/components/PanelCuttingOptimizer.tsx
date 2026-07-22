@@ -444,12 +444,14 @@ export function PanelCuttingOptimizer() {
   // Remove Part
   const removePart = (id: string) => {
     setParts(prev => prev.filter(p => p.id !== id));
+    clearManualForPart(id);
     setIsStale(true);
   };
 
   // Update Part parameters
   const updatePartField = (id: string, field: keyof CutPart, value: any) => {
     setParts(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    clearManualForPart(id);
     setIsStale(true);
   };
 
@@ -1920,7 +1922,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
 
               <button
                 type="button"
-                onClick={() => runOptimization()}
+                onClick={() => unlockAllParts()}
                 className={`py-3 px-5 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
                   isStale
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100 scale-102 hover:scale-105 active:scale-95 cursor-pointer'
