@@ -470,17 +470,18 @@ export function PanelCuttingOptimizer() {
 
     const partsList = Array.isArray(overrideParts) ? overrideParts : parts;
 
-    // Helper for overlap checking
+    // Helper for overlap checking with floating point precision tolerance
+    const EPS = 0.001; // 0.01 mm tolerance for JS floating point rounding
     const checkOverlap = (
       x1: number, y1: number, w1: number, h1: number,
       x2: number, y2: number, w2: number, h2: number,
       spacing: number
     ): boolean => {
       return !(
-        x1 + w1 + spacing <= x2 ||
-        x2 + w2 + spacing <= x1 ||
-        y1 + h1 + spacing <= y2 ||
-        y2 + h2 + spacing <= y1
+        x1 + w1 + spacing <= x2 + EPS ||
+        x2 + w2 + spacing <= x1 + EPS ||
+        y1 + h1 + spacing <= y2 + EPS ||
+        y2 + h2 + spacing <= y1 + EPS
       );
     };
 
@@ -698,7 +699,7 @@ export function PanelCuttingOptimizer() {
               // Try existing shelves
               for (let shelf of shelves) {
                 const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
-                if (neededX <= maxW && h <= shelf.h) {
+                if (neededX <= maxW + EPS && h <= shelf.h + EPS) {
                   const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
                   const absX = targetSheet.trimLeft + posX;
                   const absY = targetSheet.trimTop + shelf.y;
@@ -748,11 +749,20 @@ export function PanelCuttingOptimizer() {
               targetSheet.placedParts.forEach(other => {
                 const relRight = other.x + other.w + bw - targetSheet.trimLeft;
                 const relBottom = other.y + other.h + bw - targetSheet.trimTop;
-                if (relRight >= 0 && relRight <= maxW - w) {
+                const relLeft = other.x - targetSheet.trimLeft;
+                const relTop = other.y - targetSheet.trimTop;
+
+                if (relRight >= -EPS && relRight <= maxW - w + EPS) {
                   candidateXs.add(Number(relRight.toFixed(4)));
                 }
-                if (relBottom >= 0 && relBottom <= maxH - h) {
+                if (relBottom >= -EPS && relBottom <= maxH - h + EPS) {
                   candidateYs.add(Number(relBottom.toFixed(4)));
+                }
+                if (relLeft >= -EPS && relLeft <= maxW - w + EPS) {
+                  candidateXs.add(Number(relLeft.toFixed(4)));
+                }
+                if (relTop >= -EPS && relTop <= maxH - h + EPS) {
+                  candidateYs.add(Number(relTop.toFixed(4)));
                 }
               });
 
@@ -760,9 +770,9 @@ export function PanelCuttingOptimizer() {
               const sortedYs = Array.from(candidateYs).sort((a, b) => a - b);
 
               for (const yVal of sortedYs) {
-                if (yVal + h > maxH) continue;
+                if (yVal + h > maxH + EPS) continue;
                 for (const xVal of sortedXs) {
-                  if (xVal + w > maxW) continue;
+                  if (xVal + w > maxW + EPS) continue;
 
                   const absX = targetSheet.trimLeft + xVal;
                   const absY = targetSheet.trimTop + yVal;
@@ -877,7 +887,7 @@ export function PanelCuttingOptimizer() {
               // Try existing shelves
               for (let shelf of shelves) {
                 const neededX = shelf.usedX === 0 ? w : shelf.usedX + bw + w;
-                if (neededX <= maxW && h <= shelf.h) {
+                if (neededX <= maxW + EPS && h <= shelf.h + EPS) {
                   const posX = shelf.usedX === 0 ? 0 : shelf.usedX + bw;
                   const absX = targetSheet.trimLeft + posX;
                   const absY = targetSheet.trimTop + shelf.y;
@@ -926,11 +936,20 @@ export function PanelCuttingOptimizer() {
               targetSheet.placedParts.forEach(other => {
                 const relRight = other.x + other.w + bw - targetSheet.trimLeft;
                 const relBottom = other.y + other.h + bw - targetSheet.trimTop;
-                if (relRight >= 0 && relRight <= maxW - w) {
+                const relLeft = other.x - targetSheet.trimLeft;
+                const relTop = other.y - targetSheet.trimTop;
+
+                if (relRight >= -EPS && relRight <= maxW - w + EPS) {
                   candidateXs.add(Number(relRight.toFixed(4)));
                 }
-                if (relBottom >= 0 && relBottom <= maxH - h) {
+                if (relBottom >= -EPS && relBottom <= maxH - h + EPS) {
                   candidateYs.add(Number(relBottom.toFixed(4)));
+                }
+                if (relLeft >= -EPS && relLeft <= maxW - w + EPS) {
+                  candidateXs.add(Number(relLeft.toFixed(4)));
+                }
+                if (relTop >= -EPS && relTop <= maxH - h + EPS) {
+                  candidateYs.add(Number(relTop.toFixed(4)));
                 }
               });
 
@@ -938,9 +957,9 @@ export function PanelCuttingOptimizer() {
               const sortedYs = Array.from(candidateYs).sort((a, b) => a - b);
 
               for (const yVal of sortedYs) {
-                if (yVal + h > maxH) continue;
+                if (yVal + h > maxH + EPS) continue;
                 for (const xVal of sortedXs) {
-                  if (xVal + w > maxW) continue;
+                  if (xVal + w > maxW + EPS) continue;
 
                   const absX = targetSheet.trimLeft + xVal;
                   const absY = targetSheet.trimTop + yVal;
