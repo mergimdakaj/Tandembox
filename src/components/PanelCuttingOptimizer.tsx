@@ -1,6 +1,6 @@
 import { useState, useMemo, FormEvent, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight, Lock, Unlock, Move } from 'lucide-react';
+import { Settings, Trash2, Plus, Info, Download, AlertTriangle, RefreshCw, Scissors, Grid, Layers, RotateCw, Check, Compass, HelpCircle, Printer, ArrowLeftRight, Lock, Unlock, Move, Bookmark, Save, FolderOpen, Eye, X, FileText, Sparkles, Search } from 'lucide-react';
 
 interface CutPart {
   id: string;
@@ -10,6 +10,33 @@ interface CutPart {
   quantity: number;
   allowRotation: boolean;
   orientation?: 'auto' | 'fixed' | 'vertical' | 'horizontal';
+}
+
+interface SavedProject {
+  id: string;
+  name: string;
+  kitchenCode: string;
+  createdAt: string;
+  updatedAt: string;
+  sheetWidth: number | '';
+  sheetHeight: number | '';
+  bladeWidth: number | '';
+  grainDirection: 'none' | 'vertical' | 'horizontal';
+  addPreMilling: boolean;
+  damageLeft: boolean;
+  damageRight: boolean;
+  damageTop: boolean;
+  damageBottom: boolean;
+  cleaningAmount: number;
+  parts: CutPart[];
+  manualSheetOverrides?: Record<string, number>;
+  manualPositions?: Record<string, { sheetIndex: number; x: number; y: number; w: number; h: number; rotated: boolean }>;
+  summary?: {
+    totalSheets: number;
+    utilizationPercent: number;
+    totalPartsPlaced: number;
+    totalPartsRequested: number;
+  };
 }
 
 interface PlacedPart {
@@ -151,6 +178,206 @@ export function PanelCuttingOptimizer() {
   const [manualPositions, setManualPositions] = useState<Record<string, { sheetIndex: number; x: number; y: number; w: number; h: number; rotated: boolean }>>({});
   // Track part being moved manually
   const [movingPart, setMovingPart] = useState<{ part: PlacedPart; currentSheetIndex: number } | null>(null);
+
+  // Saved Projects & Sketches state
+  const [savedProjects, setSavedProjects] = useState<SavedProject[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('pc_saved_projects');
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        console.error('Failed to parse saved projects', e);
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const [showSavedProjectsModal, setShowSavedProjectsModal] = useState<boolean>(false);
+  const [showSaveNameModal, setShowSaveNameModal] = useState<boolean>(false);
+  const [saveProjectNameInput, setSaveProjectNameInput] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
+  const [previewProject, setPreviewProject] = useState<SavedProject | null>(null);
+
+  // Auto-save working draft to localStorage so refresh never loses user's work
+  useEffect(() => {
+    if (typeof window !== 'undefined' && parts.length > 0) {
+      const draft = {
+        kitchenCode,
+        sheetWidth,
+        sheetHeight,
+        bladeWidth,
+        addPreMilling,
+        grainDirection,
+        damageLeft,
+        damageRight,
+        damageTop,
+        damageBottom,
+        cleaningAmount,
+        parts,
+        manualSheetOverrides,
+        manualPositions,
+      };
+      localStorage.setItem('pc_current_draft', JSON.stringify(draft));
+    }
+  }, [
+    kitchenCode, sheetWidth, sheetHeight, bladeWidth, addPreMilling, grainDirection,
+    damageLeft, damageRight, damageTop, damageBottom, cleaningAmount, parts,
+    manualSheetOverrides, manualPositions
+  ]);
+
+  // Auto-load draft on mount if canvas is empty
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const draftStr = localStorage.getItem('pc_current_draft');
+        if (draftStr && parts.length === 0) {
+          const draft = JSON.parse(draftStr);
+          if (draft.parts && Array.isArray(draft.parts) && draft.parts.length > 0) {
+            if (draft.kitchenCode !== undefined) setKitchenCode(draft.kitchenCode);
+            if (draft.sheetWidth) setSheetWidth(draft.sheetWidth);
+            if (draft.sheetHeight) setSheetHeight(draft.sheetHeight);
+            if (draft.bladeWidth !== undefined) setBladeWidth(draft.bladeWidth);
+            if (draft.addPreMilling !== undefined) setAddPreMilling(draft.addPreMilling);
+            if (draft.grainDirection) setGrainDirection(draft.grainDirection);
+            if (draft.damageLeft !== undefined) setDamageLeft(draft.damageLeft);
+            if (draft.damageRight !== undefined) setDamageRight(draft.damageRight);
+            if (draft.damageTop !== undefined) setDamageTop(draft.damageTop);
+            if (draft.damageBottom !== undefined) setDamageBottom(draft.damageBottom);
+            if (draft.cleaningAmount) setCleaningAmount(draft.cleaningAmount);
+            setParts(draft.parts);
+            if (draft.manualSheetOverrides) setManualSheetOverrides(draft.manualSheetOverrides);
+            if (draft.manualPositions) setManualPositions(draft.manualPositions);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load current draft', e);
+      }
+    }
+  }, []);
+
+  // Save current project with all specifications and calculated skica
+  const handleSaveProject = (customName?: string) => {
+    const nameToUse = (customName || saveProjectNameInput || kitchenCode || `Projekti ${new Date().toLocaleDateString('sq-AL')}`).trim();
+    if (!nameToUse) return;
+
+    const totalSheetsCount = calculatedResults?.sheets?.length || 0;
+    const avgUtilization = calculatedResults ? Number(calculatedResults.averageUtilization.toFixed(1)) : 0;
+    const totalPartsPlaced = calculatedResults?.sheets?.reduce((acc, s) => acc + s.placedParts.length, 0) || 0;
+    const totalPartsRequested = parts.reduce((acc, p) => acc + p.quantity, 0);
+
+    const newProject: SavedProject = {
+      id: 'proj_' + Date.now(),
+      name: nameToUse,
+      kitchenCode: kitchenCode || nameToUse,
+      createdAt: new Date().toLocaleString('sq-AL', { dateStyle: 'short', timeStyle: 'short' }),
+      updatedAt: new Date().toISOString(),
+      sheetWidth,
+      sheetHeight,
+      bladeWidth,
+      grainDirection,
+      addPreMilling,
+      damageLeft,
+      damageRight,
+      damageTop,
+      damageBottom,
+      cleaningAmount,
+      parts: [...parts],
+      manualSheetOverrides: { ...manualSheetOverrides },
+      manualPositions: { ...manualPositions },
+      summary: {
+        totalSheets: totalSheetsCount,
+        utilizationPercent: avgUtilization,
+        totalPartsPlaced,
+        totalPartsRequested
+      }
+    };
+
+    const updatedProjects = [newProject, ...savedProjects.filter(p => p.id !== newProject.id)];
+    setSavedProjects(updatedProjects);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pc_saved_projects', JSON.stringify(updatedProjects));
+    }
+
+    setShowSaveNameModal(false);
+    setSaveProjectNameInput('');
+    
+    setToastMessage({
+      type: 'success',
+      text: `Projekti "${nameToUse}" u ruajt me sukses me të gjitha skicat!`
+    });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Load a saved project into active canvas
+  const handleLoadProject = (proj: SavedProject) => {
+    if (proj.kitchenCode !== undefined) setKitchenCode(proj.kitchenCode);
+    if (proj.sheetWidth) setSheetWidth(proj.sheetWidth);
+    if (proj.sheetHeight) setSheetHeight(proj.sheetHeight);
+    if (proj.bladeWidth !== undefined) setBladeWidth(proj.bladeWidth);
+    if (proj.addPreMilling !== undefined) setAddPreMilling(proj.addPreMilling);
+    if (proj.grainDirection) setGrainDirection(proj.grainDirection);
+    if (proj.damageLeft !== undefined) setDamageLeft(proj.damageLeft);
+    if (proj.damageRight !== undefined) setDamageRight(proj.damageRight);
+    if (proj.damageTop !== undefined) setDamageTop(proj.damageTop);
+    if (proj.damageBottom !== undefined) setDamageBottom(proj.damageBottom);
+    if (proj.cleaningAmount) setCleaningAmount(proj.cleaningAmount);
+    
+    const loadedParts = proj.parts || [];
+    const loadedOverrides = proj.manualSheetOverrides || {};
+    const loadedPositions = proj.manualPositions || {};
+
+    setParts(loadedParts);
+    setManualSheetOverrides(loadedOverrides);
+    setManualPositions(loadedPositions);
+    
+    setShowSavedProjectsModal(false);
+    setPreviewProject(null);
+    
+    setIsStale(true);
+    setTimeout(() => {
+      runOptimization(loadedParts, loadedOverrides, loadedPositions);
+    }, 50);
+
+    setToastMessage({
+      type: 'success',
+      text: `Projekti "${proj.name}" u ngarkua me sukses!`
+    });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Delete a saved project
+  const handleDeleteProject = (projId: string) => {
+    const filtered = savedProjects.filter(p => p.id !== projId);
+    setSavedProjects(filtered);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pc_saved_projects', JSON.stringify(filtered));
+    }
+    if (previewProject?.id === projId) {
+      setPreviewProject(null);
+    }
+  };
+
+  // Clear current canvas
+  const handleClearCanvas = () => {
+    if (confirm('A jeni të sigurt që dëshironi të pastroni projektin aktual?')) {
+      setParts([]);
+      setManualSheetOverrides({});
+      setManualPositions({});
+      setKitchenCode('');
+      setIsStale(false);
+      setCalculatedResults(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('pc_current_draft');
+      }
+      setToastMessage({
+        type: 'info',
+        text: 'Projektuali aktual u pastrua!'
+      });
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
 
 
 
@@ -1249,23 +1476,51 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setSaveProjectNameInput(kitchenCode ? `Kuzhina ${kitchenCode}` : `Projekti ${new Date().toLocaleDateString('sq-AL')}`);
+              setShowSaveNameModal(true);
+            }}
+            disabled={parts.length === 0}
+            className="py-2 px-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+          >
+            <Bookmark className="w-4 h-4" /> Ruaj Projektin
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSavedProjectsModal(true)}
+            className="py-2 px-3.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+          >
+            <FolderOpen className="w-4 h-4 text-amber-400" /> Skicat e Ruajtura ({savedProjects.length})
+          </button>
           <button
             type="button"
             onClick={exportPlan}
             disabled={!calculatedResults}
-            className="w-full md:w-auto py-2 px-4 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all border border-indigo-100 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
+            className="py-2 px-3.5 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all border border-indigo-100 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
           >
-            <Download className="w-4 h-4" /> Shkarko Skemën
+            <Download className="w-4 h-4" /> Shkarko
           </button>
           <button
             type="button"
             onClick={() => window.print()}
             disabled={!calculatedResults}
-            className="w-full md:w-auto py-2 px-4 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all border border-emerald-100 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
+            className="py-2 px-3.5 text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all border border-emerald-100 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider"
           >
-            <Printer className="w-4 h-4" /> Printo në A4
+            <Printer className="w-4 h-4" /> Printo A4
           </button>
+          {parts.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearCanvas}
+              title="Fshij të gjitha nga canvas"
+              className="py-2 px-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-slate-100"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -3645,6 +3900,247 @@ PANELI MASTER #${shLayout.sheetIndex}:
         })}
       </div>,
       document.body
+    )}
+
+    {/* Toast Notification Banner */}
+    {toastMessage && (
+      <div className="fixed bottom-6 right-6 z-50 animate-bounce bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3">
+        <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+        <span className="text-xs font-bold">{toastMessage.text}</span>
+      </div>
+    )}
+
+    {/* Modal 1: Save Project Name Modal */}
+    {showSaveNameModal && (
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-5 animate-in fade-in zoom-in-95">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="font-extrabold text-slate-800 text-base uppercase tracking-wider flex items-center gap-2">
+              <Bookmark className="w-5 h-5 text-indigo-600" /> Ruaj Projektin me Skica
+            </h3>
+            <button
+              onClick={() => setShowSaveNameModal(false)}
+              className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-xs font-bold uppercase text-slate-600 tracking-wider">
+              Emri / Kodi i Projektit ose Kuzhinës
+            </label>
+            <input
+              type="text"
+              autoFocus
+              value={saveProjectNameInput}
+              onChange={(e) => setSaveProjectNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSaveProject();
+                }
+              }}
+              placeholder="p.sh. Kuzhina 05/05 Ose Emri i Klientit..."
+              className="w-full text-sm font-bold bg-slate-50 p-3 rounded-2xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+
+            <div className="bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100 space-y-1.5 text-xs text-indigo-900">
+              <div className="flex justify-between font-bold">
+                <span>Pjesët e Prerjes:</span>
+                <span>{parts.reduce((acc, p) => acc + p.quantity, 0)} copë</span>
+              </div>
+              <div className="flex justify-between font-bold">
+                <span>Panela të nevojshme:</span>
+                <span>{calculatedResults?.sheets?.length || 0} panela ({sheetWidth}x{sheetHeight} cm)</span>
+              </div>
+              <div className="flex justify-between font-bold">
+                <span>Shfrytëzimi Mesatar:</span>
+                <span className="text-emerald-700">{calculatedResults?.averageUtilization.toFixed(1) || 0}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowSaveNameModal(false)}
+              className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+            >
+              Anulo
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSaveProject()}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" /> Ruaj të Gjitha Skicat
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal 2: Saved Projects & Sketches List & Preview Modal */}
+    {showSavedProjectsModal && (
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-6 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+            <div className="flex items-center gap-3">
+              <FolderOpen className="w-6 h-6 text-amber-500" />
+              <div>
+                <h3 className="font-extrabold text-slate-800 text-lg uppercase tracking-wider">
+                  Projektet & Skicat e Ruajtura në Uebfaqe
+                </h3>
+                <p className="text-xs text-slate-400 font-semibold">
+                  Gjithsej {savedProjects.length} projekte të ruajtura për prerje me të gjitha skemat e tyre.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSavedProjectsModal(false)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div className="py-3 shrink-0">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Kërko projektin sipas emrit ose kodit të kuzhinës..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full text-xs font-bold pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Projects List Container */}
+          <div className="overflow-y-auto flex-1 pr-1 space-y-3 py-2">
+            {savedProjects.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+                <FolderOpen className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="text-sm font-bold text-slate-500">Nuk keni asnjë projekt të ruajtur ende.</p>
+                <p className="text-xs text-slate-400">Pasi të vendosni dimensionet e pjesëve, klikoni butonit "Ruaj Projektin" për ta ruajtur këtu!</p>
+              </div>
+            ) : (
+              savedProjects
+                .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.kitchenCode.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((proj) => {
+                  const totalParts = proj.parts.reduce((a, b) => a + b.quantity, 0);
+                  const isPreviewing = previewProject?.id === proj.id;
+
+                  return (
+                    <div key={proj.id} className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3 hover:border-indigo-300 transition-all shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-extrabold text-slate-800 text-sm">{proj.name}</h4>
+                            {proj.kitchenCode && (
+                              <span className="text-[10px] bg-indigo-100 text-indigo-800 font-black px-2 py-0.5 rounded-md uppercase">
+                                {proj.kitchenCode}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                            Ruajtur më: {proj.createdAt} • Paneli Master: {proj.sheetWidth} x {proj.sheetHeight} cm
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewProject(isPreviewing ? null : proj)}
+                            className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl transition-all flex items-center gap-1.5"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> {isPreviewing ? 'Mbyll Skicat' : 'Shiko Skicat'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleLoadProject(proj)}
+                            className="px-4 py-1.5 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Ngarko Projektin
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`A jeni të sigurt që dëshironi të fshini projektin "${proj.name}"?`)) {
+                                handleDeleteProject(proj.id);
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-slate-200"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Details summary chips */}
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-slate-600 pt-2 border-t border-slate-200/60">
+                        <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                          Gjithsej Pjesë: <strong className="text-slate-900">{totalParts} copë</strong> ({proj.parts.length} tipe)
+                        </span>
+                        {proj.summary && (
+                          <>
+                            <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                              Panela të Nevojshme: <strong className="text-indigo-700">{proj.summary.totalSheets}</strong>
+                            </span>
+                            <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200">
+                              Shfrytëzimi: <strong>{proj.summary.utilizationPercent}%</strong>
+                            </span>
+                          </>
+                        )}
+                        <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                          Sharra: {Number(proj.bladeWidth || 0.4) * 10}mm
+                        </span>
+                        <span className="bg-white px-2.5 py-1 rounded-lg border border-slate-200">
+                          Kant +4mm: {proj.addPreMilling ? 'Po' : 'Jo'}
+                        </span>
+                      </div>
+
+                      {/* Expandable Preview Section of Saved Project Parts / Sketches */}
+                      {isPreviewing && (
+                        <div className="mt-3 p-4 bg-white rounded-2xl border border-indigo-100 space-y-3 animate-in fade-in">
+                          <h5 className="text-xs font-black uppercase text-indigo-900 tracking-wider flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-indigo-600" /> Detajet e Pjesëve të Ruajtura
+                          </h5>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+                            {proj.parts.map((pt, pIdx) => (
+                              <div key={pIdx} className="p-2 bg-slate-50 rounded-xl border border-slate-200 text-[10px]">
+                                <div className="font-extrabold text-slate-800 truncate">{pt.name}</div>
+                                <div className="text-slate-500 font-mono">
+                                  {(pt.width * 10).toFixed(0)} x {(pt.height * 10).toFixed(0)} mm • <strong>{pt.quantity}x</strong>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex justify-between items-center shrink-0">
+            <span className="text-xs font-semibold text-slate-400">
+              * Të gjitha skicat dhe projektet ruhen automatikisht në shfletuesin tuaj.
+            </span>
+            <button
+              onClick={() => setShowSavedProjectsModal(false)}
+              className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+            >
+              Mbyll
+            </button>
+          </div>
+        </div>
+      </div>
     )}
 
     <style dangerouslySetInnerHTML={{ __html: `
