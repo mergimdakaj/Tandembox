@@ -22,6 +22,7 @@ import { CalendarView } from './components/CalendarView';
 import { ExpensesView } from './components/ExpensesView';
 import { AdminPanel } from './components/AdminPanel';
 import { NotificationsView } from './components/NotificationsView';
+import { checkAndTriggerWorkReminders } from './lib/notifications';
 import { Login } from './components/Login';
 import { Landing } from './components/Landing';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
@@ -221,6 +222,12 @@ export default function App() {
       const allNotifications = JSON.parse(localStorage.getItem('pl_notifications') || '[]');
       const unread = allNotifications.filter((n: any) => !n.readBy || !n.readBy.includes(user.uid)).length;
       setUnreadNotificationsCount(unread);
+
+      // Automatic Work Schedule Reminders Check
+      const todayStr = new Date().toISOString().split('T')[0];
+      const attendance = JSON.parse(localStorage.getItem('pl_attendance') || '[]');
+      const todayRecord = attendance.find((r: any) => r.userId === user.uid && r.date === todayStr);
+      checkAndTriggerWorkReminders(user.uid, todayRecord, showToast);
     };
 
     calculateCounts();

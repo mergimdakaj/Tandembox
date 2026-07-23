@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../App';
-import { Bell, Trash2, Check, Send, X, Plus } from 'lucide-react';
+import { Bell, Trash2, Check, Send, X, Plus, Clock, Settings, Volume2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
+import { 
+  getScheduleSettings, 
+  saveScheduleSettings, 
+  requestNotificationPermission, 
+  sendDeviceNotification,
+  ScheduleSettings 
+} from '../lib/notifications';
 
 export interface NotificationRecord {
   id: string;
@@ -14,12 +21,18 @@ export interface NotificationRecord {
 }
 
 export function NotificationsView() {
-  const { user, profile } = useAuth();
+  const { user, profile, showToast } = useAuth();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newSender, setNewSender] = useState('BURIMET NJERËZORE');
+
+  // Work Schedule & Device Notification Settings
+  const [schedule, setSchedule] = useState<ScheduleSettings>(getScheduleSettings());
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
 
   useEffect(() => {
     const loadNotifications = () => {
@@ -27,7 +40,7 @@ export function NotificationsView() {
       if (stored) {
         setNotifications(JSON.parse(stored));
       } else {
-        // Seed initial notifications as shown in screenshot 3
+        // Seed initial notifications
         const defaultNotifications: NotificationRecord[] = [
           {
             id: 'n1',
@@ -55,6 +68,39 @@ export function NotificationsView() {
     window.addEventListener('storage', loadNotifications);
     return () => window.removeEventListener('storage', loadNotifications);
   }, []);
+
+  const handleUpdateSchedule = (updated: Partial<ScheduleSettings>) => {
+    const next = { ...schedule, ...updated };
+    setSchedule(next);
+    saveScheduleSettings(next);
+    showToast('Cilësimet e kujtuesit u ruajtën me sukses!', 'success');
+  };
+
+  const handleEnableNotifications = async () => {
+    const res = await requestNotificationPermission();
+    setPermission(res);
+    if (res === 'granted') {
+      showToast('Njoftimet në shfletues u aktivizuan! Do të merrni kujtues automatikë.', 'success');
+      sendDeviceNotification(
+        '🔔 Njoftimet u aktivizuan!',
+        'MergimGroup: Tani do të merrni njoftime automatike për hyrje (Check-In) dhe dalje (Check-Out) nga puna.'
+      );
+    } else {
+      showToast('Ju lutemi lejoni njoftimet në cilësimet e shfletuesit/telefonit tuaj.', 'error');
+    }
+  };
+
+  const handleTestNotification = () => {
+    if (permission !== 'granted') {
+      handleEnableNotifications();
+      return;
+    }
+    sendDeviceNotification(
+      '⏰ Kyçu për të filluar punën!',
+      'MergimGroup (PROVË): Ka ardhur ora e fillimit të orarit të punës. Bëj Check-In në sistem.'
+    );
+    showToast('Njoftim provë u dërgua në pajisje!', 'info');
+  };
 
   const handleMarkAsRead = (id: string) => {
     if (!user) return;
@@ -122,6 +168,119 @@ export function NotificationsView() {
             <Plus className="w-4 h-4" /> Njofto
           </button>
         )}
+      </div>
+
+      {/* Work Schedule Reminders Card */}
+      <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 rounded-[32px] p-6 text-white shadow-xl border border-indigo-800/40 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <Clock className="w-48 h-48 text-indigo-400" />
+        </div>
+
+        <div className="relative z-10 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600/80 border border-indigo-400/30 flex items-center justify-center text-indigo-200">
+                <Bell className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                  Kujtuesit e Orarit të Punës
+                  {permission === 'granted' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <ShieldCheck className="w-3 h-3" /> Aktiv
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <AlertCircle className="w-3 h-3" /> Jo Aktiv
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-indigo-200/80 font-medium mt-0.5">
+                  Merr njoftime direkte në telefon apo kompjuter për të filluar dhe përfunduar punën.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {permission !== 'granted' ? (
+                <button
+                  onClick={handleEnableNotifications}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                >
+                  <Bell className="w-4 h-4" /> Aktivizo Njoftimet në Pajisje
+                </button>
+              ) : (
+                <button
+                  onClick={handleTestNotification}
+                  className="px-3.5 py-2 bg-white/10 hover:bg-white/20 active:scale-95 text-indigo-200 border border-white/10 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5"
+                >
+                  <Volume2 className="w-4 h-4 text-indigo-300" /> Provo Njoftimin
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Schedule Settings Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-indigo-800/60 text-xs">
+            {/* Start Time */}
+            <div className="bg-indigo-950/60 backdrop-blur-md p-3.5 rounded-2xl border border-indigo-800/40">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-indigo-300 mb-1.5">
+                Ora e Hyrjes (Check-In)
+              </label>
+              <input
+                type="time"
+                value={schedule.startTime}
+                onChange={(e) => handleUpdateSchedule({ startTime: e.target.value })}
+                className="w-full bg-indigo-900/60 border border-indigo-700/50 rounded-xl px-3 py-1.5 text-white font-black text-sm focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+
+            {/* End Time */}
+            <div className="bg-indigo-950/60 backdrop-blur-md p-3.5 rounded-2xl border border-indigo-800/40">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-indigo-300 mb-1.5">
+                Ora e Daljes (Check-Out)
+              </label>
+              <input
+                type="time"
+                value={schedule.endTime}
+                onChange={(e) => handleUpdateSchedule({ endTime: e.target.value })}
+                className="w-full bg-indigo-900/60 border border-indigo-700/50 rounded-xl px-3 py-1.5 text-white font-black text-sm focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+
+            {/* Toggle Start Reminder */}
+            <div className="bg-indigo-950/60 backdrop-blur-md p-3.5 rounded-2xl border border-indigo-800/40 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                  Kujtues Fillimi
+                </span>
+                <span className="text-[11px] text-indigo-200/70 font-semibold">Kyçu për punë</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={schedule.notifyStart}
+                onChange={(e) => handleUpdateSchedule({ notifyStart: e.target.checked })}
+                className="w-5 h-5 accent-emerald-500 rounded cursor-pointer"
+              />
+            </div>
+
+            {/* Toggle End Reminder */}
+            <div className="bg-indigo-950/60 backdrop-blur-md p-3.5 rounded-2xl border border-indigo-800/40 flex items-center justify-between">
+              <div>
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-300">
+                  Kujtues Mbarimi
+                </span>
+                <span className="text-[11px] text-indigo-200/70 font-semibold">Kyçu për dalje</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={schedule.notifyEnd}
+                onChange={(e) => handleUpdateSchedule({ notifyEnd: e.target.checked })}
+                className="w-5 h-5 accent-emerald-500 rounded cursor-pointer"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Notifications List */}
