@@ -1,3 +1,5 @@
+import { LOGO_DATA_URL } from '../assets/logo';
+
 export interface ScheduleSettings {
   enabled: boolean;
   startTime: string; // e.g. "08:00"
@@ -44,44 +46,101 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return permission;
 }
 
+export function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const now = audioCtx.currentTime;
+
+    // Dual chime tone
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc1.type = 'triangle';
+    osc2.type = 'sine';
+
+    osc1.frequency.setValueAtTime(523.25, now); // C5
+    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.15); // E5
+    osc1.frequency.exponentialRampToValueAtTime(783.99, now + 0.3); // G5
+
+    osc2.frequency.setValueAtTime(1046.50, now); // C6
+    osc2.frequency.exponentialRampToValueAtTime(1318.51, now + 0.3); // E6
+
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.6);
+    osc2.stop(now + 0.6);
+  } catch (err) {
+    console.log("Audio not supported or blocked by gesture:", err);
+  }
+}
+
+export function triggerVibration() {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate([200, 100, 200, 100, 300]);
+    } catch {
+      // Vibrate fallback
+    }
+  }
+}
+
 export function sendDeviceNotification(title: string, body: string) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') {
-    return;
+  // 1. Play sound chime & vibrate mobile device immediately
+  playNotificationSound();
+  triggerVibration();
+
+  // 2. Dispatch custom in-app popup event so mobile screen shows an unmissable banner/modal
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mergim_push_alert', {
+      detail: { title, body, timestamp: new Date().toISOString() }
+    }));
   }
 
-  try {
-    const notification = new Notification(title, {
-      body,
-      icon: '/logo.jpeg',
-      badge: '/logo.jpeg',
-      tag: 'mergim-group-work-reminder',
-      requireInteraction: true
-    });
-
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-
-    // Play subtle audio alert if possible
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 note
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5 note
-      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.4);
-    } catch {
-      // Audio fallback silent
+  // 3. Attempt Native Web Notification API
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (Notification.permission === 'granted') {
+      try {
+        // Try Service Worker registration showNotification first (much better for Android/iOS)
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, {
+              body,
+              icon: LOGO_DATA_URL,
+              badge: LOGO_DATA_URL,
+              vibrate: [200, 100, 200],
+              tag: 'mergim-group-work-reminder'
+            } as any);
+          }).catch(() => {
+            new Notification(title, {
+              body,
+              icon: LOGO_DATA_URL,
+              badge: LOGO_DATA_URL,
+              tag: 'mergim-group-work-reminder'
+            });
+          });
+        } else {
+          new Notification(title, {
+            body,
+            icon: LOGO_DATA_URL,
+            badge: LOGO_DATA_URL,
+            tag: 'mergim-group-work-reminder'
+          });
+        }
+      } catch (err) {
+        console.warn("Standard Notification constructor failed on mobile:", err);
+      }
     }
-  } catch (err) {
-    console.error("Dërgimi i njoftimit dështoi:", err);
   }
 }
 

@@ -79,27 +79,27 @@ export function NotificationsView() {
   const handleEnableNotifications = async () => {
     const res = await requestNotificationPermission();
     setPermission(res);
+    sendDeviceNotification(
+      '🔔 Njoftimet u aktivizuan!',
+      'MergimGroup: Tani do të merrni njoftime automatike me zë dhe dridhje për hyrje (Check-In) dhe dalje (Check-Out).'
+    );
     if (res === 'granted') {
       showToast('Njoftimet në shfletues u aktivizuan! Do të merrni kujtues automatikë.', 'success');
-      sendDeviceNotification(
-        '🔔 Njoftimet u aktivizuan!',
-        'MergimGroup: Tani do të merrni njoftime automatike për hyrje (Check-In) dhe dalje (Check-Out) nga puna.'
-      );
     } else {
-      showToast('Ju lutemi lejoni njoftimet në cilësimet e shfletuesit/telefonit tuaj.', 'error');
+      showToast('Njoftimi u shfaq në ekran me zë/dridhje! Për njoftime jashtë faqes lejoni lejen në shfletues.', 'info');
     }
   };
 
-  const handleTestNotification = () => {
+  const handleTestNotification = async () => {
     if (permission !== 'granted') {
-      handleEnableNotifications();
-      return;
+      await handleEnableNotifications();
+    } else {
+      sendDeviceNotification(
+        '⏰ Kyçu për të filluar punën!',
+        'MergimGroup (PROVË): Ka ardhur ora e fillimit të orarit të punës. Bëj Check-In në sistem.'
+      );
+      showToast('Njoftim provë u dërgua në pajisje (me zë, dridhje & popup)!', 'info');
     }
-    sendDeviceNotification(
-      '⏰ Kyçu për të filluar punën!',
-      'MergimGroup (PROVË): Ka ardhur ora e fillimit të orarit të punës. Bëj Check-In në sistem.'
-    );
-    showToast('Njoftim provë u dërgua në pajisje!', 'info');
   };
 
   const handleMarkAsRead = (id: string) => {

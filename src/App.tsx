@@ -89,6 +89,7 @@ export default function App() {
 
   // Toast notification state
   const [toasts, setToasts] = useState<ToastType[]>([]);
+  const [pushModalAlert, setPushModalAlert] = useState<{ title: string; body: string } | null>(null);
   
   const showToast = (message: string, type: 'success' | 'warning' | 'info' = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -104,8 +105,17 @@ export default function App() {
         showToast(e.detail.message, e.detail.type || 'info');
       }
     };
+    const handlePushAlert = (e: any) => {
+      if (e.detail && e.detail.title) {
+        setPushModalAlert({ title: e.detail.title, body: e.detail.body });
+      }
+    };
     window.addEventListener('show-toast', handleToastEvent);
-    return () => window.removeEventListener('show-toast', handleToastEvent);
+    window.addEventListener('mergim_push_alert', handlePushAlert);
+    return () => {
+      window.removeEventListener('show-toast', handleToastEvent);
+      window.removeEventListener('mergim_push_alert', handlePushAlert);
+    };
   }, []);
 
   // Dynamic status indicators badges
@@ -559,6 +569,48 @@ export default function App() {
       showToast
     }}>
       {renderContent()}
+
+      {/* Push Notification Mobile Popup Alert Modal */}
+      <AnimatePresence>
+        {pushModalAlert && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          >
+            <div className="bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-950 border-2 border-indigo-500/80 rounded-[32px] p-6 max-w-sm w-full text-white shadow-2xl text-center space-y-4 relative overflow-hidden">
+              <div className="w-16 h-16 mx-auto bg-indigo-600 rounded-full flex items-center justify-center text-3xl shadow-xl shadow-indigo-500/40 border-2 border-indigo-400/80 animate-bounce">
+                ⏰
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-900/60 px-3 py-1 rounded-full border border-indigo-700/50">
+                  Njoftim nga MergimGroup
+                </span>
+                <h3 className="text-xl font-black text-white mt-3 leading-snug">{pushModalAlert.title}</h3>
+                <p className="text-xs text-slate-300 mt-2 font-medium leading-relaxed">{pushModalAlert.body}</p>
+              </div>
+              <div className="pt-2 flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setPushModalAlert(null);
+                    setCurrentView('dashboard');
+                  }}
+                  className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                >
+                  <Bell className="w-4 h-4" /> Bëj Check-In Tani
+                </button>
+                <button
+                  onClick={() => setPushModalAlert(null)}
+                  className="w-full py-2.5 bg-white/10 hover:bg-white/20 active:scale-95 text-slate-300 font-bold rounded-2xl transition-all text-xs"
+                >
+                  Mbyll Njoftimin
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AuthContext.Provider>
   );
 }
