@@ -26,6 +26,7 @@ import { checkAndTriggerWorkReminders } from './lib/notifications';
 import { Login } from './components/Login';
 import { Landing } from './components/Landing';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
+import { KuzhinaProStudio } from './components/KuzhinaProStudio';
 import { LOGO_DATA_URL } from './assets/logo';
 import { DashboardChart } from './components/DashboardChart';
 import { cn } from './lib/utils';
@@ -39,7 +40,8 @@ import {
 } from './lib/firebase';
 
 type View = 'dashboard' | 'calendar' | 'notifications' | 'expenses' | 'admin' | 'salary';
-type AppMode = 'portal' | 'work-management' | 'calculator';
+type AppMode = 'portal' | 'work-management' | 'calculator' | 'kuzhina-pro';
+
 
 interface AuthContextType {
   user: { uid: string; email: string } | null;
@@ -343,11 +345,16 @@ export default function App() {
       return <Landing 
         onSelectWork={() => setAppMode('work-management')} 
         onSelectCalc={() => setAppMode('calculator')} 
+        onSelectAiStudio={() => setAppMode('kuzhina-pro')}
       />;
     }
 
     if (appMode === 'calculator') {
       return <TandemboxCalculator onBack={() => setAppMode('portal')} />;
+    }
+
+    if (appMode === 'kuzhina-pro') {
+      return <KuzhinaProStudio onBack={() => setAppMode('portal')} showToast={showToast} />;
     }
 
     if (!user) {

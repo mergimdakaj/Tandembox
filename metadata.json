@@ -1,6 +1,8 @@
 {
   "name": "MergimGroup - Menaxhimi i Punës",
-  "description": "Një platformë dedikuar gjurmimit të orarit të punës, menaxhimit të pushimeve dhe shpenzimeve për punonjësit.",
+  "description": "Sistemi zyrtar MergimGroup me Menaxhimin e Punës, Mergim Pro Llogaritësin dhe Studio-n AI Kuzhina Pro.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
