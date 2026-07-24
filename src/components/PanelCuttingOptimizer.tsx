@@ -2233,6 +2233,74 @@ PANELI MASTER #${shLayout.sheetIndex}:
             </div>
           )}
 
+          {/* Top Panel Utilization Summary Grid - Directly requested by User */}
+          {calculatedResults && (
+            <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 border-2 border-emerald-500/70 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-emerald-500/30 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300">
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white flex items-center gap-2">
+                      <span>Prerja është e Optimizuar</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider">
+                        Gjithsej {calculatedResults.sheets.length} Panele
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-300 font-medium">
+                      Përqindja e shfrytëzimit për secilin panel LART (pa pasur nevojë të shikoni poshtë):
+                    </p>
+                  </div>
+                </div>
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400 block">Shfrytëzimi Mesatar</span>
+                  <span className="text-xl font-black text-emerald-300 font-mono">
+                    {calcAvgUtilization}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid showing Paneli 1, Paneli 2, Paneli 3 ... with percentages */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                {calculatedResults.sheets.map((sheet) => (
+                  <button
+                    type="button"
+                    key={sheet.sheetIndex}
+                    onClick={() => {
+                      const el = document.getElementById(`panel-sheet-${sheet.sheetIndex}`);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('ring-4', 'ring-emerald-400', 'border-emerald-400');
+                        setTimeout(() => {
+                          el.classList.remove('ring-4', 'ring-emerald-400', 'border-emerald-400');
+                        }, 2000);
+                      }
+                    }}
+                    className="bg-slate-950/90 border border-emerald-500/50 hover:border-emerald-400 hover:bg-emerald-950/60 rounded-xl p-3 flex flex-col items-center justify-center text-center shadow-md transition-all hover:scale-105 cursor-pointer group"
+                  >
+                    <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-emerald-300 tracking-wider mb-0.5">
+                      Paneli {sheet.sheetIndex}
+                    </span>
+                    <span className="text-xl font-black text-emerald-400 font-mono tracking-tight">
+                      {sheet.utilization}%
+                    </span>
+                    <div className="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-emerald-500 to-teal-300 h-full rounded-full"
+                        style={{ width: `${Math.min(100, Math.max(0, sheet.utilization))}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-400 mt-1 flex items-center gap-1">
+                      <span>{sheet.placedParts.length} Detaje</span>
+                      <span className="text-[8px] text-emerald-400 font-extrabold uppercase">Shiko ↓</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Quick summary of required sheets */}
           {calculatedResults && (
             <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -2269,7 +2337,7 @@ PANELI MASTER #${shLayout.sheetIndex}:
                 const viewHeight = sheet.height + paddingTop * 2;
 
                 return (
-                  <div key={sheet.sheetIndex} className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 space-y-4">
+                  <div key={sheet.sheetIndex} id={`panel-sheet-${sheet.sheetIndex}`} className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 space-y-4 transition-all duration-300">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-black uppercase text-indigo-700 bg-indigo-100 px-3 py-1 rounded-lg flex items-center gap-1">
