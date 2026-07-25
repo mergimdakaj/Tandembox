@@ -1273,33 +1273,130 @@ export function PanelCuttingOptimizer() {
           shLayout.wasteArea = Number((totalRawArea - usedArea).toFixed(1));
           totalUtilization += shLayout.utilization;
 
-          // Calculate actual leftovers (useful empty spaces) on shelves & remaining sheet space
-          const shelves = sheetShelves[shLayout.sheetIndex] || [];
-          
-          // 1. Leftover space at the end of each shelf
-          shelves.forEach(shelf => {
-            const remW = shLayout.trimmedWidth - shelf.usedX;
-            if (remW > 10 && shelf.h > 10) { // minimum useful size 10x10 cm
-              shLayout.leftovers.push({
-                id: `leftover_shelf_${shelf.y}`,
-                x: shLayout.trimLeft + shelf.usedX,
-                y: shLayout.trimTop + shelf.y,
-                w: Number(remW.toFixed(1)),
-                h: Number(shelf.h.toFixed(1))
-              });
-            }
-          });
-
-          // 2. Large leftover block at the top/bottom of the sheet if not fully height-packed
-          const currentShelvesHeight = shelves.reduce((sum, sh) => sum + sh.h + bw, 0);
-          const remH = shLayout.trimmedHeight - currentShelvesHeight;
-          if (remH > 10) {
-            shLayout.leftovers.push({
-              id: 'leftover_top_block',
+          // Compute exact non-overlapping empty space remnants
+          shLayout.leftovers = [];
+          if (shLayout.trimmedWidth > 0 && shLayout.trimmedHeight > 0) {
+            let freeRects: { x: number; y: number; w: number; h: number }[] = [{
               x: shLayout.trimLeft,
-              y: shLayout.trimTop + currentShelvesHeight,
-              w: Number(shLayout.trimmedWidth.toFixed(1)),
-              h: Number(remH.toFixed(1))
+              y: shLayout.trimTop,
+              w: shLayout.trimmedWidth,
+              h: shLayout.trimmedHeight
+            }];
+
+            shLayout.placedParts.forEach(part => {
+              const px = part.x;
+              const py = part.y;
+              const pw = part.w + bw;
+              const ph = part.h + bw;
+
+              const nextFreeRects: { x: number; y: number; w: number; h: number }[] = [];
+
+              freeRects.forEach(rect => {
+                const overlap = !(
+                  px >= rect.x + rect.w - EPS ||
+                  px + pw <= rect.x + EPS ||
+                  py >= rect.y + rect.h - EPS ||
+                  py + ph <= rect.y + EPS
+                );
+
+                if (!overlap) {
+                  nextFreeRects.push(rect);
+                } else {
+                  // Split rect into non-overlapping sub-rectangles around part
+                  if (py > rect.y + EPS) {
+                    nextFreeRects.push({
+                      x: rect.x,
+                      y: rect.y,
+                      w: rect.w,
+                      h: Number((py - rect.y).toFixed(1))
+                    });
+                  }
+                  if (py + ph < rect.y + rect.h - EPS) {
+                    nextFreeRects.push({
+                      x: rect.x,
+                      y: py + ph,
+                      w: rect.w,
+                      h: Number((rect.y + rect.h - (py + ph)).toFixed(1))
+                    });
+                  }
+                  if (px > rect.x + EPS) {
+                    nextFreeRects.push({
+                      x: rect.x,
+                      y: rect.y,
+                      w: Number((px - rect.x).toFixed(1)),
+                      h: rect.h
+                    });
+                  }
+                  if (px + pw < rect.x + rect.w - EPS) {
+                    nextFreeRects.push({
+                      x: px + pw,
+                      y: rect.y,
+                      w: Number((rect.x + rect.w - (px + pw)).toFixed(1)),
+                      h: rect.h
+                    });
+                  }
+                }
+              });
+
+              freeRects = nextFreeRects;
+            });
+
+            // Filter out small sizes (minimum 10cm x 10cm)
+            let useful = freeRects.filter(r => r.w >= 10 && r.h >= 10);
+
+            // Filter out redundant sub-rectangles completely contained inside larger free rectangles
+            const nonRedundant: { x: number; y: number; w: number; h: number }[] = [];
+            for (let i = 0; i < useful.length; i++) {
+              const r1 = useful[i];
+              let isContained = false;
+              for (let j = 0; j < useful.length; j++) {
+                if (i === j) continue;
+                const r2 = useful[j];
+                if (
+                  r1.x >= r2.x - EPS &&
+                  r1.y >= r2.y - EPS &&
+                  r1.x + r1.w <= r2.x + r2.w + EPS &&
+                  r1.y + r1.h <= r2.y + r2.h + EPS
+                ) {
+                  if (Math.abs(r1.w * r1.h - r2.w * r2.h) < EPS) {
+                    if (i > j) { isContained = true; break; }
+                  } else {
+                    isContained = true;
+                    break;
+                  }
+                }
+              }
+              if (!isContained) {
+                nonRedundant.push(r1);
+              }
+            }
+
+            // FINAL STRICT OVERLAP CHECK: Reject any leftover that overlaps with ANY placed part
+            const verifiedLeftovers = nonRedundant.filter(rect => {
+              const overlapsAnyPlacedPart = shLayout.placedParts.some(part => {
+                const px = part.x;
+                const py = part.y;
+                const pw = part.w;
+                const ph = part.h;
+
+                return !(
+                  rect.x >= px + pw - EPS ||
+                  rect.x + rect.w <= px + EPS ||
+                  rect.y >= py + ph - EPS ||
+                  rect.y + rect.h <= py + EPS
+                );
+              });
+              return !overlapsAnyPlacedPart;
+            });
+
+            verifiedLeftovers.forEach((r, idx) => {
+              shLayout.leftovers.push({
+                id: `leftover_free_${shLayout.sheetIndex}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+                x: Number(r.x.toFixed(1)),
+                y: Number(r.y.toFixed(1)),
+                w: Number(r.w.toFixed(1)),
+                h: Number(r.h.toFixed(1))
+              });
             });
           }
         });
@@ -2964,6 +3061,14 @@ PANELI MASTER #${shLayout.sheetIndex}:
                         {/* Render Leftover/Wasted space (Dashed golden rectangles) with dynamic add button option */}
                         {sheet.leftovers.map((leftover) => {
                           const isSubstantial = leftover.w >= 15 && leftover.h >= 15;
+                          // Dynamically scale badge box dimensions so it fits inside the leftover bounds
+                          const badgeW = Math.min(leftover.w - 2, 44);
+                          const badgeH = Math.min(leftover.h - 2, isSubstantial ? 18 : 12);
+                          const badgeX = leftover.x + (leftover.w - badgeW) / 2;
+                          const badgeY = leftover.y + (leftover.h - badgeH) / 2;
+                          const centerX = leftover.x + leftover.w / 2;
+                          const centerY = leftover.y + leftover.h / 2;
+
                           return (
                             <g key={leftover.id}>
                               <rect
@@ -2978,57 +3083,56 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                 strokeDasharray="3 2"
                               />
                               {/* Display remaining space size dimensions directly on map */}
-                              {leftover.w > 18 && leftover.h > 15 ? (
+                              {leftover.w >= 18 && leftover.h >= 14 && badgeW >= 14 && badgeH >= 10 ? (
                                 <g>
                                   <rect
-                                    x={leftover.x + leftover.w / 2 - 25}
-                                    y={leftover.y + leftover.h / 2 - 10}
-                                    width="50"
-                                    height="20"
+                                    x={badgeX}
+                                    y={badgeY}
+                                    width={badgeW}
+                                    height={badgeH}
                                     rx="2"
                                     fill="#1e293b"
                                     stroke="#f59e0b"
                                     strokeWidth="0.5"
                                   />
                                   <text
-                                    x={leftover.x + leftover.w / 2}
-                                    y={leftover.y + leftover.h / 2 - 3}
+                                    x={centerX}
+                                    y={badgeY + (isSubstantial ? 4.5 : 4)}
                                     fill="#fbbf24"
-                                    fontSize="5"
+                                    fontSize={Math.min(4.5, badgeW / 8)}
                                     fontWeight="black"
                                     textAnchor="middle"
                                   >
                                     Tepricë e Lirë
                                   </text>
                                   <text
-                                    x={leftover.x + leftover.w / 2}
-                                    y={leftover.y + leftover.h / 2 + 3}
+                                    x={centerX}
+                                    y={badgeY + (isSubstantial ? 9.5 : 8.5)}
                                     fill="#ffffff"
-                                    fontSize="5"
+                                    fontSize={Math.min(4.5, badgeW / 8)}
                                     fontWeight="bold"
                                     textAnchor="middle"
                                     className="font-mono"
                                   >
                                     {leftover.w}x{leftover.h} cm
                                   </text>
-                                  {isSubstantial && (
+                                  {isSubstantial && badgeH >= 16 && (
                                     <g
                                       className="cursor-pointer group"
                                       onClick={() => addPartFromLeftover(leftover.w, leftover.h)}
                                     >
-                                      {/* Invisible background rectangle to capture touch clicks easily */}
                                       <rect
-                                        x={leftover.x + leftover.w / 2 - 20}
-                                        y={leftover.y + leftover.h / 2 + 5}
-                                        width="40"
-                                        height="6"
+                                        x={badgeX + 1}
+                                        y={badgeY + 11}
+                                        width={badgeW - 2}
+                                        height={6}
                                         fill="transparent"
                                       />
                                       <text
-                                        x={leftover.x + leftover.w / 2}
-                                        y={leftover.y + leftover.h / 2 + 9}
+                                        x={centerX}
+                                        y={badgeY + 14.5}
                                         fill="#34d399"
-                                        fontSize="4.5"
+                                        fontSize={Math.min(4, badgeW / 9)}
                                         fontWeight="black"
                                         textAnchor="middle"
                                         className="animate-pulse group-hover:fill-emerald-400 select-none transition-all"
@@ -3040,8 +3144,8 @@ PANELI MASTER #${shLayout.sheetIndex}:
                                 </g>
                               ) : (
                                 <text
-                                  x={leftover.x + leftover.w / 2}
-                                  y={leftover.y + leftover.h / 2 + 1}
+                                  x={centerX}
+                                  y={centerY + 1}
                                   fill="#fbbf24"
                                   fontSize="4"
                                   fontWeight="black"
