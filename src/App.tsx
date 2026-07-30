@@ -27,6 +27,7 @@ import { Login } from './components/Login';
 import { Landing } from './components/Landing';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
 import { KuzhinaProStudio } from './components/KuzhinaProStudio';
+import { TvWallStudioMain } from './components/tvwall/TvWallStudioMain';
 import { LOGO_DATA_URL } from './assets/logo';
 import { DashboardChart } from './components/DashboardChart';
 import { cn } from './lib/utils';
@@ -40,7 +41,7 @@ import {
 } from './lib/firebase';
 
 type View = 'dashboard' | 'calendar' | 'notifications' | 'expenses' | 'admin' | 'salary';
-type AppMode = 'portal' | 'work-management' | 'calculator' | 'kuzhina-pro';
+type AppMode = 'portal' | 'work-management' | 'calculator' | 'kuzhina-pro' | 'tvwall-studio';
 
 
 interface AuthContextType {
@@ -345,7 +346,7 @@ export default function App() {
       return <Landing 
         onSelectWork={() => setAppMode('work-management')} 
         onSelectCalc={() => setAppMode('calculator')} 
-        onSelectAiStudio={() => setAppMode('kuzhina-pro')}
+        onSelectTvWall={() => setAppMode('tvwall-studio')}
       />;
     }
 
@@ -355,6 +356,10 @@ export default function App() {
 
     if (appMode === 'kuzhina-pro') {
       return <KuzhinaProStudio onBack={() => setAppMode('portal')} showToast={showToast} />;
+    }
+
+    if (appMode === 'tvwall-studio') {
+      return <TvWallStudioMain onBack={() => setAppMode('portal')} showToast={showToast} />;
     }
 
     if (!user) {

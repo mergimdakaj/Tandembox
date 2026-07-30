@@ -8,6 +8,9 @@ import {
   Grid, MoveHorizontal, HardDrive, PackageCheck
 } from 'lucide-react';
 import { LOGO_DATA_URL } from '../assets/logo';
+import { TvWallStudioMain } from './tvwall/TvWallStudioMain';
+import tvRender1 from '../assets/images/tv_wall_render_1_1785016109461.jpg';
+import tvRender2 from '../assets/images/kitchen_tv_render_2_1785016123269.jpg';
 
 export interface CabinetElement {
   id: string;
@@ -19,7 +22,7 @@ export interface CabinetElement {
   materialThickness: number; // mm (18, 25)
   drawerSystem: 'Tandembox' | 'Antaro' | 'Nova Pro' | 'Sistem Standard';
   drawerCount: number;
-  frontMaterial: 'MDF' | 'Ivericë' | 'Dru' | 'Profile Alumini';
+  frontMaterial: 'MDF' | 'Ivericë' | 'Dru' | 'Profile Alumini' | 'Xham Vitrinë';
   applianceType?: 'lavapjate' | 'furre' | 'frigorifer' | 'lavastovilje' | 'kend' | 'standard';
   xPosition?: number; // cm along wall
   wallIndex: 'A' | 'B';
@@ -155,15 +158,16 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
   // Selected Element for Inspector (Hapi 4)
   const [selectedElementId, setSelectedElementId] = useState<string | null>('el-3');
 
-  // AI Quick Generator Wizard State
+  // AI TV Wall Generator Wizard State (Vetëm TV Wall)
   const [aiWizard, setAiWizard] = useState({
-    wallLength: 360,
-    hasFridge: true,
-    hasDishwasher: true,
-    hasOven: true,
-    sinkWidth: 80,
-    style: 'Modern' as 'Modern' | 'Klasik' | 'Handleless',
-    drawerSystem: 'Tandembox' as 'Tandembox' | 'Antaro' | 'Nova Pro'
+    wallLength: 320,
+    tvSize: 75 as 55 | 65 | 75 | 85,
+    finish: 'Sage Green' as 'Sage Green' | 'Warm Oak' | 'Dark Walnut' | 'Anthracite' | 'Calacatta White',
+    panelMaterial: 'Wood Slats' as 'Wood Slats' | 'Dark Marble' | 'Calacatta Marble' | 'Matt Black',
+    ledTone: 'Warm 3000K' as 'Warm 3000K' | 'Natural 4000K' | 'Cool 6000K' | 'Off',
+    hasGlassVitrine: true,
+    hasFloatingConsole: true,
+    drawerCount: 3
   });
 
   // Price & Stock Costing Settings
@@ -173,6 +177,24 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
   const [screwsPrice, setScrewsPrice] = useState<number>(4);      // € / element
   const [laborCost, setLaborCost] = useState<number>(200);        // € punë
   const [stockBoardsAvailable, setStockBoardsAvailable] = useState<number>(2); // Current stock
+
+  // TV Wall & Photorealistic 3D Customizer State (Hapi 10)
+  const [tvWallFinish, setTvWallFinish] = useState<'Sage Green' | 'Warm Oak' | 'Dark Walnut' | 'Anthracite' | 'Calacatta White'>('Sage Green');
+  const [wallPanelMaterial, setWallPanelMaterial] = useState<'Wood Slats' | 'Dark Marble' | 'Calacatta Marble' | 'Matt Black'>('Wood Slats');
+  const [ledTone, setLedTone] = useState<'Warm 3000K' | 'Natural 4000K' | 'Cool 6000K' | 'Off'>('Warm 3000K');
+  const [tvSize, setTvSize] = useState<55 | 65 | 75 | 85>(75);
+  const [hasGlassVitrine, setHasGlassVitrine] = useState<boolean>(true);
+  const [hasFloatingConsole, setHasFloatingConsole] = useState<boolean>(true);
+  const [ledBrightness, setLedBrightness] = useState<number>(85); // 0-100%
+  const [studioViewMode, setStudioViewMode] = useState<'2D' | '3D'>('3D'); // 2D Map vs 3D Photo View
+
+  // TV Wall Decor & LED Layout Map Items State
+  const [decorItems, setDecorItems] = useState<{ id: string; name: string; icon: string; x: number; y: number }[]>([
+    { id: 'dec-1', name: 'Soundbar Pro', icon: '🔊', x: 50, y: 72 },
+    { id: 'dec-2', name: 'Vazë Keramike', icon: '🏺', x: 20, y: 72 },
+    { id: 'dec-3', name: 'Bimë Ambientale', icon: '🪴', x: 82, y: 72 },
+    { id: 'dec-4', name: 'Kornizë Arti', icon: '🖼️', x: 82, y: 30 },
+  ]);
 
   // Selected Element getter
   const selectedElement = project.elements.find(e => e.id === selectedElementId) || project.elements[0];
@@ -243,19 +265,69 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
       if (el.applianceType !== 'furre' && el.applianceType !== 'frigorifer') {
         const frontHeight = el.drawerCount > 0 ? Math.floor(hMm / el.drawerCount) - 3 : hMm - 3;
         const frontQty = el.drawerCount > 0 ? el.drawerCount : 1;
+        
+        if (el.frontMaterial === 'Profile Alumini' || el.frontMaterial === 'Xham Vitrinë') {
+          // Profile frame cuts
+          list.push({
+            id: `${el.id}-prof-vert`,
+            elementName: el.name,
+            partName: `Profile Alumini Vertikale (Kornizë xhami)`,
+            width: 22,
+            height: frontHeight,
+            quantity: 2 * frontQty,
+            material: 'Profil Alumini e Zezë/Ar',
+            edgeBanding: 'Kornizë'
+          });
+          list.push({
+            id: `${el.id}-prof-horiz`,
+            elementName: el.name,
+            partName: `Profile Alumini Horizontale (Kornizë xhami)`,
+            width: wMm - 42,
+            height: 22,
+            quantity: 2 * frontQty,
+            material: 'Profil Alumini e Zezë/Ar',
+            edgeBanding: 'Kornizë'
+          });
+          // Glass panel insert for doors
+          list.push({
+            id: `${el.id}-glass-panel`,
+            elementName: el.name,
+            partName: `Xham 4mm për Dyer Vitrinë (${frontQty} copë)`,
+            width: Math.max(100, wMm - 40),
+            height: Math.max(100, frontHeight - 40),
+            quantity: frontQty,
+            material: 'Xham 4mm Transparent/Smoked',
+            edgeBanding: 'Prerje Sharre'
+          });
+        } else {
+          list.push({
+            id: `${el.id}-front`,
+            elementName: el.name,
+            partName: `Ballinë ${el.frontMaterial} (${frontQty} copë)`,
+            width: wMm - 3,
+            height: frontHeight,
+            quantity: frontQty,
+            material: `${el.frontMaterial} 18mm`,
+            edgeBanding: 'ABS 2mm me shkëlqim'
+          });
+        }
+      }
+
+      // 6. Rafta Xhami (Glass Shelves for wall elements & glass display units)
+      if (el.type === 'wall' || el.frontMaterial === 'Xham Vitrinë' || el.frontMaterial === 'Profile Alumini') {
         list.push({
-          id: `${el.id}-front`,
+          id: `${el.id}-glass-shelf`,
           elementName: el.name,
-          partName: `Ballinë ${el.frontMaterial} (${frontQty} copë)`,
-          width: wMm - 3,
-          height: frontHeight,
-          quantity: frontQty,
-          material: `${el.frontMaterial} 18mm`,
-          edgeBanding: 'ABS 2mm me shkëlqim'
+          partName: 'Raft Xhami 6mm/8mm (2 copë)',
+          width: Math.max(100, wMm - 36),
+          height: Math.max(100, dMm - 20),
+          quantity: 2,
+          material: 'Xham 6mm / 8mm (Lustrim me Buza)',
+          edgeBanding: 'Këndet e Lustruara'
         });
       }
 
-      // 6. Fijokat Tandembox/Antaro internal boxes
+      // 7. Fijokat Tandembox/Antaro internal boxes
       if (el.drawerCount > 0) {
         list.push({
           id: `${el.id}-drawer-box`,
@@ -299,6 +371,51 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
 
   // Inventory Stock Alert (Hapi 9)
   const missingBoards = Math.max(0, totalSheetsRequired - stockBoardsAvailable);
+
+  // Helper: Export Glass & Profile Cuts directly to Viber / Sharre Xhami
+  const handleShareGlassToViber = () => {
+    // Filter all glass & profile parts
+    const glassParts = cutList.filter(p => 
+      p.partName.toLowerCase().includes('xham') || 
+      p.partName.toLowerCase().includes('profile') || 
+      p.material.toLowerCase().includes('xham') ||
+      p.material.toLowerCase().includes('alumini')
+    );
+
+    let msg = `📲 SPECIFIKIMI I PRERJES SË XHAMAVE & PROFILEVE ALUMINI\n`;
+    msg += `🏛 MergimGroup Pro Studio | Klienti: ${project.clientName || 'Klient i ri'}\n`;
+    msg += `📅 Data: ${project.date}\n`;
+    msg += `------------------------------------------\n`;
+
+    if (glassParts.length > 0) {
+      glassParts.forEach((item, i) => {
+        msg += `${i + 1}. ${item.elementName} → ${item.partName}\n`;
+        msg += `   📐 Prerja: ${item.width} mm x ${item.height} mm (${item.quantity} copë)\n`;
+        msg += `   ⚙ Materiali: ${item.material}\n`;
+      });
+    } else {
+      // Auto-calculate exact glass dimensions for all elements
+      project.elements.forEach((el, i) => {
+        const wMm = el.width * 10;
+        const hMm = el.height * 10;
+        const dMm = el.depth * 10;
+        msg += `${i + 1}. ${el.name} (${el.width}cm x ${el.height}cm):\n`;
+        msg += `   • Xham 4mm dyer: ${wMm - 40} mm x ${hMm - 40} mm (2 copë)\n`;
+        msg += `   • Raft Xhami 6mm/8mm: ${wMm - 36} mm x ${dMm - 20} mm (2 copë me buza të lustruara)\n`;
+        msg += `   • Profile Alumini kornizë: 2x ${hMm} mm vertikale, 2x ${wMm - 42} mm horizontale\n`;
+      });
+    }
+
+    msg += `------------------------------------------\n`;
+    msg += `🔗 Shiko projektin online: http://www.instagram.com/mergimd1\n`;
+    msg += `✍ Zhvilluar nga Mergim Dakaj`;
+
+    navigator.clipboard.writeText(msg);
+    if (showToast) showToast('Specifikimi i xhamave u kopjua! Po hapet Viber...', 'success');
+    
+    // Open Viber share protocol
+    window.open(`viber://forward?text=${encodeURIComponent(msg)}`, '_blank');
+  };
 
   // Add new element function
   const handleAddElement = (width: number, applianceType: CabinetElement['applianceType'] = 'standard', customName?: string) => {
@@ -345,112 +462,78 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
     if (showToast) showToast(`Elementi u fshi!`, 'info');
   };
 
-  // AI Unik Fast Auto Proposal Function (Funksioni i Kërkuar!)
+  // AI Unik Fast Auto TV Wall Generator
   const handleExecuteAiMagicProposal = () => {
     const wallLen = aiWizard.wallLength;
     const newElements: CabinetElement[] = [];
+
+    // Sync TV Wall studio states from AI Wizard choices
+    setTvWallFinish(aiWizard.finish);
+    setWallPanelMaterial(aiWizard.panelMaterial);
+    setLedTone(aiWizard.ledTone);
+    setTvSize(aiWizard.tvSize);
+    setHasGlassVitrine(aiWizard.hasGlassVitrine);
+    setHasFloatingConsole(aiWizard.hasFloatingConsole);
+
     let currentX = 0;
 
-    // 1. Tall Fridge if requested
-    if (aiWizard.hasFridge && currentX + 60 <= wallLen) {
+    // 1. Floating Console / Low TV Console with Tandembox drawers
+    if (aiWizard.hasFloatingConsole) {
+      const consoleW = Math.min(240, Math.max(160, wallLen - 80));
       newElements.push({
-        id: `el-ai-${Date.now()}-1`,
-        name: 'Frigorifer 60',
-        type: 'tall',
-        width: 60,
-        height: 220,
-        depth: 60,
-        materialThickness: 18,
-        drawerSystem: aiWizard.drawerSystem,
-        drawerCount: 0,
-        frontMaterial: aiWizard.style === 'Modern' ? 'MDF' : 'Ivericë',
-        applianceType: 'frigorifer',
-        xPosition: currentX,
-        wallIndex: 'A'
-      });
-      currentX += 60;
-    }
-
-    // 2. Dishwasher if requested
-    if (aiWizard.hasDishwasher && currentX + 60 <= wallLen) {
-      newElements.push({
-        id: `el-ai-${Date.now()}-2`,
-        name: 'Lavastovilje 60',
+        id: `el-tv-${Date.now()}-1`,
+        name: `Konsole e Pezulluar TV ${consoleW}cm`,
         type: 'base',
-        width: 60,
-        height: 72,
-        depth: 56,
+        width: consoleW,
+        height: 38,
+        depth: 42,
         materialThickness: 18,
-        drawerSystem: aiWizard.drawerSystem,
-        drawerCount: 0,
-        frontMaterial: aiWizard.style === 'Modern' ? 'MDF' : 'Ivericë',
-        applianceType: 'lavastovilje',
-        xPosition: currentX,
-        wallIndex: 'A'
-      });
-      currentX += 60;
-    }
-
-    // 3. Sink Module
-    const sinkW = aiWizard.sinkWidth || 80;
-    if (currentX + sinkW <= wallLen) {
-      newElements.push({
-        id: `el-ai-${Date.now()}-3`,
-        name: `Lavapjatë ${sinkW}`,
-        type: 'base',
-        width: sinkW,
-        height: 72,
-        depth: 56,
-        materialThickness: 18,
-        drawerSystem: aiWizard.drawerSystem,
-        drawerCount: 2,
-        frontMaterial: aiWizard.style === 'Modern' ? 'MDF' : 'Ivericë',
-        applianceType: 'lavapjate',
-        xPosition: currentX,
-        wallIndex: 'A'
-      });
-      currentX += sinkW;
-    }
-
-    // 4. Oven Module
-    if (aiWizard.hasOven && currentX + 60 <= wallLen) {
-      newElements.push({
-        id: `el-ai-${Date.now()}-4`,
-        name: 'Furrë 60',
-        type: 'base',
-        width: 60,
-        height: 72,
-        depth: 56,
-        materialThickness: 18,
-        drawerSystem: aiWizard.drawerSystem,
-        drawerCount: 1,
-        frontMaterial: aiWizard.style === 'Modern' ? 'MDF' : 'Ivericë',
-        applianceType: 'furre',
-        xPosition: currentX,
-        wallIndex: 'A'
-      });
-      currentX += 60;
-    }
-
-    // 5. Fill remaining space with Tandembox Drawers module
-    const remainingSpace = wallLen - currentX;
-    if (remainingSpace >= 40) {
-      newElements.push({
-        id: `el-ai-${Date.now()}-5`,
-        name: `Fioka Premium ${remainingSpace}`,
-        type: 'base',
-        width: remainingSpace,
-        height: 72,
-        depth: 56,
-        materialThickness: 18,
-        drawerSystem: aiWizard.drawerSystem,
-        drawerCount: 3,
-        frontMaterial: aiWizard.style === 'Modern' ? 'MDF' : 'Ivericë',
+        drawerSystem: 'Tandembox',
+        drawerCount: aiWizard.drawerCount || 3,
+        frontMaterial: aiWizard.finish === 'Calacatta White' ? 'MDF' : 'Ivericë',
         applianceType: 'standard',
         xPosition: currentX,
         wallIndex: 'A'
       });
+      currentX += consoleW;
     }
+
+    // 2. Glass Vitrine Unit if requested
+    if (aiWizard.hasGlassVitrine && currentX + 60 <= wallLen) {
+      newElements.push({
+        id: `el-tv-${Date.now()}-2`,
+        name: 'Vitrinë Xhami me LED 60cm',
+        type: 'tall',
+        width: 60,
+        height: 210,
+        depth: 38,
+        materialThickness: 18,
+        drawerSystem: 'Tandembox',
+        drawerCount: 0,
+        frontMaterial: 'Xham Vitrinë',
+        applianceType: 'standard',
+        xPosition: currentX,
+        wallIndex: 'A'
+      });
+      currentX += 60;
+    }
+
+    // 3. Wood Slats / Marble Wall Panel Frame
+    newElements.push({
+      id: `el-tv-${Date.now()}-3`,
+      name: `Panel Dekorativ Prapa TV (${aiWizard.panelMaterial})`,
+      type: 'wall',
+      width: Math.min(wallLen, 280),
+      height: 160,
+      depth: 10,
+      materialThickness: 18,
+      drawerSystem: 'Tandembox',
+      drawerCount: 0,
+      frontMaterial: 'Profile Alumini',
+      applianceType: 'standard',
+      xPosition: 0,
+      wallIndex: 'A'
+    });
 
     setProject(prev => ({
       ...prev,
@@ -459,8 +542,8 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
     }));
 
     setShowAiModal(false);
-    setActiveStep(3); // Jump to Canvas Step
-    if (showToast) showToast('🚀 AI gjeneroi propozimin e plotë të kuzhinës me sukses!', 'success');
+    setActiveStep(10); // Jump directly to Step 10: TV Wall 3D/2D Studio!
+    if (showToast) showToast('🚀 AI gjeneroi kompozicionin e plotë të TV Wall me sukses!', 'success');
   };
 
   return (
@@ -490,27 +573,30 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black uppercase tracking-widest text-indigo-400 bg-indigo-950/80 px-2.5 py-0.5 rounded-full border border-indigo-800/50">
-                  MODULI AI
+                  MODULI PRO
                 </span>
                 <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" /> KUZHINA PRO
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" /> KUZHINA PRO
                 </span>
               </div>
-              <h1 className="text-base font-black text-white tracking-tight">Studio e Gjenerimit Automatik</h1>
+              <h1 className="text-base font-black text-white tracking-tight flex items-center gap-2">
+                <span>Studio Inxhinierike e Prodhimit</span>
+                <a
+                  href="https://www.instagram.com/mergimd1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden md:inline-flex items-center gap-1 text-[10px] uppercase font-extrabold text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 px-2 py-0.5 rounded-md border border-amber-400/30 transition-all cursor-pointer"
+                  title="Klikoni për të hapur Instagramin e Mergim Dakaj (@mergimd1)"
+                >
+                  Nga Mergim Dakaj ↗
+                </a>
+              </h1>
             </div>
           </div>
         </div>
 
         {/* Quick Actions Header */}
         <div className="flex items-center gap-3">
-          {/* AI Magic Generator Modal Trigger */}
-          <button
-            onClick={() => setShowAiModal(true)}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 via-indigo-600 to-emerald-500 hover:brightness-110 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all border border-amber-300/40"
-          >
-            <Wand2 className="w-4 h-4 animate-bounce" /> ✨ AI Magic Proposal
-          </button>
-
           {/* 2D / 3D Toggle Button */}
           <div className="bg-slate-950 p-1 rounded-xl border border-indigo-900/60 flex items-center gap-1">
             <button
@@ -541,7 +627,7 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
             { step: 2, label: 'Hapi 2: Dhoma', icon: Grid },
             { step: 3, label: 'Hapi 3: Canvas (Muri)', icon: MoveHorizontal },
             { step: 4, label: 'Hapi 4: Inspector', icon: Settings },
-            { step: 5, label: 'Hapi 5: AI Pjesët', icon: Cpu },
+            { step: 5, label: 'Hapi 5: Lista e Pjesëve', icon: Cpu },
             { step: 6, label: 'Hapi 6: Optimizimi', icon: Layers },
             { step: 7, label: 'Hapi 7: Kosto', icon: DollarSign },
             { step: 8, label: 'Hapi 8: Oferta PDF', icon: FileText },
@@ -1215,6 +1301,61 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
                 </table>
               </div>
 
+              {/* SPECIFIKIMI I XHAMAVE & RAFTAVE TË XHOMIT CARD (PËR VIBER) */}
+              <div className="mt-6 bg-gradient-to-r from-purple-950/80 via-slate-900 to-indigo-950/80 border-2 border-purple-500/60 rounded-2xl p-5 shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-purple-500/30 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/50 flex items-center justify-center text-purple-300 font-black text-lg shadow-lg">
+                      💎
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white flex items-center gap-2">
+                        <span>Specifikimi i Xhamave & Raftave të Xhomit</span>
+                        <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 text-[10px] font-bold uppercase">
+                          Gatshëm për Viber / Sharre Xhami
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-300">
+                        Llogaritja e saktë automatike e dyerve me xham, raftave të xhomit dhe profileve alumini për prerje!
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleShareGlassToViber}
+                    className="px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-purple-500/30 flex items-center gap-2 border border-purple-400/40 cursor-pointer"
+                  >
+                    <span>📱 Dërgo Xhamat në Viber</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-semibold">
+                  {cutList.filter(p => p.partName.toLowerCase().includes('xham') || p.partName.toLowerCase().includes('profile')).length > 0 ? (
+                    cutList.filter(p => p.partName.toLowerCase().includes('xham') || p.partName.toLowerCase().includes('profile')).map((item, idx) => (
+                      <div key={idx} className="bg-slate-950/80 p-3 rounded-xl border border-purple-500/30 space-y-1">
+                        <span className="text-[10px] font-black uppercase text-purple-300 block truncate">{item.elementName}</span>
+                        <span className="text-xs font-bold text-white block">{item.partName}</span>
+                        <div className="flex items-center justify-between text-emerald-400 font-mono text-xs pt-1 border-t border-slate-800">
+                          <span>{item.width} x {item.height} mm</span>
+                          <span className="text-amber-300 font-bold">{item.quantity}x</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    project.elements.map((el, idx) => (
+                      <div key={idx} className="bg-slate-950/80 p-3 rounded-xl border border-purple-500/30 space-y-1">
+                        <span className="text-[10px] font-black uppercase text-purple-300 block truncate">{el.name}</span>
+                        <span className="text-xs font-bold text-white block">Xham Dyer + Raft Xhami</span>
+                        <div className="text-[11px] text-slate-300 font-mono space-y-0.5 pt-1 border-t border-slate-800">
+                          <p>• Xham 4mm: <strong className="text-emerald-400">{el.width * 10 - 40} x {el.height * 10 - 40} mm</strong></p>
+                          <p>• Raft Xhami: <strong className="text-emerald-400">{el.width * 10 - 36} x {el.depth * 10 - 20} mm</strong></p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               <div className="mt-8 flex justify-end gap-3">
                 <button
                   onClick={() => setActiveStep(6)}
@@ -1675,129 +1816,45 @@ export function KuzhinaProStudio({ onBack, showToast }: KuzhinaProStudioProps) {
           </motion.div>
         )}
 
-      </main>
-
-      {/* AI MAGIC FAST GENERATOR WIZARD MODAL (FUNKSIONI UNIK I KËRKUAR) */}
-      <AnimatePresence>
-        {showAiModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 border-2 border-indigo-500/80 rounded-[32px] p-6 sm:p-8 max-w-xl w-full text-white shadow-2xl relative overflow-hidden space-y-6"
-            >
-              <div className="flex items-center justify-between border-b border-indigo-900/60 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                    <Wand2 className="w-5 h-5 animate-spin" style={{ animationDuration: '8s' }} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-white">AI Gjeneruesi Automatik i Kuzhinës</h3>
-                    <p className="text-xs text-slate-400">Përzgjidhni parametrat bazë dhe sistemi do të ndërtojë propozimin e plotë instant!</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setShowAiModal(false)}
-                  className="p-2 text-slate-400 hover:text-white bg-slate-900 rounded-xl border border-slate-800"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Wizard Form Options */}
-              <div className="space-y-4 text-xs font-bold">
-                <div>
-                  <label className="block text-indigo-300 mb-1">Gjatësia e Murit A (cm)</label>
-                  <input 
-                    type="number"
-                    value={aiWizard.wallLength}
-                    onChange={(e) => setAiWizard({ ...aiWizard, wallLength: Number(e.target.value) || 360 })}
-                    className="w-full bg-slate-950 border border-indigo-800/60 rounded-xl px-4 py-2.5 text-white font-black text-base"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <label className="flex items-center gap-2 bg-slate-950 p-3 rounded-xl border border-indigo-900/60 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={aiWizard.hasFridge}
-                      onChange={(e) => setAiWizard({ ...aiWizard, hasFridge: e.target.checked })}
-                      className="accent-emerald-500 w-4 h-4"
-                    />
-                    <span>Frigorifer = Po</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 bg-slate-950 p-3 rounded-xl border border-indigo-900/60 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={aiWizard.hasDishwasher}
-                      onChange={(e) => setAiWizard({ ...aiWizard, hasDishwasher: e.target.checked })}
-                      className="accent-emerald-500 w-4 h-4"
-                    />
-                    <span>Lavastovilje = Po</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 bg-slate-950 p-3 rounded-xl border border-indigo-900/60 cursor-pointer">
-                    <input 
-                      type="checkbox"
-                      checked={aiWizard.hasOven}
-                      onChange={(e) => setAiWizard({ ...aiWizard, hasOven: e.target.checked })}
-                      className="accent-emerald-500 w-4 h-4"
-                    />
-                    <span>Furrë = Po</span>
-                  </label>
-
-                  <div className="bg-slate-950 p-2.5 rounded-xl border border-indigo-900/60 flex items-center justify-between">
-                    <span className="text-slate-400">Lavapjatë:</span>
-                    <select
-                      value={aiWizard.sinkWidth}
-                      onChange={(e) => setAiWizard({ ...aiWizard, sinkWidth: Number(e.target.value) })}
-                      className="bg-slate-900 text-white font-bold rounded px-2 py-1 border border-indigo-800"
-                    >
-                      <option value={80}>80 cm</option>
-                      <option value={60}>60 cm</option>
-                      <option value={90}>90 cm</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Stili */}
-                <div>
-                  <label className="block text-indigo-300 mb-1.5">Stili i Kuzhinës:</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['Modern', 'Klasik', 'Handleless'].map((st) => (
-                      <button
-                        key={st}
-                        onClick={() => setAiWizard({ ...aiWizard, style: st as any })}
-                        className={`py-2 rounded-xl border text-center transition-all ${
-                          aiWizard.style === st ? 'bg-indigo-600 text-white border-indigo-400 shadow' : 'bg-slate-950 text-slate-400 border-slate-800'
-                        }`}
-                      >
-                        □ {st}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-indigo-900/60 flex gap-3">
-                <button
-                  onClick={handleExecuteAiMagicProposal}
-                  className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-indigo-600 to-purple-600 hover:brightness-110 active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2"
-                >
-                  <Wand2 className="w-4 h-4 text-amber-300" /> Gjenero Propozimin e Plotë me AI
-                </button>
-              </div>
-            </motion.div>
+        {/* STEP 10: STUDIO 3D CAD PËR TV WALL & MOBILJE */}
+        {activeStep === 10 && (
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <TvWallStudioMain onBack={() => setActiveStep(8)} showToast={showToast} />
           </motion.div>
         )}
-      </AnimatePresence>
+
+      </main>
+
+      {/* OFFICIAL FORMAL CREATOR FOOTER */}
+      <footer className="mt-12 py-6 border-t border-indigo-900/40 bg-slate-950/80 text-center px-4">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center text-amber-300 font-black text-base shadow-lg">
+              👑
+            </div>
+            <div className="text-left">
+              <span className="text-[10px] uppercase font-black tracking-widest text-amber-400 block">
+                Arkitektura Zyrtare e Platformës
+              </span>
+              <span className="text-xs font-black text-white">
+                Krijuar & Zhvilluar nga{' '}
+                <a
+                  href="https://www.instagram.com/mergimd1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-300 underline font-extrabold hover:text-amber-200 transition-colors inline-flex items-center gap-0.5 cursor-pointer"
+                  title="Klikoni për të hapur Instagramin e Mergim Dakaj (@mergimd1)"
+                >
+                  Mergim Dakaj ↗
+                </a>
+              </span>
+            </div>
+          </div>
+          <div className="text-xs text-slate-400 font-medium">
+            MergimGroup Pro Studio • Standard Inxhinierik për Kuzhina & Mobilje
+          </div>
+        </div>
+      </footer>
 
     </div>
   );

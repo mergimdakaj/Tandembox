@@ -1,8 +1,9 @@
 import { useState, useMemo, ReactNode } from 'react';
-import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maximize2, MoveRight, Frame } from 'lucide-react';
+import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maximize2, MoveRight, Frame, Scale } from 'lucide-react';
 import { motion } from 'motion/react';
 import { PanelCuttingOptimizer } from './PanelCuttingOptimizer';
 import { GlassProfileCalculator } from './GlassProfileCalculator';
+import { KitchenWeightCalculator } from './KitchenWeightCalculator';
 import { LOGO_DATA_URL } from '../assets/logo';
 
 interface Dimensions {
@@ -33,7 +34,7 @@ const ANTARO_HEIGHTS: Record<AntaroProfile, number> = {
 };
 
 export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<'calculator' | 'planner' | 'glass-profiles'>('calculator');
+  const [activeTab, setActiveTab] = useState<'calculator' | 'planner' | 'glass-profiles' | 'kitchen-weight'>('calculator');
   const [type, setType] = useState<CalculatorType>('fijoka-druri');
   const [kaca, setKaca] = useState<number>(90);
   const [llageri, setLlageri] = useState<number>(50);
@@ -200,8 +201,19 @@ Gjeneruar nga MergimGroup Tool
               />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight uppercase">Mergim Pro</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Llogaritësi i masave</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black tracking-tight uppercase">Mergim Pro</h1>
+                <a
+                  href="https://www.instagram.com/mergimd1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] uppercase font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md border border-indigo-200 transition-all inline-flex items-center gap-1 cursor-pointer"
+                  title="Klikoni për të hapur Instagramin e Mergim Dakaj (@mergimd1)"
+                >
+                  Nga Mergim Dakaj ↗
+                </a>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Llogaritësi Zyrtar i Masave & Mekanizmave Blum</p>
             </div>
           </div>
         </div>
@@ -209,7 +221,7 @@ Gjeneruar nga MergimGroup Tool
 
       {/* Tabs bar */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6 print:hidden">
-        <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-wrap gap-2 w-full max-w-xl mx-auto md:mx-0">
+        <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-wrap gap-2 w-full max-w-3xl mx-auto md:mx-0">
           <button
             onClick={() => setActiveTab('calculator')}
             className={`flex-1 py-2.5 px-3 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
@@ -239,6 +251,16 @@ Gjeneruar nga MergimGroup Tool
             }`}
           >
             <Frame className="w-4 h-4 text-emerald-400" /> Profila Xhami
+          </button>
+          <button
+            onClick={() => setActiveTab('kitchen-weight')}
+            className={`flex-1 py-2.5 px-3 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+              activeTab === 'kitchen-weight'
+                ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Scale className="w-4 h-4 text-amber-700" /> Pesha Totale per Kuzhina
           </button>
         </div>
       </div>
@@ -545,6 +567,10 @@ Gjeneruar nga MergimGroup Tool
       ) : activeTab === 'planner' ? (
         <main className="max-w-7xl mx-auto p-4 md:p-8">
           <PanelCuttingOptimizer />
+        </main>
+      ) : activeTab === 'kitchen-weight' ? (
+        <main className="max-w-7xl mx-auto p-4 md:p-8">
+          <KitchenWeightCalculator />
         </main>
       ) : (
         <main className="max-w-7xl mx-auto p-4 md:p-8">

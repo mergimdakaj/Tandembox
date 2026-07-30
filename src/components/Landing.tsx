@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Briefcase, Calculator, ArrowRight, ShieldCheck, Sparkles, Zap, Award, CheckCircle2, Wand2, Lock, KeyRound, X, AlertCircle } from 'lucide-react';
+import { Briefcase, Calculator, ArrowRight, ShieldCheck, Sparkles, Zap, Award, CheckCircle2, Wand2, Lock, KeyRound, X, AlertCircle, Tv, Box, Layers } from 'lucide-react';
 import { LOGO_DATA_URL } from '../assets/logo';
 
 interface LandingProps {
   onSelectWork: () => void;
   onSelectCalc: () => void;
-  onSelectAiStudio?: () => void;
+  onSelectTvWall: () => void;
 }
 
-export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: LandingProps) {
+export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingProps) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -23,7 +23,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
         if (nextPin === '1996') {
           setShowPinModal(false);
           setPin('');
-          if (onSelectAiStudio) onSelectAiStudio();
+          if (onSelectTvWall) onSelectTvWall();
         } else {
           setPinError(true);
           setTimeout(() => setPin(''), 500);
@@ -43,7 +43,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
       setShowPinModal(false);
       setPin('');
       setPinError(false);
-      if (onSelectAiStudio) onSelectAiStudio();
+      if (onSelectTvWall) onSelectTvWall();
     } else {
       setPinError(true);
       setTimeout(() => setPin(''), 500);
@@ -108,7 +108,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
         </h1>
         
         <p className="text-slate-300 text-sm sm:text-base lg:text-lg mb-10 font-medium leading-relaxed max-w-2xl mx-auto drop-shadow-md">
-          Zgjidhni modulain e punës, llogaritësin profesional ose Studio-n e Gjenerimit me AI.
+          Zgjidhni modulin e punës, llogaritësin profesional Mergim Pro ose Studio-n e Projektimit TV Wall.
         </p>
 
         {/* Entrance Cards Grid - 3 Modules Layout */}
@@ -218,59 +218,52 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
             </div>
           </motion.div>
 
-          {/* CARD 3: Ai Gjenerim (MODULI: KUZHINA PRO) */}
+          {/* CARD 3: Dizajn TV Wall (3D & 2D CAD Studio) */}
           <motion.div
             whileHover={{ y: -8, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            onClick={() => {
-              setPin('');
-              setPinError(false);
-              setShowPinModal(true);
-            }}
-            className="group relative cursor-pointer rounded-[36px] bg-gradient-to-b from-slate-900/90 via-purple-950/80 to-indigo-950/90 p-6 sm:p-8 border-2 border-amber-400/50 shadow-[0_15px_50px_rgba(124,58,237,0.3)] backdrop-blur-2xl overflow-hidden hover:border-amber-300 hover:shadow-[0_20px_60px_rgba(245,158,11,0.4)] transition-all duration-500"
+            onClick={onSelectTvWall}
+            className="group relative cursor-pointer rounded-[36px] bg-gradient-to-b from-slate-900/90 via-indigo-950/90 to-purple-950/80 p-6 sm:p-8 border border-amber-400/40 shadow-[0_15px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl overflow-hidden hover:border-amber-300 hover:shadow-[0_20px_60px_rgba(245,158,11,0.35)] transition-all duration-500"
           >
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-bl-[100px] pointer-events-none group-hover:bg-amber-500/20 transition-all"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-600/10 rounded-bl-[100px] pointer-events-none group-hover:bg-amber-600/20 transition-all"></div>
 
             <div className="relative z-10 flex flex-col h-full">
               <div className="flex items-center justify-between mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 via-purple-600 to-indigo-600 p-0.5 shadow-[0_10px_25px_rgba(245,158,11,0.5)] group-hover:shadow-[0_10px_35px_rgba(245,158,11,0.8)] group-hover:scale-110 transition-all duration-500">
-                  <div className="w-full h-full bg-slate-950/80 rounded-[14px] flex items-center justify-center text-white backdrop-blur-md">
-                    <Wand2 className="w-7 h-7 text-amber-300 group-hover:text-amber-200 transition-colors animate-pulse" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 via-indigo-600 to-purple-600 p-0.5 shadow-[0_10px_25px_rgba(245,158,11,0.4)] group-hover:shadow-[0_10px_35px_rgba(245,158,11,0.7)] group-hover:scale-110 transition-all duration-500">
+                  <div className="w-full h-full bg-slate-950/70 rounded-[14px] flex items-center justify-center text-white backdrop-blur-md">
+                    <Tv className="w-7 h-7 text-amber-300 group-hover:text-white transition-colors" />
                   </div>
                 </div>
 
-                <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500/20 border border-amber-400/50 text-amber-300 group-hover:bg-amber-500/30 transition-all flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-amber-300" /> ME KOD 1996
+                <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-400/30 text-amber-300 group-hover:bg-amber-500/20 transition-all">
+                  Studio 3D & 2D
                 </span>
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-black text-white mb-1 group-hover:text-amber-200 transition-colors flex items-center gap-2">
-                Ai Gjenerim
+              <h2 className="text-xl sm:text-2xl font-black text-white mb-2 group-hover:text-amber-200 transition-colors">
+                Dizajn TV Wall
               </h2>
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-2 block">
-                MODULI: KUZHINA PRO (E MBROJTUR)
-              </span>
 
               <p className="text-slate-300 text-xs font-medium mb-6 leading-relaxed">
-                Studio e plotë automatike me PIN hyrës: Canvas 2D/3D, Auto-Cutlist, Optimizim pllakash, Kosto & PDF!
+                Projektim i mureve dekorative për TV: 3D Studio, Harta 2D CAD, Tërhiq & Lësho, Materialet, LED & Kalkulimi i Çmimit.
               </p>
 
-              <div className="space-y-2 mb-8 text-[11px] text-slate-300/90 font-medium border-t border-purple-500/30 pt-4">
+              <div className="space-y-2 mb-8 text-[11px] text-slate-300/90 font-medium border-t border-amber-500/20 pt-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Kërkohet kodi 4-shifror për hyrje</span>
+                  <span>Interactive 3D View & Drag-and-Drop 2D</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Interactive Canvas & Lista e Prerjeve</span>
+                  <span>Kalkulim çmimi, Materiale Egger & PDF</span>
                 </div>
               </div>
 
               <div className="mt-auto pt-2 flex items-center justify-between text-amber-300 group-hover:text-white font-black text-xs uppercase tracking-widest">
                 <span className="flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
-                  Hap me Kod <Lock className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-200" />
+                  Hap Studio-n <ArrowRight className="w-4 h-4 text-amber-400 group-hover:text-amber-200" />
                 </span>
                 <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_10px_#f59e0b] animate-ping"></span>
               </div>
@@ -280,24 +273,50 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
         </div>
 
         {/* Bottom Luxury Stats & Security Badge */}
-        <div className="mt-12 sm:mt-16 pt-8 border-t border-white/10 flex flex-wrap items-center justify-center gap-6 sm:gap-12 text-slate-400 text-xs font-semibold">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-indigo-400" />
-            <span>Transmetim i Sigurt & Enkriptuar</span>
+        <div className="mt-12 sm:mt-16 pt-8 border-t border-white/10 flex flex-col items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-12 text-slate-400 text-xs font-semibold">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="w-5 h-5 text-indigo-400" />
+              <span>Transmetim i Sigurt & Enkriptuar</span>
+            </div>
+
+            <div className="hidden sm:block w-px h-5 bg-white/10"></div>
+
+            <div className="flex items-center gap-2.5">
+              <Award className="w-5 h-5 text-amber-400" />
+              <span>Standardi MergimGroup Pro</span>
+            </div>
+
+            <div className="hidden sm:block w-px h-5 bg-white/10"></div>
+
+            <div className="flex items-center gap-2.5">
+              <Zap className="w-5 h-5 text-emerald-400" />
+              <span>Përditësime në Kohë Reale</span>
+            </div>
           </div>
 
-          <div className="hidden sm:block w-px h-5 bg-white/10"></div>
-
-          <div className="flex items-center gap-2.5">
-            <Award className="w-5 h-5 text-amber-400" />
-            <span>Standardi MergimGroup Pro</span>
-          </div>
-
-          <div className="hidden sm:block w-px h-5 bg-white/10"></div>
-
-          <div className="flex items-center gap-2.5">
-            <Zap className="w-5 h-5 text-emerald-400" />
-            <span>Përditësime në Kohë Reale</span>
+          {/* Official Formal Creator Badge for Mergim Dakaj */}
+          <div className="mt-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 border border-amber-400/50 shadow-2xl flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/30 to-amber-600/20 border border-amber-400/60 flex items-center justify-center text-amber-300 font-black text-lg shadow-inner">
+              🏛️
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-black tracking-widest text-amber-400 block">
+                Arkitektura & Zhvillimi Zyrtar i Platformës
+              </span>
+              <span className="text-sm font-black text-white tracking-wide">
+                Konceptuar, Dizajnuar & Zhvilluar nga{' '}
+                <a
+                  href="https://www.instagram.com/mergimd1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-300 font-extrabold underline decoration-amber-400/60 decoration-2 underline-offset-4 hover:text-amber-200 hover:decoration-amber-300 transition-all inline-flex items-center gap-1 cursor-pointer"
+                  title="Klikoni për të hapur Instagramin e Mergim Dakaj (@mergimd1)"
+                >
+                  Mergim Dakaj <span className="text-xs">↗</span>
+                </a>
+              </span>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -326,9 +345,9 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-black text-white">Aksesi i Mbrojtur: Ai Gjenerim</h3>
+                  <h3 className="text-xl font-black text-white">Aksesi i Mbrojtur: Kuzhina Pro</h3>
                   <p className="text-xs text-slate-300 font-medium mt-1">
-                    Moduli është në zhvillim e sipër. Ju lutem shkruani kodin hyrës <span className="text-amber-300 font-bold">4-shifror</span> për të vazhduar:
+                    Moduli është i mbrojtur. Ju lutem shkruani kodin hyrës <span className="text-amber-300 font-bold">4-shifror</span> për të vazhduar:
                   </p>
                 </div>
 
@@ -379,7 +398,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
                         if (val === '1996') {
                           setShowPinModal(false);
                           setPin('');
-                          if (onSelectAiStudio) onSelectAiStudio();
+                          if (onSelectTvWall) onSelectTvWall();
                         } else {
                           setPinError(true);
                           setTimeout(() => setPin(''), 500);
@@ -424,7 +443,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectAiStudio }: Landin
                 </div>
 
                 <div className="pt-2 text-[11px] text-slate-400 font-medium">
-                  Moduli "Ai Gjenerim" • MergimGroup Pro Studio
+                  Moduli "Kuzhina Pro" • MergimGroup Pro Studio
                 </div>
               </div>
             </motion.div>
