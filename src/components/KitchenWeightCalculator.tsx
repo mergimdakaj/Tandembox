@@ -48,6 +48,11 @@ export interface ComponentWeight {
 }
 
 // Single Cabinet Element Item
+export interface DoorDimension {
+  widthMm?: number;
+  heightMm?: number;
+}
+
 export interface KitchenElementItem {
   id: string;
   name: string;
@@ -66,8 +71,9 @@ export interface KitchenElementItem {
   // Doors
   numDoors: number;
   doorMaterialId: string;
-  doorWidthMm?: number;   // Custom door width in mm per door
-  doorHeightMm?: number;  // Custom door height in mm per door
+  doorWidthMm?: number;   // Fallback / single door width in mm
+  doorHeightMm?: number;  // Fallback / single door height in mm
+  customDoors?: DoorDimension[]; // Dimensions for each door (Door 1, Door 2, etc.)
 
   // Backing & Hardware
   hasBacking: boolean;
@@ -391,20 +397,29 @@ export function KitchenWeightCalculator() {
       });
     }
 
-    // 4. Dyer / Frontet (Doors) - custom or calculated dimensions
+    // 4. Dyer / Frontet (Doors) - custom or calculated dimensions per door
     if (el.numDoors > 0) {
-      const dW = (el.doorWidthMm && el.doorWidthMm > 0) ? el.doorWidthMm : Math.round((el.widthMm / el.numDoors) - 3);
-      const dH = (el.doorHeightMm && el.doorHeightMm > 0) ? el.doorHeightMm : (el.heightMm - 3);
+      let totalDoorArea = 0;
+      const doorListDesc: string[] = [];
+      const defaultDW = (el.doorWidthMm && el.doorWidthMm > 0) ? el.doorWidthMm : Math.round((el.widthMm / el.numDoors) - 3);
+      const defaultDH = (el.doorHeightMm && el.doorHeightMm > 0) ? el.doorHeightMm : (el.heightMm - 3);
 
-      const doorArea = el.numDoors * ((dW / 1000) * (dH / 1000));
-      const doorKg = doorArea * doorMat.weightPerM2;
+      for (let i = 0; i < el.numDoors; i++) {
+        const custom = el.customDoors && el.customDoors[i];
+        const dW = (custom && custom.widthMm && custom.widthMm > 0) ? custom.widthMm : defaultDW;
+        const dH = (custom && custom.heightMm && custom.heightMm > 0) ? custom.heightMm : defaultDH;
+        totalDoorArea += (dW / 1000) * (dH / 1000);
+        doorListDesc.push(el.numDoors > 1 ? `D${i+1}:${dW}x${dH}` : `${dW}x${dH}mm`);
+      }
+
+      const doorKg = totalDoorArea * doorMat.weightPerM2;
 
       components.push({
-        partName: `${el.numDoors} Dyer/Front (${dW}x${dH}mm)`,
+        partName: `${el.numDoors} Dyer/Front (${doorListDesc.join(', ')})`,
         count: el.numDoors,
-        widthMm: dW,
-        heightMm: dH,
-        areaM2: Number(doorArea.toFixed(3)),
+        widthMm: defaultDW,
+        heightMm: defaultDH,
+        areaM2: Number(totalDoorArea.toFixed(3)),
         materialName: doorMat.name,
         weightPerM2: doorMat.weightPerM2,
         totalKg: Number(doorKg.toFixed(2))
@@ -1063,25 +1078,60 @@ export function KitchenWeightCalculator() {
                             </div>
 
                             {el.numDoors > 0 && (
-                              <div className="flex items-center gap-1 text-[10px] text-amber-300 font-mono">
-                                <span>W:</span>
-                                <input 
-                                  type="number" 
-                                  placeholder="Auto"
-                                  value={el.doorWidthMm || ''}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorWidthMm: Number(e.target.value) || undefined } : x))}
-                                  className="w-12 bg-slate-950 border border-amber-900 rounded px-1 text-center text-amber-300"
-                                  title="Gjerësia e derës"
-                                />
-                                <span>H:</span>
-                                <input 
-                                  type="number" 
-                                  placeholder="Auto"
-                                  value={el.doorHeightMm || ''}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorHeightMm: Number(e.target.value) || undefined } : x))}
-                                  className="w-12 bg-slate-950 border border-amber-900 rounded px-1 text-center text-amber-300"
-                                  title="Lartësia e derës"
-                                />
+                              <div className="space-y-1 mt-1">
+                                {Array.from({ length: el.numDoors }).map((_, doorIdx) => {
+                                  const doorDim = (el.customDoors && el.customDoors[doorIdx]) || {};
+                                  const currentW = doorDim.widthMm !== undefined ? doorDim.widthMm : (el.doorWidthMm || '');
+                                  const currentH = doorDim.heightMm !== undefined ? doorDim.heightMm : (el.doorHeightMm || '');
+
+                                  return (
+                                    <div key={doorIdx} className="flex items-center gap-1 text-[10px] text-amber-300 font-mono">
+                                      <span className="text-slate-400 font-bold text-[9px] min-w-[38px]">
+                                        {el.numDoors === 1 ? 'Derë:' : `D${doorIdx + 1}:`}
+                                      </span>
+                                      <span>W:</span>
+                                      <input 
+                                        type="number" 
+                                        placeholder="Auto"
+                                        value={currentW}
+                                        onChange={(e) => {
+                                          const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                          setKitchenElements(prev => prev.map(x => {
+                                            if (x.id !== el.id) return x;
+                                            const newCustomDoors = [...(x.customDoors || [])];
+                                            while (newCustomDoors.length < x.numDoors) {
+                                              newCustomDoors.push({ widthMm: x.doorWidthMm, heightMm: x.doorHeightMm });
+                                            }
+                                            newCustomDoors[doorIdx] = { ...newCustomDoors[doorIdx], widthMm: val };
+                                            return { ...x, customDoors: newCustomDoors };
+                                          }));
+                                        }}
+                                        className="w-12 bg-slate-950 border border-amber-900 rounded px-1 text-center text-amber-300"
+                                        title={`Gjerësia e derës ${doorIdx + 1}`}
+                                      />
+                                      <span>H:</span>
+                                      <input 
+                                        type="number" 
+                                        placeholder="Auto"
+                                        value={currentH}
+                                        onChange={(e) => {
+                                          const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                          setKitchenElements(prev => prev.map(x => {
+                                            if (x.id !== el.id) return x;
+                                            const newCustomDoors = [...(x.customDoors || [])];
+                                            while (newCustomDoors.length < x.numDoors) {
+                                              newCustomDoors.push({ widthMm: x.doorWidthMm, heightMm: x.doorHeightMm });
+                                            }
+                                            newCustomDoors[doorIdx] = { ...newCustomDoors[doorIdx], heightMm: val };
+                                            return { ...x, customDoors: newCustomDoors };
+                                          }));
+                                        }}
+                                        className="w-12 bg-slate-950 border border-amber-900 rounded px-1 text-center text-amber-300"
+                                        title={`Lartësia e derës ${doorIdx + 1}`}
+                                      />
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </td>
@@ -1339,27 +1389,61 @@ export function KitchenWeightCalculator() {
               </div>
 
               {builderForm.numDoors > 0 && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="block text-slate-400 text-[10px] mb-1">Gjerësia për 1 Derë (W mm):</label>
-                    <input 
-                      type="number"
-                      placeholder="Auto calculated width"
-                      value={builderForm.doorWidthMm || ''}
-                      onChange={(e) => setBuilderForm({ ...builderForm, doorWidthMm: Number(e.target.value) || undefined })}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1 text-amber-300 font-mono text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 text-[10px] mb-1">Lartësia e Derës (H mm):</label>
-                    <input 
-                      type="number"
-                      placeholder="Auto calculated height"
-                      value={builderForm.doorHeightMm || ''}
-                      onChange={(e) => setBuilderForm({ ...builderForm, doorHeightMm: Number(e.target.value) || undefined })}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1 text-amber-300 font-mono text-xs"
-                    />
-                  </div>
+                <div className="space-y-2 pt-2 border-t border-indigo-900/40">
+                  <span className="text-[10px] text-slate-400 font-bold block">
+                    Përmasat individuale për çdo derë (mm):
+                  </span>
+                  {Array.from({ length: builderForm.numDoors }).map((_, doorIdx) => {
+                    const doorDim = (builderForm.customDoors && builderForm.customDoors[doorIdx]) || {};
+                    const currentW = doorDim.widthMm !== undefined ? doorDim.widthMm : (builderForm.doorWidthMm || '');
+                    const currentH = doorDim.heightMm !== undefined ? doorDim.heightMm : (builderForm.doorHeightMm || '');
+
+                    return (
+                      <div key={doorIdx} className="p-2.5 bg-slate-900 rounded-xl border border-indigo-900/50 space-y-1">
+                        <span className="text-[10px] font-black text-amber-300 block">
+                          {builderForm.numDoors === 1 ? 'Derë:' : `Derë ${doorIdx + 1}:`}
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-slate-400 text-[9px] mb-0.5 font-bold">Gjerësia W (mm):</label>
+                            <input 
+                              type="number"
+                              placeholder="Auto width"
+                              value={currentW}
+                              onChange={(e) => {
+                                const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                const newCustomDoors = [...(builderForm.customDoors || [])];
+                                while (newCustomDoors.length < builderForm.numDoors) {
+                                  newCustomDoors.push({ widthMm: builderForm.doorWidthMm, heightMm: builderForm.doorHeightMm });
+                                }
+                                newCustomDoors[doorIdx] = { ...newCustomDoors[doorIdx], widthMm: val };
+                                setBuilderForm({ ...builderForm, customDoors: newCustomDoors });
+                              }}
+                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-slate-400 text-[9px] mb-0.5 font-bold">Lartësia H (mm):</label>
+                            <input 
+                              type="number"
+                              placeholder="Auto height"
+                              value={currentH}
+                              onChange={(e) => {
+                                const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                const newCustomDoors = [...(builderForm.customDoors || [])];
+                                while (newCustomDoors.length < builderForm.numDoors) {
+                                  newCustomDoors.push({ widthMm: builderForm.doorWidthMm, heightMm: builderForm.doorHeightMm });
+                                }
+                                newCustomDoors[doorIdx] = { ...newCustomDoors[doorIdx], heightMm: val };
+                                setBuilderForm({ ...builderForm, customDoors: newCustomDoors });
+                              }}
+                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
