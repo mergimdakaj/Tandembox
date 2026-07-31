@@ -355,11 +355,11 @@ export function KitchenWeightCalculator() {
 
   // Preset catalog state (persisted in localStorage, allowing standard created items to be saved into Kërko Elementet me Pesha)
   const [presetCatalog, setPresetCatalog] = useState<CatalogPresetItem[]>(() => {
-    const saved = localStorage.getItem('mergim_preset_catalog_v5');
+    const saved = localStorage.getItem('mergim_preset_catalog_v6');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {
         console.error('Error loading preset catalog:', e);
       }
@@ -368,7 +368,7 @@ export function KitchenWeightCalculator() {
   });
 
   useEffect(() => {
-    localStorage.setItem('mergim_preset_catalog_v5', JSON.stringify(presetCatalog));
+    localStorage.setItem('mergim_preset_catalog_v6', JSON.stringify(presetCatalog));
   }, [presetCatalog]);
 
   // Quick Element Modal State
@@ -434,14 +434,14 @@ export function KitchenWeightCalculator() {
     localStorage.setItem('mergim_weight_materials', JSON.stringify(materials));
   }, [materials]);
 
-  // Kitchen Project Elements List (Persisted in localStorage)
+  // Kitchen Project Elements List (Persisted in localStorage, defaults to empty list)
   const [kitchenElements, setKitchenElements] = useState<KitchenElementItem[]>(() => {
-    const saved = localStorage.getItem('mergim_kitchen_project_elements');
-    return saved ? JSON.parse(saved) : DEFAULT_KITCHEN_ELEMENTS;
+    const saved = localStorage.getItem('mergim_kitchen_project_elements_v6');
+    return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('mergim_kitchen_project_elements', JSON.stringify(kitchenElements));
+    localStorage.setItem('mergim_kitchen_project_elements_v6', JSON.stringify(kitchenElements));
   }, [kitchenElements]);
 
   // Saved Projects List (Persisted in localStorage)
@@ -547,9 +547,7 @@ export function KitchenWeightCalculator() {
 
   // Clear list handler
   const handleClearKitchenElements = () => {
-    if (window.confirm('A jeni të sigurt që dëshironi të pastroni (zbrazni) të gjithë listën e elementeve të këtij projekti?')) {
-      setKitchenElements([]);
-    }
+    setKitchenElements([]);
   };
 
   // Quick Element Submission Handler
@@ -1709,14 +1707,6 @@ export function KitchenWeightCalculator() {
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Pastro Listën (Zbraz)
                   </button>
-
-                  {/* Custom Addition Button */}
-                  <button
-                    onClick={handleAddCustomElement}
-                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" /> + Shto Custom
-                  </button>
                 </div>
               </div>
 
@@ -1808,9 +1798,21 @@ export function KitchenWeightCalculator() {
                                   {preset.widthMm} × {preset.heightMm} × {preset.depthMm} mm
                                 </span>
                               </div>
-                              <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-mono text-[10px] font-black shrink-0">
-                                ~{preset.approxKg} kg
-                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-mono text-[10px] font-black">
+                                  ~{preset.approxKg} kg
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPresetCatalog(prev => prev.filter(p => p.id !== preset.id));
+                                  }}
+                                  className="p-1.5 text-rose-400 hover:text-white hover:bg-rose-600 bg-rose-950/60 rounded-lg border border-rose-800/80 transition-all cursor-pointer shadow-sm active:scale-95 flex items-center justify-center"
+                                  title="Fshij nga katalogu"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
 
                             {/* Quick Add Buttons */}
