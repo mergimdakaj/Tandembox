@@ -1,6 +1,6 @@
 import { useState, useMemo, ReactNode } from 'react';
-import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maximize2, MoveRight, Frame, Scale } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Settings, Ruler, Box, Info, Calculator, Download, Printer, Layers, Maximize2, MoveRight, Frame, Scale, Lock, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { PanelCuttingOptimizer } from './PanelCuttingOptimizer';
 import { GlassProfileCalculator } from './GlassProfileCalculator';
 import { KitchenWeightCalculator } from './KitchenWeightCalculator';
@@ -35,6 +35,24 @@ const ANTARO_HEIGHTS: Record<AntaroProfile, number> = {
 
 export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<'calculator' | 'planner' | 'glass-profiles' | 'kitchen-weight'>('calculator');
+  const [isKitchenWeightUnlocked, setIsKitchenWeightUnlocked] = useState(false);
+  const [showWeightPinModal, setShowWeightPinModal] = useState(false);
+  const [weightPin, setWeightPin] = useState('');
+  const [weightPinError, setWeightPinError] = useState(false);
+
+  const handleWeightPinSubmit = (pinVal: string) => {
+    if (pinVal === '1994') {
+      setIsKitchenWeightUnlocked(true);
+      setShowWeightPinModal(false);
+      setWeightPin('');
+      setWeightPinError(false);
+      setActiveTab('kitchen-weight');
+    } else {
+      setWeightPinError(true);
+      setTimeout(() => setWeightPin(''), 500);
+    }
+  };
+
   const [type, setType] = useState<CalculatorType>('fijoka-druri');
   const [kaca, setKaca] = useState<number>(90);
   const [llageri, setLlageri] = useState<number>(50);
@@ -253,7 +271,13 @@ Gjeneruar nga MergimGroup Tool
             <Frame className="w-4 h-4 text-emerald-400" /> Profila Xhami
           </button>
           <button
-            onClick={() => setActiveTab('kitchen-weight')}
+            onClick={() => {
+              if (isKitchenWeightUnlocked) {
+                setActiveTab('kitchen-weight');
+              } else {
+                setShowWeightPinModal(true);
+              }
+            }}
             className={`flex-1 py-2.5 px-3 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === 'kitchen-weight'
                 ? 'bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
@@ -577,6 +601,121 @@ Gjeneruar nga MergimGroup Tool
           <GlassProfileCalculator />
         </main>
       )}
+
+      {/* PIN Passcode Modal for Pesha Totale (Code 1994) */}
+      <AnimatePresence>
+        {showWeightPinModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-slate-900 border border-amber-400/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-[0_25px_60px_rgba(0,0,0,0.8)] text-center relative overflow-hidden"
+            >
+              <button
+                onClick={() => {
+                  setShowWeightPinModal(false);
+                  setWeightPin('');
+                  setWeightPinError(false);
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 p-0.5 mx-auto mb-4 shadow-xl">
+                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-amber-300">
+                  <Lock className="w-8 h-8" />
+                </div>
+              </div>
+
+              <h3 className="text-xl font-black text-white mb-1">Qasje me Kod</h3>
+              <p className="text-xs text-slate-400 mb-6 font-medium">
+                Shkruaj kodin e sigurisë për të hapur modulin "Pesha Totale per Kuzhina".
+              </p>
+
+              <div className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleWeightPinSubmit(weightPin); }}>
+                  <input
+                    type="password"
+                    maxLength={4}
+                    value={weightPin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setWeightPin(val);
+                      setWeightPinError(false);
+                      if (val.length === 4) {
+                        handleWeightPinSubmit(val);
+                      }
+                    }}
+                    placeholder="Shkruaj kodin..."
+                    className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-center text-white font-mono font-black text-xl tracking-[0.5em] focus:outline-none transition-all ${
+                      weightPinError ? 'border-rose-500 animate-shake' : 'border-amber-400/50 focus:border-amber-400'
+                    }`}
+                    autoFocus
+                  />
+                </form>
+
+                {weightPinError && (
+                  <p className="text-xs text-rose-400 font-bold">Kodi është i pasaktë! Provojeni përsëri.</p>
+                )}
+
+                {/* Keypad Buttons */}
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                    <button
+                      key={digit}
+                      onClick={() => {
+                        if (weightPin.length < 4) {
+                          const next = weightPin + digit;
+                          setWeightPin(next);
+                          setWeightPinError(false);
+                          if (next.length === 4) {
+                            handleWeightPinSubmit(next);
+                          }
+                        }
+                      }}
+                      className="py-3 bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-white font-black text-lg rounded-xl border border-slate-800 transition-all active:scale-95"
+                    >
+                      {digit}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setWeightPin('')}
+                    className="py-3 bg-slate-950 hover:bg-slate-800 text-slate-400 font-bold text-xs rounded-xl border border-slate-800"
+                  >
+                    FSHIJ
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (weightPin.length < 4) {
+                        const next = weightPin + '0';
+                        setWeightPin(next);
+                        setWeightPinError(false);
+                        if (next.length === 4) {
+                          handleWeightPinSubmit(next);
+                        }
+                      }
+                    }}
+                    className="py-3 bg-slate-950 hover:bg-amber-500 hover:text-slate-950 text-white font-black text-lg rounded-xl border border-slate-800 transition-all active:scale-95"
+                  >
+                    0
+                  </button>
+                  <button
+                    onClick={() => {
+                      setWeightPin(prev => prev.slice(0, -1));
+                      setWeightPinError(false);
+                    }}
+                    className="py-3 bg-slate-950 hover:bg-slate-800 text-amber-300 font-bold text-xs rounded-xl border border-slate-800 flex items-center justify-center"
+                  >
+                    ⌫
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

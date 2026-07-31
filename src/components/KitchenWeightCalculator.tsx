@@ -28,7 +28,17 @@ import {
   Sparkles,
   Layers3,
   Columns3,
-  LayoutGrid
+  LayoutGrid,
+  Eye,
+  Lock,
+  Unlock,
+  Maximize2,
+  X,
+  MapPin,
+  Check,
+  Compass,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 
 // Material Interface in the database
@@ -60,12 +70,14 @@ export interface DoorDimension {
 }
 
 export type ElementPosition = 'lart' | 'posht' | 'kolone' | 'raft_lart' | 'raft_posht';
+export type SideTag = 'majtas' | 'djathtas' | 'qender' | 'kend';
 
 // Single Cabinet Element Item
 export interface KitchenElementItem {
   id: string;
   name: string;
   position: ElementPosition; // Position: Wall, Base, Column, Wall Shelf, Base Shelf
+  sideTag?: SideTag;         // Side Orientation: Majtas, Djathtas, Qendër, Kënd
   widthMm: number;  // e.g. 600
   heightMm: number; // e.g. 720
   depthMm: number;  // e.g. 560
@@ -291,8 +303,242 @@ const DEFAULT_KITCHEN_ELEMENTS: KitchenElementItem[] = [
   }
 ];
 
+export interface CatalogPresetItem {
+  id: string;
+  name: string;
+  position: ElementPosition;
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  carcaseMaterialId: string;
+  numShelves: number;
+  shelfMaterialId: string;
+  numDoors: number;
+  doorMaterialId: string;
+  doorWidthMm?: number;
+  doorHeightMm?: number;
+  hasBacking: boolean;
+  backingMaterialId: string;
+  hardwareKg: number;
+  quantity: number;
+  approxKg: number;
+  categoryLabel: 'Base Cabinets' | 'Wall Cabinets' | 'Tall Cabinets' | 'Drawer Units';
+}
+
+export const PRESET_CATALOG_ITEMS: CatalogPresetItem[] = [
+  // Base Cabinets (Poshtë)
+  {
+    id: 'preset-baza-30',
+    name: 'Baza 30 cm (1 Derë)',
+    position: 'posht',
+    widthMm: 300, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 297, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.5, quantity: 1,
+    approxKg: 24.5, categoryLabel: 'Base Cabinets'
+  },
+  {
+    id: 'preset-baza-40',
+    name: 'Baza 40 cm (1 Derë)',
+    position: 'posht',
+    widthMm: 400, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.8, quantity: 1,
+    approxKg: 28.5, categoryLabel: 'Base Cabinets'
+  },
+  {
+    id: 'preset-baza-50',
+    name: 'Baza 50 cm (1 Derë)',
+    position: 'posht',
+    widthMm: 500, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 497, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.0, quantity: 1,
+    approxKg: 32.5, categoryLabel: 'Base Cabinets'
+  },
+  {
+    id: 'preset-baza-60',
+    name: 'Baza 60 cm (1 Derë)',
+    position: 'posht',
+    widthMm: 600, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.2, quantity: 1,
+    approxKg: 37.0, categoryLabel: 'Base Cabinets'
+  },
+  {
+    id: 'preset-baza-80',
+    name: 'Baza 80 cm (2 Dyer)',
+    position: 'posht',
+    widthMm: 800, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.8, quantity: 1,
+    approxKg: 45.0, categoryLabel: 'Base Cabinets'
+  },
+  {
+    id: 'preset-baza-90',
+    name: 'Baza 90 cm (2 Dyer)',
+    position: 'posht',
+    widthMm: 900, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 447, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 3.0, quantity: 1,
+    approxKg: 49.0, categoryLabel: 'Base Cabinets'
+  },
+  // Drawer Units (Fioka)
+  {
+    id: 'preset-fioka-60',
+    name: 'Fioka Baza 60 cm (3 Fioka)',
+    position: 'posht',
+    widthMm: 600, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 0, shelfMaterialId: 'mat-iv-18',
+    numDoors: 3, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 236,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 5.5, quantity: 1,
+    approxKg: 41.5, categoryLabel: 'Drawer Units'
+  },
+  {
+    id: 'preset-fioka-80',
+    name: 'Fioka Baza 80 cm (3 Fioka)',
+    position: 'posht',
+    widthMm: 800, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 0, shelfMaterialId: 'mat-iv-18',
+    numDoors: 3, doorMaterialId: 'mat-mdf-22', doorWidthMm: 797, doorHeightMm: 236,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 6.2, quantity: 1,
+    approxKg: 47.8, categoryLabel: 'Drawer Units'
+  },
+  {
+    id: 'preset-fioka-90',
+    name: 'Fioka Baza 90 cm (3 Fioka)',
+    position: 'posht',
+    widthMm: 900, heightMm: 720, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 0, shelfMaterialId: 'mat-iv-18',
+    numDoors: 3, doorMaterialId: 'mat-mdf-22', doorWidthMm: 897, doorHeightMm: 236,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 7.0, quantity: 1,
+    approxKg: 52.0, categoryLabel: 'Drawer Units'
+  },
+  // Wall Cabinets (Pezull / Lart)
+  {
+    id: 'preset-lart-40',
+    name: 'Pezull Lart 40 cm (1 Derë)',
+    position: 'lart',
+    widthMm: 400, heightMm: 720, depthMm: 350,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-iv-18',
+    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.5, quantity: 1,
+    approxKg: 18.2, categoryLabel: 'Wall Cabinets'
+  },
+  {
+    id: 'preset-lart-60',
+    name: 'Pezull Lart 60 cm (1 Derë)',
+    position: 'lart',
+    widthMm: 600, heightMm: 720, depthMm: 350,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-iv-18',
+    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.8, quantity: 1,
+    approxKg: 23.5, categoryLabel: 'Wall Cabinets'
+  },
+  {
+    id: 'preset-lart-80',
+    name: 'Pezull Lart 80 cm (2 Dyer)',
+    position: 'lart',
+    widthMm: 800, heightMm: 720, depthMm: 350,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-iv-18',
+    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.5, quantity: 1,
+    approxKg: 29.8, categoryLabel: 'Wall Cabinets'
+  },
+  {
+    id: 'preset-lart-vitrine-80',
+    name: 'Pezull Vitrinë me Xham 80 cm',
+    position: 'lart',
+    widthMm: 800, heightMm: 720, depthMm: 350,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-xham-4',
+    numDoors: 2, doorMaterialId: 'mat-xham-4', doorWidthMm: 397, doorHeightMm: 716,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 3.2, quantity: 1,
+    approxKg: 28.0, categoryLabel: 'Wall Cabinets'
+  },
+  // Tall Cabinets (Kolonë / Spajz)
+  {
+    id: 'preset-kolone-60',
+    name: 'Kolonë Shpajz 60x210 cm',
+    position: 'kolone',
+    widthMm: 600, heightMm: 2100, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 4, shelfMaterialId: 'mat-iv-18',
+    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 1040,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 4.5, quantity: 1,
+    approxKg: 65.0, categoryLabel: 'Tall Cabinets'
+  },
+  {
+    id: 'preset-kolone-frigo-60',
+    name: 'Kolonë Frigorifer 60x210 cm',
+    position: 'kolone',
+    widthMm: 600, heightMm: 2100, depthMm: 560,
+    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
+    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 1040,
+    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 3.8, quantity: 1,
+    approxKg: 58.5, categoryLabel: 'Tall Cabinets'
+  }
+];
+
 export function KitchenWeightCalculator() {
-  const [activeTab, setActiveTab] = useState<'kitchen-project' | 'pallets-view' | 'single' | 'materials-db' | 'saved-projects'>('kitchen-project');
+  const [activeTab, setActiveTab] = useState<'kitchen-project' | 'single' | 'materials-db' | 'saved-projects'>('kitchen-project');
+
+  // Preset catalog state (persisted in localStorage, allowing standard created items to be saved into Kërko Elementet me Pesha)
+  const [presetCatalog, setPresetCatalog] = useState<CatalogPresetItem[]>(() => {
+    const saved = localStorage.getItem('mergim_preset_catalog_v2');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.error('Error loading preset catalog:', e);
+      }
+    }
+    return PRESET_CATALOG_ITEMS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mergim_preset_catalog_v2', JSON.stringify(presetCatalog));
+  }, [presetCatalog]);
+
+  // Quick Element Modal State
+  const [isQuickElementModalOpen, setIsQuickElementModalOpen] = useState<boolean>(false);
+  const [expandedElementId, setExpandedElementId] = useState<string | null>(null);
+  const [quickForm, setQuickForm] = useState({
+    name: 'Element i Shpejtë / Kolonë / Derë',
+    position: 'posht' as ElementPosition,
+    widthMm: 600,
+    heightMm: 720,
+    depthMm: 560,
+    hasAnsores: true,
+    ansoresThickness: 18 as 18 | 22,
+    numShelves: 1, // 0 for Jo Raft, 1+ for Raft
+    numDoors: 1, // 0 for Pa Derë, 1 for 1 Derë, 2 for 2 Dyer
+    doorThickness: 22 as 19 | 22,
+    door1WidthMm: 597,
+    door1HeightMm: 716,
+    door2WidthMm: 297,
+    door2HeightMm: 716,
+    hasBacking: true,
+    saveToPresetCatalog: true,
+    quantity: 1
+  });
+
+  // Modal to inspect Pallets overview
+  const [isPalletModalOpen, setIsPalletModalOpen] = useState<boolean>(false);
+
+  // Catalog search & filter state
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
+  const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<'all' | 'Base Cabinets' | 'Wall Cabinets' | 'Tall Cabinets' | 'Drawer Units'>('all');
+
+  // Pallet Studio 3D Interactive View State (Photo 3 matching)
+  const [selectedStudioPallet, setSelectedStudioPallet] = useState<number>(1);
+  const [studioPalletType, setStudioPalletType] = useState<'euro' | 'american'>('euro');
+  const [studioViewMode, setStudioViewMode] = useState<'3D' | '2D'>('3D');
+  const [studioRotateDeg, setStudioRotateDeg] = useState<number>(0);
+  const [studioSnapOn, setStudioSnapOn] = useState<boolean>(true);
 
   // Kitchen Code & Name
   const [kitchenCode, setKitchenCode] = useState<string>(() => {
@@ -359,8 +605,43 @@ export function KitchenWeightCalculator() {
     localStorage.setItem('mergim_custom_pallets_list', JSON.stringify(customPallets));
   }, [customPallets]);
 
+  const handleRemovePallet = (palletNoToRemove: number) => {
+    if (customPallets.length <= 1) return;
+    setCustomPallets(prev => prev.filter(p => p !== palletNoToRemove));
+    setKitchenElements(prev => prev.map(el => el.palletNumber === palletNoToRemove ? { ...el, palletNumber: 1 } : el));
+    if (selectedActivePallet === palletNoToRemove) {
+      setSelectedActivePallet(1);
+    }
+  };
+
+  // Selected Active Pallet for Step-by-Step workflow
+  const [selectedActivePallet, setSelectedActivePallet] = useState<number>(1);
+
+  // Completed / Sealed Pallets List
+  const [completedPallets, setCompletedPallets] = useState<number[]>(() => {
+    const saved = localStorage.getItem('mergim_completed_pallets');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mergim_completed_pallets', JSON.stringify(completedPallets));
+  }, [completedPallets]);
+
+  // Step 1 Initial Wizard State - Always start from beginning screen when opening app
+  const [isStarted, setIsStarted] = useState<boolean>(false);
+
+  // Selected element for visual selection & quick pallet assignment
+  const [selectedVisualElementId, setSelectedVisualElementId] = useState<string | null>(null);
+
+  // Pallet Type: 'euro' (1200x800) | 'american' (1200x1000)
+  const [palletType, setPalletType] = useState<'euro' | 'american'>('euro');
+
   // Selected pallet ID for "Futem ne Paletë" detailed inspect modal/view
   const [activePalletModal, setActivePalletModal] = useState<number | null>(null);
+  const [inspectModalTab, setInspectModalTab] = useState<'list' | 'map2d'>('list');
 
   // Single Element Builder Form State
   const [builderForm, setBuilderForm] = useState<KitchenElementItem>({
@@ -392,6 +673,165 @@ export function KitchenWeightCalculator() {
   const [newMatThickness, setNewMatThickness] = useState<number>(18);
   const [newMatWeight, setNewMatWeight] = useState<number>(10.5);
   const [newMatCategory, setNewMatCategory] = useState<WeightMaterial['category']>('iverice');
+
+  // Clear list handler
+  const handleClearKitchenElements = () => {
+    if (window.confirm('A jeni të sigurt që dëshironi të pastroni (zbrazni) të gjithë listën e elementeve të këtij projekti?')) {
+      setKitchenElements([]);
+    }
+  };
+
+  // Quick Element Submission Handler
+  const handleAddQuickElementSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const doorMatId = quickForm.doorThickness === 22 ? 'mat-mdf-22' : 'mat-mdf-19';
+    const carcaseMatId = quickForm.ansoresThickness === 22 ? 'mat-iv-22' : 'mat-iv-18';
+    const newId = `quick-el-${Date.now()}`;
+
+    // Custom doors array if 2 doors or custom door size
+    const customDoors: DoorDimension[] = [];
+    if (quickForm.numDoors >= 1) {
+      customDoors.push({
+        widthMm: quickForm.door1WidthMm || (quickForm.numDoors === 2 ? Math.floor(quickForm.widthMm / 2) - 3 : Math.max(100, quickForm.widthMm - 3)),
+        heightMm: quickForm.door1HeightMm || Math.max(100, quickForm.heightMm - 4)
+      });
+    }
+    if (quickForm.numDoors >= 2) {
+      customDoors.push({
+        widthMm: quickForm.door2WidthMm || Math.floor(quickForm.widthMm / 2) - 3,
+        heightMm: quickForm.door2HeightMm || Math.max(100, quickForm.heightMm - 4)
+      });
+    }
+    
+    const newItem: KitchenElementItem = {
+      id: newId,
+      name: quickForm.name || (quickForm.position === 'kolone' ? 'Kolonë / Shpajz' : 'Element i Shpejtë'),
+      position: quickForm.position,
+      widthMm: quickForm.widthMm,
+      heightMm: quickForm.heightMm,
+      depthMm: quickForm.depthMm,
+      carcaseMaterialId: carcaseMatId,
+      numShelves: quickForm.numShelves,
+      shelfMaterialId: 'mat-iv-18',
+      shelfWidthMm: Math.max(100, quickForm.widthMm - 36),
+      shelfDepthMm: Math.max(100, quickForm.depthMm - 20),
+      numDoors: quickForm.numDoors,
+      doorMaterialId: doorMatId,
+      doorWidthMm: customDoors[0]?.widthMm || Math.max(100, quickForm.widthMm - 3),
+      doorHeightMm: customDoors[0]?.heightMm || Math.max(100, quickForm.heightMm - 4),
+      customDoors: customDoors.length > 0 ? customDoors : undefined,
+      hasBacking: quickForm.hasBacking,
+      backingMaterialId: 'mat-hdf-3',
+      hardwareKg: quickForm.numDoors > 0 ? (quickForm.position === 'kolone' ? 4.5 : 2.5) : 0.8,
+      quantity: quickForm.quantity || 1,
+      isCompleted: false,
+      palletNumber: selectedActivePallet || 1
+    };
+
+    // Add to current active elements list
+    setKitchenElements(prev => [...prev, newItem]);
+
+    // Optionally save to presetCatalog so it appears permanently in Kërko Elementet me Pesha
+    if (quickForm.saveToPresetCatalog) {
+      const calc = calculateElementBreakdown(newItem);
+      const catLabel = quickForm.position === 'lart' || quickForm.position === 'raft_lart' 
+        ? 'Wall Cabinets' 
+        : quickForm.position === 'kolone' 
+        ? 'Tall Cabinets' 
+        : 'Base Cabinets';
+
+      const newPreset: CatalogPresetItem = {
+        id: `preset-custom-${Date.now()}`,
+        name: newItem.name,
+        position: newItem.position,
+        widthMm: newItem.widthMm,
+        heightMm: newItem.heightMm,
+        depthMm: newItem.depthMm,
+        carcaseMaterialId: newItem.carcaseMaterialId,
+        numShelves: newItem.numShelves,
+        shelfMaterialId: newItem.shelfMaterialId,
+        numDoors: newItem.numDoors,
+        doorMaterialId: newItem.doorMaterialId,
+        doorWidthMm: newItem.doorWidthMm,
+        doorHeightMm: newItem.doorHeightMm,
+        hasBacking: newItem.hasBacking,
+        backingMaterialId: newItem.backingMaterialId,
+        hardwareKg: newItem.hardwareKg,
+        quantity: 1,
+        approxKg: parseFloat(calc.finalUnitKg.toFixed(1)),
+        categoryLabel: catLabel
+      };
+
+      setPresetCatalog(prev => [newPreset, ...prev]);
+    }
+
+    setIsQuickElementModalOpen(false);
+  };
+
+  // Register from Single Module Builder into Preset Catalog
+  const handleSaveBuilderToPresetCatalog = () => {
+    const calc = calculateElementBreakdown(builderForm);
+    const catLabel = builderForm.position === 'lart' || builderForm.position === 'raft_lart' 
+      ? 'Wall Cabinets' 
+      : builderForm.position === 'kolone' 
+      ? 'Tall Cabinets' 
+      : 'Base Cabinets';
+
+    const newPreset: CatalogPresetItem = {
+      id: `preset-builder-${Date.now()}`,
+      name: builderForm.name || 'Modul Standard i Ri',
+      position: builderForm.position,
+      widthMm: builderForm.widthMm,
+      heightMm: builderForm.heightMm,
+      depthMm: builderForm.depthMm,
+      carcaseMaterialId: builderForm.carcaseMaterialId,
+      numShelves: builderForm.numShelves,
+      shelfMaterialId: builderForm.shelfMaterialId,
+      numDoors: builderForm.numDoors,
+      doorMaterialId: builderForm.doorMaterialId,
+      doorWidthMm: builderForm.doorWidthMm,
+      doorHeightMm: builderForm.doorHeightMm,
+      hasBacking: builderForm.hasBacking,
+      backingMaterialId: builderForm.backingMaterialId,
+      hardwareKg: builderForm.hardwareKg,
+      quantity: 1,
+      approxKg: parseFloat(calc.finalUnitKg.toFixed(1)),
+      categoryLabel: catLabel
+    };
+
+    setPresetCatalog(prev => [newPreset, ...prev]);
+    alert(`Moduli "${builderForm.name}" u regjistrua me sukses në Katalogun Standard ("Kërko Elementet me Pesha")!`);
+  };
+
+  // Add Preset item handler
+  const handleAddPresetToKitchenElements = (preset: CatalogPresetItem, targetPalletNo?: number) => {
+    const newId = `preset-el-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const palletAssigned = targetPalletNo !== undefined ? targetPalletNo : (selectedActivePallet || 1);
+    const newItem: KitchenElementItem = {
+      id: newId,
+      name: preset.name,
+      position: preset.position,
+      widthMm: preset.widthMm,
+      heightMm: preset.heightMm,
+      depthMm: preset.depthMm,
+      carcaseMaterialId: preset.carcaseMaterialId,
+      numShelves: preset.numShelves,
+      shelfMaterialId: preset.shelfMaterialId,
+      shelfWidthMm: preset.widthMm - 36,
+      shelfDepthMm: preset.depthMm - 20,
+      numDoors: preset.numDoors,
+      doorMaterialId: preset.doorMaterialId,
+      doorWidthMm: preset.doorWidthMm,
+      doorHeightMm: preset.doorHeightMm,
+      hasBacking: preset.hasBacking,
+      backingMaterialId: preset.backingMaterialId,
+      hardwareKg: preset.hardwareKg,
+      quantity: 1,
+      isCompleted: false,
+      palletNumber: palletAssigned
+    };
+    setKitchenElements(prev => [...prev, newItem]);
+  };
 
   // Helper to get material object
   const getMaterial = (id: string): WeightMaterial => {
@@ -530,11 +970,21 @@ export function KitchenWeightCalculator() {
       ? el.overrideTotalKg 
       : Number(calculatedTotalKg.toFixed(2));
 
+    const carcaseKg = sidesKg + topBotKg;
+    const shelfKgVal = el.numShelves > 0 ? components.filter(c => c.partName.includes('Raft')).reduce((a,b) => a + b.totalKg, 0) : 0;
+    const doorKgVal = el.numDoors > 0 ? components.filter(c => c.partName.includes('Dyer')).reduce((a,b) => a + b.totalKg, 0) : 0;
+    const backingKgVal = el.hasBacking ? components.filter(c => c.partName.includes('Kurrizi')).reduce((a,b) => a + b.totalKg, 0) : 0;
+
     return {
       components,
       calculatedTotalKg: Number(calculatedTotalKg.toFixed(2)),
       finalUnitKg,
-      totalLineKg: Number((finalUnitKg * el.quantity).toFixed(2))
+      totalLineKg: Number((finalUnitKg * el.quantity).toFixed(2)),
+      carcaseKg: Number(carcaseKg.toFixed(2)),
+      shelvesKg: Number(shelfKgVal.toFixed(2)),
+      doorsKg: Number(doorKgVal.toFixed(2)),
+      backingKg: Number(backingKgVal.toFixed(2)),
+      hardwareKg: el.hardwareKg || 0
     };
   };
 
@@ -660,7 +1110,52 @@ export function KitchenWeightCalculator() {
     const maxNumber = customPallets.length > 0 ? Math.max(...customPallets) : 0;
     const newPalletNo = maxNumber + 1;
     setCustomPallets(prev => [...prev, newPalletNo]);
+    setSelectedActivePallet(newPalletNo);
     alert(`U shtua me sukses "Paleta ${newPalletNo}"! Tani mund të vendosni elemente në të.`);
+  };
+
+  // Function to Mark a Pallet as Completed ("Përfundo Paletën 1") and move to Next
+  const handleFinishPallet = (palletNo: number) => {
+    if (!completedPallets.includes(palletNo)) {
+      setCompletedPallets(prev => [...prev, palletNo]);
+    }
+    const nextPalletNo = palletNo + 1;
+    if (!customPallets.includes(nextPalletNo)) {
+      setCustomPallets(prev => [...prev, nextPalletNo]);
+    }
+    setSelectedActivePallet(nextPalletNo);
+    alert(`✅ Paleta #${palletNo} u mbyll dhe u shënua si e PËRFUNDUAR për projektin ${kitchenCode} (${kitchenName})!\n\nTani po vazhdoni automatikisht me Paletën #${nextPalletNo}.`);
+  };
+
+  // Function to Re-open a Completed Pallet
+  const handleReopenPallet = (palletNo: number) => {
+    setCompletedPallets(prev => prev.filter(p => p !== palletNo));
+    setSelectedActivePallet(palletNo);
+  };
+
+  // Add Element Directly into a specific Pallet
+  const handleAddElementDirectlyToPallet = (palletNo: number) => {
+    const id = `k-el-${Date.now()}`;
+    const newEl: KitchenElementItem = {
+      id,
+      name: `Element i Ri në Paletën #${palletNo}`,
+      position: 'posht',
+      sideTag: 'majtas',
+      widthMm: 600,
+      heightMm: 720,
+      depthMm: 560,
+      carcaseMaterialId: 'mat-iv-18',
+      numShelves: 1,
+      shelfMaterialId: 'mat-iv-18',
+      numDoors: 1,
+      doorMaterialId: 'mat-mdf-22',
+      hasBacking: true,
+      backingMaterialId: 'mat-hdf-3',
+      hardwareKg: 2.0,
+      quantity: 1,
+      palletNumber: palletNo
+    };
+    setKitchenElements(prev => [...prev, newEl]);
   };
 
   // Function to Delete a Pallet
@@ -1047,30 +1542,149 @@ export function KitchenWeightCalculator() {
         2. INTERACTIVE SCREEN APP UI (HIDDEN ON PRINT)
         ===================================================================
       */}
+      {!isStarted ? (
+        <div className="max-w-4xl mx-auto py-8 px-4 space-y-6 print:hidden">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 p-6 sm:p-10 rounded-3xl border-2 border-amber-500/80 shadow-2xl relative overflow-hidden space-y-6">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center gap-4 border-b border-indigo-900/60 pb-6">
+              <div className="p-4 bg-gradient-to-br from-amber-500 to-indigo-600 rounded-2xl text-slate-950 font-black shadow-lg">
+                <Scale className="w-10 h-10" />
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/30">
+                  HAPI 1 • KODI & KLIENTI I KUZHINËS
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-2">
+                  PESHA TOTALE PËR KUZHINA & PALETAT
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 font-medium leading-relaxed">
+                  Shënoni Kodin e Kuzhinës dhe Emrin e Klientit / Për Ku Është, më pas klikoni <strong>"VAZHDO TEK LISTA E ELEMENTEVE ➔"</strong> për të parë elementet me pesha automatike dhe shpërndarjen në paleta.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-amber-300 mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><Tag className="w-4 h-4 text-amber-400" /> Kodi i Kuzhinës:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const randomCode = `KUZ-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+                      setKitchenCode(randomCode);
+                    }}
+                    className="text-[11px] text-indigo-300 hover:text-white underline font-mono cursor-pointer"
+                  >
+                    🎲 Gjenero Kod Automatik
+                  </button>
+                </label>
+                <input 
+                  type="text"
+                  value={kitchenCode}
+                  onChange={(e) => setKitchenCode(e.target.value)}
+                  placeholder="e.g. KUZ-2026-001"
+                  className="w-full bg-slate-950 border-2 border-indigo-700/80 rounded-2xl px-4 py-3 text-amber-300 font-mono font-black text-base outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20 shadow-inner"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-indigo-200 mb-2">
+                  Emri / Klienti / Për Ku Është Kuzhina:
+                </label>
+                <input 
+                  type="text"
+                  value={kitchenName}
+                  onChange={(e) => setKitchenName(e.target.value)}
+                  placeholder="e.g. Agim Hoxha - Prishtinë (Vllahi)"
+                  className="w-full bg-slate-950 border-2 border-indigo-700/80 rounded-2xl px-4 py-3 text-white font-black text-base outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20 shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-indigo-900/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-slate-400">
+                ⚡ Do të vazhdoni te lista e elementeve dhe llogaritja e peshës së kuzhinës.
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsStarted(true)}
+                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 via-emerald-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl hover:shadow-2xl transition-all cursor-pointer flex items-center justify-center gap-3 transform hover:scale-105 active:scale-95"
+              >
+                <CheckCircle2 className="w-5 h-5 text-slate-950" /> VAZHDO TEK LISTA E ELEMENTEVE ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="max-w-7xl mx-auto space-y-6 print:hidden">
         
         {/* APP TITLE & TOP HEADER */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900/90 p-5 rounded-3xl border border-indigo-900/60 shadow-2xl">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-amber-500 to-indigo-600 rounded-2xl shadow-lg text-slate-950 font-black">
-              <Scale className="w-7 h-7" />
+        <div className="bg-slate-900/90 p-5 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-indigo-600 rounded-2xl shadow-lg text-slate-950 font-black">
+                <Scale className="w-7 h-7" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                  LLOGARITËSI I PESHOJAVE TË KUZHINËS & PALETAT
+                </h1>
+                <p className="text-xs text-slate-400 font-medium">
+                  Sistemi automatik i llogaritjes së peshave dhe organizimit në paleta.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                LLOGARITËSI I PESHOJAVE TË KUZHINËS & PALETAT
-              </h1>
-              <p className="text-xs text-slate-400 font-medium">
-                Përmasat e elementeve (Lart, Poshtë, Kolona, Rafta) dhe shpërndarja në Paleta Euro (80x120 cm).
-              </p>
+
+            {/* Quick Actions Header Buttons */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <button
+                onClick={() => setIsPalletModalOpen(true)}
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:scale-105"
+              >
+                <Truck className="w-4 h-4 text-emerald-200" /> 📦 Shiko Paletat ({customPallets.length})
+              </button>
+
+              <button
+                onClick={handleSaveCurrentProject}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Save className="w-4 h-4 text-indigo-200" /> Ruaj Projektin
+              </button>
+
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-slate-950" /> Printo Peshën
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* PROJECT SUMMARY INFO BADGES */}
+          <div className="pt-3 border-t border-indigo-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 bg-slate-950 border border-indigo-900/80 rounded-xl text-slate-300 font-medium flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-amber-400" /> Kodi: <strong className="text-amber-300 font-mono font-bold">{kitchenCode}</strong>
+              </span>
+
+              <span className="px-3 py-1 bg-slate-950 border border-indigo-900/80 rounded-xl text-slate-300 font-medium flex items-center gap-1.5">
+                👤 Klienti / Për Ku: <strong className="text-white font-bold">{kitchenName}</strong>
+              </span>
+
+              <span className="px-3 py-1 bg-emerald-950 border border-emerald-800 rounded-xl text-emerald-300 font-medium flex items-center gap-1.5">
+                ⚖️ Pesha Totale: <strong className="text-emerald-400 font-mono font-black">{projectSummary.grandTotalKg} KG</strong> ({projectSummary.totalItemsCount} elemente)
+              </span>
+            </div>
+
             <button
-              onClick={() => window.print()}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              type="button"
+              onClick={() => setIsStarted(false)}
+              className="px-3 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold text-[11px] rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              title="Kthehu prapa për të ndryshuar Kodin ose Klientin"
             >
-              <Printer className="w-4 h-4" /> Printo Fletën e Logjistikës
+              ✏️ Ndrysho Kodin / Klientin
             </button>
           </div>
         </div>
@@ -1089,18 +1703,6 @@ export function KitchenWeightCalculator() {
             >
               <Box className="w-4 h-4" />
               <span>Lista e Elementeve ({kitchenElements.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('pallets-view')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
-                activeTab === 'pallets-view'
-                  ? 'bg-gradient-to-r from-emerald-500 to-indigo-600 text-white shadow-lg scale-[1.02]'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Truck className="w-4 h-4 text-emerald-300" />
-              <span>Paletat (80x120 cm) ({palletSummary.length})</span>
             </button>
 
             <button
@@ -1142,46 +1744,6 @@ export function KitchenWeightCalculator() {
           </div>
         </div>
 
-        {/* KITCHEN CODE & CLIENT INPUT HEADER */}
-        <div className="bg-slate-900/90 p-4 rounded-2xl border border-indigo-900/60 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
-            <div className="w-full sm:w-48">
-              <label className="block text-[10px] uppercase font-black tracking-wider text-amber-400 mb-1 flex items-center gap-1">
-                <Tag className="w-3 h-3" /> Kodi i Kuzhinës:
-              </label>
-              <input 
-                type="text"
-                value={kitchenCode}
-                onChange={(e) => setKitchenCode(e.target.value)}
-                placeholder="e.g. KUZ-2026-001"
-                className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-black text-xs outline-none focus:ring-2 focus:ring-amber-400"
-              />
-            </div>
-
-            <div className="w-full flex-1">
-              <label className="block text-[10px] uppercase font-black tracking-wider text-indigo-300 mb-1">
-                Emri / Klienti i Kuzhinës:
-              </label>
-              <input 
-                type="text"
-                value={kitchenName}
-                onChange={(e) => setKitchenName(e.target.value)}
-                placeholder="e.g. Kuzhina Lisi Villa Prishtinë"
-                className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-3 py-1.5 text-white font-black text-xs outline-none focus:ring-2 focus:ring-amber-400"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <button
-              onClick={handleSaveCurrentProject}
-              className="w-full md:w-auto px-4 py-2 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Save className="w-4 h-4" /> Ruaj Projekti me Kod
-            </button>
-          </div>
-        </div>
-
         {/* TAB 1: KITCHEN ELEMENTS & WEIGHT SUMMARY */}
         {activeTab === 'kitchen-project' && (
           <div className="space-y-6">
@@ -1216,7 +1778,7 @@ export function KitchenWeightCalculator() {
                     <Truck className="w-4 h-4" /> Paletat Euro (80x120 cm)
                   </span>
                   <button 
-                    onClick={() => setActiveTab('pallets-view')}
+                    onClick={() => setIsPalletModalOpen(true)}
                     className="text-[10px] text-emerald-300 hover:underline font-bold"
                   >
                     Detajet &rarr;
@@ -1264,11 +1826,11 @@ export function KitchenWeightCalculator() {
 
             </div>
 
-            {/* CATEGORY FILTER & FRONT THICKNESS CONTROLS & KITCHEN ELEMENTS TABLE */}
-            <div className="bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-5">
+            {/* CATEGORY FILTER & FRONT THICKNESS CONTROLS & KITCHEN ELEMENTS WORKSPACE */}
+            <div className="bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-6">
               
               {/* Front Thickness Selector & Quick Actions */}
-              <div className="bg-slate-950 p-4 rounded-2xl border border-indigo-900/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="bg-slate-950 p-4 rounded-2xl border border-indigo-900/60 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
@@ -1280,7 +1842,7 @@ export function KitchenWeightCalculator() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                   {/* Filter tabs for Front Thickness */}
                   <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-indigo-900/80">
                     <button
@@ -1325,610 +1887,1062 @@ export function KitchenWeightCalculator() {
                     Kalo të gjitha ne 22 mm
                   </button>
 
+                  {/* Clear Empty List Button */}
+                  <button
+                    onClick={handleClearKitchenElements}
+                    className="px-3 py-1.5 bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                    title="Pastron listën për të filluar me listë të zbrazët"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Pastro Listën (Zbraz)
+                  </button>
+
                   {/* Custom Addition Button */}
                   <button
                     onClick={handleAddCustomElement}
                     className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> + Shto Element të Ri (Shtesë)
+                    <Plus className="w-4 h-4" /> + Shto Custom
                   </button>
                 </div>
               </div>
 
-              {/* Table Header Controls & Filter Buttons */}
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-indigo-900/40 pb-4">
+              {/* 2-COLUMN SPLIT: LEFT SEARCH & CATALOG DRAWER | RIGHT MAIN PROJECT ELEMENTS LIST */}
+              <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
                 
-                <div>
-                  <h3 className="text-base font-black text-white flex items-center gap-2">
-                    <Box className="w-5 h-5 text-amber-400" /> Lista e Elementeve të Kuzhinës
-                  </h3>
-                  <p className="text-xs text-slate-400 font-medium">
-                    Filtroni kategoritë ose ndryshoni përmasat dhe paletat drejtpërdrejt në tabelë.
-                  </p>
-                </div>
-
-                {/* Category Filter Tabs */}
-                <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-indigo-900/80 w-full lg:w-auto">
-                  <button
-                    onClick={() => setFilterPosition('all')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                      filterPosition === 'all'
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>Të Gjitha ({kitchenElements.length})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setFilterPosition('lart')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                      filterPosition === 'lart'
-                        ? 'bg-amber-500 text-slate-950 font-black shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <ArrowUpCircle className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Lart ({projectSummary.wallElements.length})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setFilterPosition('posht')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                      filterPosition === 'posht'
-                        ? 'bg-emerald-500 text-white font-black shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <ArrowDownCircle className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Poshtë ({projectSummary.baseElements.length})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setFilterPosition('kolone')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                      filterPosition === 'kolone'
-                        ? 'bg-purple-600 text-white font-black shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <Columns3 className="w-3.5 h-3.5 text-purple-300" />
-                    <span>Kolonat ({projectSummary.columnElements.length})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setFilterPosition('raft_lart')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                      filterPosition === 'raft_lart'
-                        ? 'bg-cyan-600 text-white font-black shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>Raftat Lart ({projectSummary.wallShelfElements.length})</span>
-                  </button>
-
-                  <button
-                    onClick={() => setFilterPosition('raft_posht')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                      filterPosition === 'raft_posht'
-                        ? 'bg-blue-600 text-white font-black shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>Raftat Poshtë ({projectSummary.baseShelfElements.length})</span>
-                  </button>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleShareReport}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Share2 className="w-3.5 h-3.5" /> Viber / Raport
-                  </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white font-black text-xs rounded-xl border border-indigo-800 transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5" /> Printo
-                  </button>
-                </div>
-
-              </div>
-
-              {/* Elements Table */}
-              {displayedElements.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead>
-                      <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
-                        <th className="p-3 text-center">Prodhimi</th>
-                        <th className="p-3">Kategoria</th>
-                        <th className="p-3">Emri i Modulit</th>
-                        <th className="p-3">Përmasat WxHxD (mm)</th>
-                        <th className="p-3">Rafte (Numri & Përmasa)</th>
-                        <th className="p-3">Dyer (Numri & Përmasa)</th>
-                        <th className="p-3 text-center">Paleta (80x120)</th>
-                        <th className="p-3 text-center">Sasi</th>
-                        <th className="p-3 text-right">Pesha per Njësi</th>
-                        <th className="p-3 text-right">Pesha Totale</th>
-                        <th className="p-3 text-center">Veprime</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-indigo-900/40 font-medium">
-                      {displayedElements.map((el) => {
-                        const breakdown = calculateElementBreakdown(el);
-                        const unitKg = breakdown.finalUnitKg;
-                        const lineKg = breakdown.totalLineKg;
-
-                        return (
-                          <tr 
-                            key={el.id} 
-                            className={`transition-colors ${el.isCompleted ? 'bg-emerald-950/20' : 'hover:bg-indigo-950/40'}`}
-                          >
-                            {/* Checkbox for Production Status */}
-                            <td className="p-3 text-center">
-                              <button
-                                onClick={() => {
-                                  setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, isCompleted: !x.isCompleted } : x));
-                                }}
-                                className="cursor-pointer focus:outline-none"
-                                title={el.isCompleted ? 'Kompletuar në Prodhim' : 'Kliko për ta marrë në Prodhim'}
-                              >
-                                {el.isCompleted ? (
-                                  <CheckSquare className="w-5 h-5 text-emerald-400" />
-                                ) : (
-                                  <Square className="w-5 h-5 text-slate-600 hover:text-amber-400" />
-                                )}
-                              </button>
-                            </td>
-
-                            {/* Position Switcher */}
-                            <td className="p-3">
-                              <select
-                                value={el.position}
-                                onChange={(e) => {
-                                  const val = e.target.value as ElementPosition;
-                                  setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, position: val } : x));
-                                }}
-                                className={`text-[10px] font-black uppercase px-2 py-1 rounded border outline-none cursor-pointer ${getPositionBadgeColor(el.position)}`}
-                              >
-                                <option value="lart">Lart (Vise)</option>
-                                <option value="posht">Poshtë (Baza)</option>
-                                <option value="kolone">Kolonë (Shpajz)</option>
-                                <option value="raft_lart">Raft Lart</option>
-                                <option value="raft_posht">Raft Poshtë</option>
-                              </select>
-                            </td>
-
-                            {/* Element Name editable */}
-                            <td className="p-3">
-                              <input 
-                                type="text"
-                                value={el.name}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, name: val } : x));
-                                }}
-                                className="bg-transparent text-white font-black text-xs outline-none focus:border-b focus:border-amber-400 w-full"
-                              />
-                            </td>
-
-                            {/* Element W x H x D (mm) editable */}
-                            <td className="p-3 font-mono text-amber-300 font-bold">
-                              <div className="flex items-center gap-1">
-                                <input 
-                                  type="number" 
-                                  value={el.widthMm}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, widthMm: Number(e.target.value) } : x))}
-                                  className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
-                                />
-                                <span>x</span>
-                                <input 
-                                  type="number" 
-                                  value={el.heightMm}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, heightMm: Number(e.target.value) } : x))}
-                                  className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
-                                />
-                                <span>x</span>
-                                <input 
-                                  type="number" 
-                                  value={el.depthMm}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, depthMm: Number(e.target.value) } : x))}
-                                  className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
-                                />
-                              </div>
-                            </td>
-
-                            {/* Shelves Details */}
-                            <td className="p-3 text-[11px]">
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-slate-400">Rafte:</span>
-                                <input 
-                                  type="number"
-                                  min={0}
-                                  value={el.numShelves}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, numShelves: Number(e.target.value) } : x))}
-                                  className="w-10 bg-slate-950 border border-slate-700 rounded px-1 text-center font-bold text-white text-xs"
-                                />
-                              </div>
-                              {el.numShelves > 0 && (
-                                <div className="flex items-center gap-1 text-[10px] text-indigo-300 font-mono">
-                                  <span>W:</span>
-                                  <input 
-                                    type="number" 
-                                    placeholder="Auto"
-                                    value={el.shelfWidthMm || ''}
-                                    onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, shelfWidthMm: Number(e.target.value) || undefined } : x))}
-                                    className="w-12 bg-slate-950 border border-indigo-900 rounded px-1 text-center text-amber-300"
-                                    title="Gjerësia e raftit"
-                                  />
-                                  <span>D:</span>
-                                  <input 
-                                    type="number" 
-                                    placeholder="Auto"
-                                    value={el.shelfDepthMm || ''}
-                                    onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, shelfDepthMm: Number(e.target.value) || undefined } : x))}
-                                    className="w-12 bg-slate-950 border border-indigo-900 rounded px-1 text-center text-amber-300"
-                                    title="Thellësia e raftit"
-                                  />
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Doors Details */}
-                            <td className="p-3 text-[11px]">
-                              <div className="flex items-center gap-1 mb-1">
-                                <span className="text-slate-400">Dyer:</span>
-                                <input 
-                                  type="number"
-                                  min={0}
-                                  value={el.numDoors}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, numDoors: Number(e.target.value) } : x))}
-                                  className="w-10 bg-slate-950 border border-slate-700 rounded px-1 text-center font-bold text-white text-xs"
-                                />
-                                <select
-                                  value={el.doorMaterialId}
-                                  onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: e.target.value } : x))}
-                                  className="bg-slate-950 border border-slate-700 text-indigo-300 text-[10px] rounded px-1 py-0.5 outline-none"
-                                >
-                                  {materials.map(m => (
-                                    <option key={m.id} value={m.id}>{m.name}</option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              {el.numDoors > 0 && (
-                                <div className="space-y-1 mt-1">
-                                  {Array.from({ length: el.numDoors }).map((_, doorIdx) => {
-                                    const doorDim = (el.customDoors && el.customDoors[doorIdx]) || {};
-                                    const currentW = doorDim.widthMm !== undefined ? doorDim.widthMm : (el.doorWidthMm || '');
-                                    const currentH = doorDim.heightMm !== undefined ? doorDim.heightMm : (el.doorHeightMm || '');
-
-                                    return (
-                                      <div key={doorIdx} className="flex items-center gap-1 text-[10px] text-amber-300 font-mono">
-                                        <span className="text-slate-400 font-bold text-[9px] min-w-[38px]">
-                                          {el.numDoors === 1 ? 'Derë:' : `D${doorIdx + 1}:`}
-                                        </span>
-                                        <span>W:</span>
-                                        <input 
-                                          type="number" 
-                                          placeholder="Auto"
-                                          value={currentW}
-                                          onChange={(e) => {
-                                            const val = e.target.value !== '' ? Number(e.target.value) : undefined;
-                                            setKitchenElements(prev => prev.map(x => {
-                                              if (x.id !== el.id) return x;
-                                              const newCustomDoors = [...(x.customDoors || [])];
-                                              while (newCustomDoors.length < x.numDoors) {
-                                                newCustomDoors.push({ widthMm: x.doorWidthMm, heightMm: x.doorHeightMm });
-                                              }
-                                              newCustomDoors[doorIdx] = { ...newCustomDoors[doorIdx], widthMm: val };
-                                              return { ...x, customDoors: newCustomDoors };
-                                            }));
-                                          }}
-                                          className="w-12 bg-slate-950 border border-amber-900 rounded px-1 text-center text-amber-300"
-                                          title={`Gjerësia e derës ${doorIdx + 1}`}
-                                        />
-                                        <span>H:</span>
-                                        <input 
-                                          type="number" 
-                                          placeholder="Auto"
-                                          value={currentH}
-                                          onChange={(e) => {
-                                            const val = e.target.value !== '' ? Number(e.target.value) : undefined;
-                                            setKitchenElements(prev => prev.map(x => {
-                                              if (x.id !== el.id) return x;
-                                              const newCustomDoors = [...(x.customDoors || [])];
-                                              while (newCustomDoors.length < x.numDoors) {
-                                                newCustomDoors.push({ widthMm: x.doorWidthMm, heightMm: x.doorHeightMm });
-                                              }
-                                              newCustomDoors[doorIdx] = { ...newCustomDoors[doorIdx], heightMm: val };
-                                              return { ...x, customDoors: newCustomDoors };
-                                            }));
-                                          }}
-                                          className="w-12 bg-slate-950 border border-amber-900 rounded px-1 text-center text-amber-300"
-                                          title={`Lartësia e derës ${doorIdx + 1}`}
-                                        />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Pallet Selector (80x120 cm) */}
-                            <td className="p-3 text-center">
-                              <select
-                                value={el.palletNumber || 1}
-                                onChange={(e) => {
-                                  const pNum = Number(e.target.value);
-                                  setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, palletNumber: pNum } : x));
-                                }}
-                                className="bg-slate-950 border border-emerald-800 text-emerald-300 font-mono font-bold text-xs rounded px-2 py-1 outline-none cursor-pointer"
-                              >
-                                <option value={1}>Paleta 1</option>
-                                <option value={2}>Paleta 2</option>
-                                <option value={3}>Paleta 3</option>
-                                <option value={4}>Paleta 4</option>
-                                <option value={5}>Paleta 5</option>
-                                <option value={6}>Paleta 6</option>
-                              </select>
-                            </td>
-
-                            {/* Quantity */}
-                            <td className="p-3 text-center">
-                              <div className="inline-flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-indigo-900">
-                                <button
-                                  onClick={() => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))}
-                                  className="text-slate-400 hover:text-white font-bold px-1"
-                                >
-                                  -
-                                </button>
-                                <span className="font-mono font-black text-white text-xs px-1">{el.quantity}</span>
-                                <button
-                                  onClick={() => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, quantity: x.quantity + 1 } : x))}
-                                  className="text-slate-400 hover:text-white font-bold px-1"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </td>
-
-                            {/* Calculated Unit Weight */}
-                            <td className="p-3 text-right font-mono font-bold text-slate-200">
-                              {unitKg} kg
-                            </td>
-
-                            {/* Total Line Weight */}
-                            <td className="p-3 text-right font-mono font-black text-amber-300 text-sm">
-                              {lineKg} kg
-                            </td>
-
-                            {/* Action Buttons */}
-                            <td className="p-3 text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    const copyEl = {
-                                      ...el,
-                                      id: `k-el-${Date.now()}`,
-                                      name: `${el.name} (Kopje)`
-                                    };
-                                    setKitchenElements(prev => [...prev, copyEl]);
-                                  }}
-                                  className="p-1 text-indigo-400 hover:text-white cursor-pointer"
-                                  title="Dupliko elementin"
-                                >
-                                  <Copy className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setKitchenElements(prev => prev.filter(x => x.id !== el.id));
-                                  }}
-                                  className="p-1 text-rose-400 hover:text-rose-300 cursor-pointer"
-                                  title="Fshij elementin"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-10 space-y-3">
-                  <Box className="w-10 h-10 text-slate-600 mx-auto" />
-                  <p className="text-slate-400 text-xs font-medium">
-                    Asnjë element në këtë kategori. Përdorni butonin "Shto me 1-klikim" ose ndërtoni modul të ri.
-                  </p>
-                </div>
-              )}
-            </div>
-
-          </div>
-        )}
-
-        {/* TAB 2: PALLETS LOGISTICS MANAGEMENT (PALETA 80x120 CM) */}
-        {activeTab === 'pallets-view' && (
-          <div className="space-y-6">
-            
-            {/* Header & Controls Bar */}
-            <div className="bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-emerald-400" /> Logjistika e Paletave (80 x 120 cm Euro Paletë)
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">
-                  Pesha e plotë e kuzhinës është e ndarë sipas paletave për lehtësi gjatë transportit dhe paketimit.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                <button
-                  onClick={handleAddNewPallet}
-                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> + Shto Paletë e Re
-                </button>
-
-                <button
-                  onClick={() => handleAutoDistributePallets(350)}
-                  className="px-4 py-2 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <Zap className="w-4 h-4" /> Auto-Shpërndaj (Max 350kg)
-                </button>
-              </div>
-            </div>
-
-            {/* Pallet Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {palletSummary.map(p => {
-                const maxRecommendedKg = 400;
-                const percentage = Math.min(100, Math.round((p.totalKg / maxRecommendedKg) * 100));
-
-                // Unassigned or other elements available to add into this pallet
-                const otherElements = kitchenElements.filter(el => (el.palletNumber || 1) !== p.palletNumber);
-
-                return (
-                  <div 
-                    key={p.palletNumber} 
-                    className="bg-slate-900/90 p-5 rounded-3xl border border-emerald-900/60 shadow-2xl space-y-4 relative overflow-hidden flex flex-col justify-between"
-                  >
-                    <div className="space-y-4">
-                      {/* Top Pallet Badge & Weight & Delete */}
-                      <div className="flex items-start justify-between border-b border-indigo-900/40 pb-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-800">
-                              📦 PALETA #{p.palletNumber} (80x120 cm)
-                            </span>
-                            {customPallets.length > 1 && (
-                              <button
-                                onClick={() => handleDeletePallet(p.palletNumber)}
-                                className="p-1 text-slate-500 hover:text-rose-400 cursor-pointer"
-                                title="Fshij këtë paletë"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                          <h4 className="text-sm font-black text-white mt-2">
-                            {p.elements.length} Element(e) të Ngarkuara
-                          </h4>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-2xl font-black font-mono text-emerald-400 block">
-                            {p.totalKg.toFixed(1)} KG
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">Peshë e plotë</span>
-                        </div>
-                      </div>
-
-                      {/* Pallet Capacity Progress Bar */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                          <span>Kapaciteti i Paletës Euro:</span>
-                          <span className={p.totalKg > 400 ? 'text-rose-400 font-bold' : 'text-emerald-400'}>
-                            {p.totalKg.toFixed(0)} / 400 kg ({percentage}%)
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                          <div 
-                            className={`h-full transition-all duration-500 ${
-                              p.totalKg > 400 ? 'bg-rose-500' : 'bg-emerald-500'
-                            }`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Assigned Elements List */}
-                      <div className="space-y-2 pt-1">
-                        <span className="text-[10px] font-black uppercase text-indigo-300 block">
-                          Elementet në Paletën #{p.palletNumber}:
-                        </span>
-                        {p.elements.length > 0 ? (
-                          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                            {p.elements.map(item => (
-                              <div key={item.element.id} className="p-2 bg-slate-950 rounded-xl border border-indigo-900/40 flex items-center justify-between text-xs">
-                                <div>
-                                  <span className="font-bold text-white block">{item.element.name}</span>
-                                  <span className="text-[10px] text-slate-400 font-mono">
-                                    {item.element.widthMm}x{item.element.heightMm}x{item.element.depthMm}mm (x{item.element.quantity})
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono font-black text-amber-300 text-xs">
-                                    {item.lineKg} kg
-                                  </span>
-                                  {/* Quick pallet reassign dropdown */}
-                                  <select
-                                    value={item.element.palletNumber || 1}
-                                    onChange={(e) => {
-                                      const pNo = Number(e.target.value);
-                                      setKitchenElements(prev => prev.map(x => x.id === item.element.id ? { ...x, palletNumber: pNo } : x));
-                                    }}
-                                    className="bg-slate-900 border border-slate-700 text-[10px] text-slate-300 rounded px-1 py-0.5 outline-none cursor-pointer"
-                                    title="Lëviz te paleta tjetër"
-                                  >
-                                    {customPallets.map(pNo => (
-                                      <option key={pNo} value={pNo}>P#{pNo}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 bg-slate-950/60 rounded-xl border border-dashed border-indigo-900/50">
-                            <span className="text-[11px] text-slate-500">Paleta është bosh</span>
-                          </div>
-                        )}
-                      </div>
+                {/* LEFT SIDEBAR: SEARCH & PRESET CATALOG WITH WEIGHTS */}
+                <div className="xl:col-span-1 bg-slate-950 p-4 rounded-3xl border border-indigo-900/80 space-y-4 shadow-xl flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
+                        <Search className="w-4 h-4 text-amber-400" /> Kërko Elementet me Pesha
+                      </span>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Katalogu standard i elementeve me pesha automatike.
+                      </p>
                     </div>
 
-                    {/* Quick Add Element into this Pallet */}
-                    <div className="pt-3 border-t border-indigo-900/40">
-                      <span className="text-[10px] font-bold text-slate-400 block mb-1">
-                        + Vendos element te Paleta #{p.palletNumber}:
-                      </span>
-                      {otherElements.length > 0 ? (
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            const selectedId = e.target.value;
-                            if (selectedId) {
-                              setKitchenElements(prev => prev.map(x => x.id === selectedId ? { ...x, palletNumber: p.palletNumber } : x));
-                            }
-                          }}
-                          className="w-full bg-slate-950 border border-emerald-800 rounded-xl px-2.5 py-1.5 text-white text-xs font-bold outline-none cursor-pointer"
+                    {/* Quick Add Door / Element Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsQuickElementModalOpen(true)}
+                      className="w-full py-2.5 bg-gradient-to-r from-amber-500 via-emerald-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95"
+                    >
+                      <Zap className="w-4 h-4 text-slate-950" /> ⚡ Shto Derë / Element të Shpejtë
+                    </button>
+
+                    {/* Search Input Box */}
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                      <input 
+                        type="text" 
+                        placeholder="Kërko (Baza 60, Pezull 80, Fioka...)"
+                        value={catalogSearchQuery}
+                        onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                        className="w-full bg-slate-900 border border-indigo-900/80 rounded-2xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-400 transition-all font-medium"
+                      />
+                      {catalogSearchQuery && (
+                        <button 
+                          onClick={() => setCatalogSearchQuery('')}
+                          className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
                         >
-                          <option value="">-- Zgjidh element nga kuzhina --</option>
-                          {otherElements.map(el => (
-                            <option key={el.id} value={el.id}>
-                              {el.name} ({el.widthMm}x{el.heightMm}mm) - Paleta #{el.palletNumber || 1}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-[10px] text-slate-500 italic block">
-                          Të gjitha elementet janë tashmë në këtë paletë.
-                        </span>
+                          <X className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
 
+                    {/* Category Filter Pills */}
+                    <div className="flex flex-wrap gap-1">
+                      {(['all', 'Base Cabinets', 'Wall Cabinets', 'Tall Cabinets', 'Drawer Units'] as const).map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setCatalogCategoryFilter(cat)}
+                          className={`px-2.5 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer ${
+                            catalogCategoryFilter === cat ? 'bg-amber-400 text-slate-950 shadow' : 'bg-slate-900 text-slate-400 hover:text-white border border-indigo-900/40'
+                          }`}
+                        >
+                          {cat === 'all' ? 'Të Gjitha' : cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Scrollable Catalog Preset Items */}
+                    <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                      {presetCatalog.filter(item => {
+                        const matchesQuery = item.name.toLowerCase().includes(catalogSearchQuery.toLowerCase()) || 
+                          `${item.widthMm}x${item.heightMm}`.includes(catalogSearchQuery);
+                        const matchesCat = catalogCategoryFilter === 'all' || item.categoryLabel === catalogCategoryFilter;
+                        return matchesQuery && matchesCat;
+                      }).map(preset => (
+                        <div 
+                          key={preset.id}
+                          className="p-3 bg-slate-900/90 rounded-2xl border border-indigo-900/60 hover:border-amber-400/80 transition-all shadow-md space-y-2 group"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <span className="font-black text-xs text-white block group-hover:text-amber-300 transition-colors">
+                                {preset.name}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                                {preset.widthMm} × {preset.heightMm} × {preset.depthMm} mm
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-mono text-[10px] font-black">
+                              ~{preset.approxKg} kg
+                            </span>
+                          </div>
+
+                          {/* Quick Add Buttons */}
+                          <div className="flex items-center justify-between gap-1 pt-1 border-t border-indigo-900/40">
+                            <button
+                              onClick={() => handleAddPresetToKitchenElements(preset)}
+                              className="px-2.5 py-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-800 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3 text-amber-400" /> Shto në Listë
+                            </button>
+
+                            {/* Direct Pallet Selector Buttons */}
+                            <div className="flex items-center gap-1">
+                              {customPallets.slice(0, 3).map(pNo => (
+                                <button
+                                  key={pNo}
+                                  onClick={() => handleAddPresetToKitchenElements(preset, pNo)}
+                                  className="px-1.5 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 rounded-lg text-[9px] font-mono font-bold cursor-pointer"
+                                  title={`Shto drejtpërdrejt te Paleta #${pNo}`}
+                                >
+                                  +P#{pNo}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                );
-              })}
+
+                  <div className="pt-2 border-t border-indigo-900/50 text-[10px] text-slate-500 font-medium text-center">
+                    Gjithsej {presetCatalog.length} modele me pesha automatike
+                  </div>
+                </div>
+
+                {/* RIGHT MAIN WORKSPACE: KITCHEN ELEMENTS LIST */}
+                <div className="xl:col-span-3 space-y-4">
+                  
+                  {/* Table Header Controls & Filter Buttons */}
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-indigo-900/40 pb-4">
+                    <div>
+                      <h3 className="text-base font-black text-white flex items-center gap-2">
+                        <Box className="w-5 h-5 text-amber-400" /> Lista e Elementeve të këtij Projekti
+                      </h3>
+                      <p className="text-xs text-slate-400 font-medium">
+                        Kodi: <strong className="text-amber-300">{kitchenCode}</strong> | {kitchenElements.length} element(e) gjithsej
+                      </p>
+                    </div>
+
+                    {/* Category Filter Tabs */}
+                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-indigo-900/80 w-full lg:w-auto">
+                      <button
+                        onClick={() => setFilterPosition('all')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                          filterPosition === 'all'
+                            ? 'bg-indigo-600 text-white shadow'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>Të Gjitha ({kitchenElements.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setFilterPosition('lart')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                          filterPosition === 'lart'
+                            ? 'bg-amber-500 text-slate-950 font-black shadow'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <ArrowUpCircle className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Lart ({projectSummary.wallElements.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setFilterPosition('posht')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                          filterPosition === 'posht'
+                            ? 'bg-emerald-500 text-white font-black shadow'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <ArrowDownCircle className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Poshtë ({projectSummary.baseElements.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setFilterPosition('kolone')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                          filterPosition === 'kolone'
+                            ? 'bg-purple-600 text-white font-black shadow'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <Columns3 className="w-3.5 h-3.5 text-purple-300" />
+                        <span>Kolonat ({projectSummary.columnElements.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => setFilterPosition('raft_lart')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                          filterPosition === 'raft_lart'
+                            ? 'bg-cyan-600 text-white font-black shadow'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>Raftat ({projectSummary.wallShelfElements.length})</span>
+                      </button>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleShareReport}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Share2 className="w-3.5 h-3.5" /> Viber / Raport
+                      </button>
+                      <button
+                        onClick={() => window.print()}
+                        className="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white font-black text-xs rounded-xl border border-indigo-800 transition-all flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Printo
+                      </button>
+                    </div>
+
+                  </div>
+
+                  {/* Elements Table OR Empty State */}
+                  {displayedElements.length > 0 ? (
+                    <div className="overflow-x-auto rounded-2xl border border-indigo-900/60 bg-slate-950/40">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead>
+                          <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
+                            <th className="p-3 text-center">Prodhimi</th>
+                            <th className="p-3">Kategoria</th>
+                            <th className="p-3">Anësorja</th>
+                            <th className="p-3">Emri i Modulit</th>
+                            <th className="p-3">Përmasat WxHxD (mm)</th>
+                            <th className="p-3">Rafte & Dyer</th>
+                            <th className="p-3 text-center">Paleta (Zgjidh Paletën 1, 2, 3)</th>
+                            <th className="p-3 text-center">Sasi</th>
+                            <th className="p-3 text-right">Pesha per Njësi</th>
+                            <th className="p-3 text-right">Pesha Totale</th>
+                            <th className="p-3 text-center">Veprime</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-indigo-900/40 font-medium">
+                          {displayedElements.map((el) => {
+                            const breakdown = calculateElementBreakdown(el);
+                            const unitKg = breakdown.finalUnitKg;
+                            const lineKg = breakdown.totalLineKg;
+                            const palletNo = el.palletNumber || 1;
+
+                            return (
+                              <React.Fragment key={el.id}>
+                                <tr 
+                                  className={`transition-colors ${el.isCompleted ? 'bg-emerald-950/20' : 'hover:bg-indigo-950/40'}`}
+                                >
+                                {/* Checkbox for Production Status */}
+                                <td className="p-3 text-center">
+                                  <button
+                                    onClick={() => {
+                                      setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, isCompleted: !x.isCompleted } : x));
+                                    }}
+                                    className="cursor-pointer focus:outline-none"
+                                    title={el.isCompleted ? 'Kompletuar në Prodhim' : 'Kliko për ta marrë në Prodhim'}
+                                  >
+                                    {el.isCompleted ? (
+                                      <CheckSquare className="w-5 h-5 text-emerald-400" />
+                                    ) : (
+                                      <Square className="w-5 h-5 text-slate-600 hover:text-amber-400" />
+                                    )}
+                                  </button>
+                                </td>
+
+                                {/* Position Switcher */}
+                                <td className="p-3">
+                                  <select
+                                    value={el.position}
+                                    onChange={(e) => {
+                                      const val = e.target.value as ElementPosition;
+                                      setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, position: val } : x));
+                                    }}
+                                    className={`text-[10px] font-black uppercase px-2 py-1 rounded border outline-none cursor-pointer ${getPositionBadgeColor(el.position)}`}
+                                  >
+                                    <option value="lart">Lart (Vise)</option>
+                                    <option value="posht">Poshtë (Baza)</option>
+                                    <option value="kolone">Kolonë (Shpajz)</option>
+                                    <option value="raft_lart">Raft Lart</option>
+                                    <option value="raft_posht">Raft Poshtë</option>
+                                  </select>
+                                </td>
+
+                                {/* Side Orientation Tag */}
+                                <td className="p-3">
+                                  <select
+                                    value={el.sideTag || 'majtas'}
+                                    onChange={(e) => {
+                                      const val = e.target.value as SideTag;
+                                      setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, sideTag: val } : x));
+                                    }}
+                                    className="bg-slate-950 text-amber-300 font-black text-[10px] uppercase border border-amber-900/80 rounded px-1.5 py-1 outline-none cursor-pointer"
+                                  >
+                                    <option value="majtas">⬅️ Majtas</option>
+                                    <option value="djathtas">➡️ Djathtas</option>
+                                    <option value="qender">⏹️ Qendër</option>
+                                    <option value="kend">📐 Kënd</option>
+                                  </select>
+                                </td>
+
+                                {/* Element Name editable */}
+                                <td className="p-3">
+                                  <input 
+                                    type="text"
+                                    value={el.name}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, name: val } : x));
+                                    }}
+                                    className="bg-transparent text-white font-black text-xs outline-none focus:border-b focus:border-amber-400 w-full"
+                                  />
+                                </td>
+
+                                {/* Element W x H x D (mm) editable */}
+                                <td className="p-3 font-mono text-amber-300 font-bold">
+                                  <div className="flex items-center gap-1">
+                                    <input 
+                                      type="number" 
+                                      value={el.widthMm}
+                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, widthMm: Number(e.target.value) } : x))}
+                                      className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
+                                    />
+                                    <span>x</span>
+                                    <input 
+                                      type="number" 
+                                      value={el.heightMm}
+                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, heightMm: Number(e.target.value) } : x))}
+                                      className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
+                                    />
+                                    <span>x</span>
+                                    <input 
+                                      type="number" 
+                                      value={el.depthMm}
+                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, depthMm: Number(e.target.value) } : x))}
+                                      className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
+                                    />
+                                  </div>
+                                </td>
+
+                                {/* Shelves & Doors Summary */}
+                                <td className="p-3 text-[11px]">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-slate-400 font-mono">Rafte: <strong className="text-white">{el.numShelves}</strong></span>
+                                    <span className="text-slate-400 font-mono">Dyer: <strong className="text-white">{el.numDoors}</strong></span>
+                                  </div>
+                                </td>
+
+                                {/* Pallet Selector Pill Group */}
+                                <td className="p-3 text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <div className="flex items-center gap-1">
+                                      {customPallets.map(pNo => (
+                                        <button
+                                          key={pNo}
+                                          onClick={() => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, palletNumber: pNo } : x))}
+                                          className={`px-2 py-0.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                                            (el.palletNumber || 1) === pNo
+                                              ? 'bg-emerald-500 text-slate-950 font-black shadow border border-emerald-400'
+                                              : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                                          }`}
+                                        >
+                                          P#{pNo}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <button
+                                      onClick={() => setActivePalletModal(el.palletNumber || 1)}
+                                      className="text-[9px] text-emerald-400 hover:underline font-bold flex items-center gap-0.5"
+                                    >
+                                      <Eye className="w-3 h-3" /> Futem ne Paletë #{el.palletNumber || 1}
+                                    </button>
+                                  </div>
+                                </td>
+
+                                {/* Quantity */}
+                                <td className="p-3 text-center">
+                                  <div className="inline-flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-indigo-900">
+                                    <button
+                                      onClick={() => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, quantity: Math.max(1, x.quantity - 1) } : x))}
+                                      className="text-slate-400 hover:text-white font-bold px-1"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="font-mono font-black text-white text-xs px-1">{el.quantity}</span>
+                                    <button
+                                      onClick={() => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, quantity: x.quantity + 1 } : x))}
+                                      className="text-slate-400 hover:text-white font-bold px-1"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </td>
+
+                                {/* Calculated Unit Weight */}
+                                <td className="p-3 text-right font-mono font-bold text-slate-200">
+                                  {unitKg} kg
+                                </td>
+
+                                {/* Total Line Weight */}
+                                <td className="p-3 text-right font-mono font-black text-amber-300 text-sm">
+                                  {lineKg} kg
+                                </td>
+
+                                {/* Action Buttons */}
+                                <td className="p-3 text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => setExpandedElementId(expandedElementId === el.id ? null : el.id)}
+                                      className={`p-1 rounded transition-colors cursor-pointer ${expandedElementId === el.id ? 'bg-amber-400 text-slate-950 font-bold' : 'text-amber-400 hover:text-white hover:bg-slate-800'}`}
+                                      title="Shiko detajet e modulit / anësoret, rafte, dyer & peshën"
+                                    >
+                                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedElementId === el.id ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const copyEl = {
+                                          ...el,
+                                          id: `k-el-${Date.now()}`,
+                                          name: `${el.name} (Kopje)`
+                                        };
+                                        setKitchenElements(prev => [...prev, copyEl]);
+                                      }}
+                                      className="p-1 text-indigo-400 hover:text-white cursor-pointer"
+                                      title="Dupliko elementin"
+                                    >
+                                      <Copy className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setKitchenElements(prev => prev.filter(x => x.id !== el.id))}
+                                      className="p-1 text-rose-400 hover:text-rose-300 cursor-pointer"
+                                      title="Fshij elementin"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {expandedElementId === el.id && (
+                                <tr key={`${el.id}-details`} className="bg-slate-950/90 border-b border-indigo-900/60">
+                                  <td colSpan={11} className="p-4">
+                                    <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-4 text-xs space-y-3">
+                                      <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                                        <span className="font-black text-amber-300 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                                          🔍 Specifikimi Teknik & Detajet e Modulit: <strong>{el.name}</strong>
+                                        </span>
+                                        <span className="text-[10px] bg-slate-950 px-2.5 py-1 rounded-full font-mono text-slate-300 border border-slate-800">
+                                          ID: {el.id}
+                                        </span>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-300">
+                                        <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                                          <span className="text-[9px] uppercase font-bold text-slate-500 block">Pozicioni & Anësorja:</span>
+                                          <strong className="text-white capitalize">
+                                            {el.position === 'kolone' ? 'Kolonë (Shpajz / Tall)' : el.position === 'lart' ? 'Lart (Vise)' : el.position === 'posht' ? 'Poshtë (Baza)' : el.position} 
+                                            {' - '}{(el.sideTag || 'majtas').toUpperCase()}
+                                          </strong>
+                                        </div>
+
+                                        <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                                          <span className="text-[9px] uppercase font-bold text-slate-500 block">Përmasat e Modulit:</span>
+                                          <strong className="text-amber-300 font-mono">
+                                            W: {el.widthMm}mm × H: {el.heightMm}mm × D: {el.depthMm}mm
+                                          </strong>
+                                        </div>
+
+                                        <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                                          <span className="text-[9px] uppercase font-bold text-slate-500 block">Korpusi & Anësoret:</span>
+                                          <strong className="text-white">
+                                            {el.carcaseMaterialId === 'mat-iv-22' ? '22 mm (Ivericë)' : '18 mm (Ivericë Standarde)'}
+                                          </strong>
+                                        </div>
+
+                                        <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                                          <span className="text-[9px] uppercase font-bold text-slate-500 block">Shpina HDF 3mm:</span>
+                                          <strong className={el.hasBacking ? 'text-emerald-400' : 'text-slate-500'}>
+                                            {el.hasBacking ? 'Po (HDF 3mm Shpinë)' : 'Jo (Pa Shpinë)'}
+                                          </strong>
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                        {/* Shelves detail */}
+                                        <div className="bg-slate-950 p-3 rounded-xl border border-indigo-900/50">
+                                          <span className="text-[10px] uppercase font-black text-indigo-300 block mb-1">📐 Raftat e Brendshëm:</span>
+                                          <p className="text-slate-300 font-medium">
+                                            {el.numShelves === 0 
+                                              ? 'Jo Raft (Modul me hapësirë krejtësisht bosh)' 
+                                              : `${el.numShelves} Raft/a me përmasa saktësisht ${Math.max(100, el.widthMm - 36)} mm (gjerësi) × ${Math.max(100, el.depthMm - 20)} mm (thellësi)`
+                                            }
+                                          </p>
+                                        </div>
+
+                                        {/* Doors detail */}
+                                        <div className="bg-slate-950 p-3 rounded-xl border border-amber-500/30">
+                                          <span className="text-[10px] uppercase font-black text-amber-300 block mb-1">🚪 Dyer dhe Frontat:</span>
+                                          <p className="text-slate-300 font-medium">
+                                            {el.numDoors === 0 ? (
+                                              'Pa Derë (Modul me kornizë të hapur)'
+                                            ) : el.numDoors === 1 ? (
+                                              `1 Derë (${el.doorWidthMm || Math.max(100, el.widthMm - 3)} mm × ${el.doorHeightMm || Math.max(100, el.heightMm - 4)} mm) - Trashësia: ${el.doorMaterialId === 'mat-mdf-22' ? '22 mm' : '19 mm'}`
+                                            ) : (
+                                              `2 Dyer: Dera 1 (${el.customDoors?.[0]?.widthMm || Math.floor(el.widthMm/2)-3} × ${el.customDoors?.[0]?.heightMm || Math.max(100, el.heightMm-4)} mm) | Dera 2 (${el.customDoors?.[1]?.widthMm || Math.floor(el.widthMm/2)-3} × ${el.customDoors?.[1]?.heightMm || Math.max(100, el.heightMm-4)} mm)`
+                                            )}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      {/* Weight Calculation Formula Breakdown */}
+                                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-slate-400 font-mono text-[11px]">
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                          <span>Korpusi: <strong className="text-white">{breakdown.carcaseKg.toFixed(1)} kg</strong></span>
+                                          <span>•</span>
+                                          <span>Raftat: <strong className="text-white">{breakdown.shelvesKg.toFixed(1)} kg</strong></span>
+                                          <span>•</span>
+                                          <span>Dyer: <strong className="text-white">{breakdown.doorsKg.toFixed(1)} kg</strong></span>
+                                          <span>•</span>
+                                          <span>Shpina: <strong className="text-white">{breakdown.backingKg.toFixed(1)} kg</strong></span>
+                                          <span>•</span>
+                                          <span>Mekanizmat: <strong className="text-white">{breakdown.hardwareKg.toFixed(1)} kg</strong></span>
+                                        </div>
+                                        <div className="text-right font-black text-amber-300">
+                                          Sasia: {el.quantity}x = <span className="text-sm font-black text-emerald-400">{lineKg} KG</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    /* EMPTY STATE WHEN LIST IS CLEARED OR EMPTY */
+                    <div className="bg-slate-950/90 p-12 rounded-3xl border-2 border-dashed border-indigo-900/80 text-center space-y-4 shadow-2xl">
+                      <div className="w-16 h-16 bg-indigo-950/80 rounded-2xl border border-indigo-700 flex items-center justify-center mx-auto text-amber-400 shadow-xl">
+                        <Box className="w-8 h-8" />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-base sm:text-lg font-black text-white">
+                          Lista e këtij projekti është e zbrazët!
+                        </h4>
+                        <p className="text-xs text-slate-400 max-w-lg mx-auto font-medium">
+                          Kërkoni ose klikoni mbi elementet në katalogun anësor për t'i shtuar këtu me pesha automatike dhe për t'i ndarë lehtësisht në Paleta 1, 2, 3 sipas dëshirës.
+                        </p>
+                      </div>
+                      <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                        {PRESET_CATALOG_ITEMS.slice(0, 4).map(preset => (
+                          <button
+                            key={preset.id}
+                            onClick={() => handleAddPresetToKitchenElements(preset)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-indigo-950 border border-indigo-800 text-indigo-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-amber-400" /> + {preset.name} (~{preset.approxKg}kg)
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
             </div>
 
           </div>
         )}
+
+        {/* TAB 2: PALLETS LOGISTICS MANAGEMENT (PHOTO 3 STUDIO MATCHING VIEW) */}
+        {activeTab === 'pallets-view' && (() => {
+          const activePNo = selectedStudioPallet || 1;
+          const palletEls = kitchenElements.filter(el => (el.palletNumber || 1) === activePNo);
+          const totalPalletKg = palletEls.reduce((sum, el) => sum + calculateElementBreakdown(el).totalLineKg, 0);
+          
+          // Footprint math (Euro 1.2m x 0.8m = 0.96m², American 1.2m x 1.0m = 1.2m²)
+          const floorAreaM2 = studioPalletType === 'euro' ? 0.96 : 1.20;
+          const usedFloorM2 = palletEls.reduce((sum, el) => sum + ((el.widthMm / 1000) * (el.depthMm / 1000) * el.quantity), 0);
+          const areaPercentage = Math.min(100, Math.round((usedFloorM2 / floorAreaM2) * 100));
+          const remainingPercentage = Math.max(0, 100 - areaPercentage);
+
+          return (
+            <div className="space-y-6">
+              
+              {/* TOP HEADER BANNER (Photo 3 Header matching) */}
+              <div className="bg-slate-900/90 p-5 rounded-3xl border border-indigo-900/60 shadow-xl flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-emerald-950 rounded-2xl border border-emerald-800 text-emerald-400">
+                    <Truck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white flex items-center gap-2">
+                      Pallet: <span className="text-amber-400 font-mono">
+                        {studioPalletType === 'euro' ? 'EPAL 1200 × 800 mm' : 'American Pallet 1200 × 1000 mm'}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 font-mono mt-0.5">
+                      Kodi: <strong className="text-amber-300">{kitchenCode}</strong> | Klienti: <strong className="text-white">{kitchenName}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleAddNewPallet}
+                    className="px-4 py-2 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> + Shto Paletë e Re
+                  </button>
+                  <button
+                    onClick={() => handleAutoDistributePallets(350)}
+                    className="px-4 py-2 bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4" /> Auto-Shpërndaj (Max 350kg)
+                  </button>
+                </div>
+              </div>
+
+              {/* PHOTO 3: 3-COLUMN WORKSPACE GRID */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* COLUMN 1: PALLET TYPES & PALLET SELECTOR (Left 3 cols) */}
+                <div className="lg:col-span-3 bg-slate-900/90 p-5 rounded-3xl border border-indigo-900/60 space-y-5 shadow-2xl flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 border-b border-indigo-900/40 pb-2">
+                      Pallet Types
+                    </h4>
+
+                    {/* Card 1: Euro Pallet */}
+                    <div 
+                      onClick={() => setStudioPalletType('euro')}
+                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-3 ${
+                        studioPalletType === 'euro' 
+                          ? 'bg-indigo-950/70 border-amber-400 shadow-xl' 
+                          : 'bg-slate-950 border-indigo-900/50 hover:border-indigo-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-sm text-white">Euro Pallet</span>
+                        <span className="text-[10px] font-mono text-amber-300 font-bold">1200 × 800 mm</span>
+                      </div>
+                      
+                      {/* Realistic 3D EPAL Wooden Pallet Graphic */}
+                      <div className="h-20 bg-amber-950/30 rounded-xl border border-amber-900/40 flex items-center justify-center p-2 relative overflow-hidden">
+                        <div className="w-full space-y-1">
+                          <div className="h-2.5 bg-amber-800/80 rounded border border-amber-600/60 shadow-sm flex items-center justify-between px-2 text-[8px] font-black font-mono text-amber-200">
+                            <span>EPAL</span> <span>1200mm</span>
+                          </div>
+                          <div className="h-2.5 bg-amber-800/80 rounded border border-amber-600/60 shadow-sm" />
+                          <div className="h-2.5 bg-amber-800/80 rounded border border-amber-600/60 shadow-sm" />
+                          <div className="flex justify-between px-2 pt-0.5">
+                            <div className="w-4 h-2 bg-amber-900 rounded border border-amber-700" />
+                            <div className="w-4 h-2 bg-amber-900 rounded border border-amber-700" />
+                            <div className="w-4 h-2 bg-amber-900 rounded border border-amber-700" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 2: American Pallet */}
+                    <div 
+                      onClick={() => setStudioPalletType('american')}
+                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer space-y-3 ${
+                        studioPalletType === 'american' 
+                          ? 'bg-indigo-950/70 border-amber-400 shadow-xl' 
+                          : 'bg-slate-950 border-indigo-900/50 hover:border-indigo-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-sm text-white">American Pallet</span>
+                        <span className="text-[10px] font-mono text-amber-300 font-bold">1200 × 1000 mm</span>
+                      </div>
+                      
+                      {/* Realistic 3D American Wooden Pallet Graphic */}
+                      <div className="h-20 bg-amber-950/30 rounded-xl border border-amber-900/40 flex items-center justify-center p-2 relative overflow-hidden">
+                        <div className="w-full space-y-1">
+                          <div className="h-2.5 bg-amber-800/80 rounded border border-amber-600/60 shadow-sm flex items-center justify-between px-2 text-[8px] font-black font-mono text-amber-200">
+                            <span>USA</span> <span>1200mm</span>
+                          </div>
+                          <div className="h-2.5 bg-amber-800/80 rounded border border-amber-600/60 shadow-sm" />
+                          <div className="h-2.5 bg-amber-800/80 rounded border border-amber-600/60 shadow-sm" />
+                          <div className="flex justify-between px-2 pt-0.5">
+                            <div className="w-5 h-2 bg-amber-900 rounded border border-amber-700" />
+                            <div className="w-5 h-2 bg-amber-900 rounded border border-amber-700" />
+                            <div className="w-5 h-2 bg-amber-900 rounded border border-amber-700" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Pallet Selector List */}
+                    <div className="space-y-2 pt-2 border-t border-indigo-900/40">
+                      <span className="text-[11px] font-black uppercase text-indigo-300 block">
+                        Zgjidh Paletën për me redaktu:
+                      </span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {customPallets.map(pNo => {
+                          const pElsCount = kitchenElements.filter(x => (x.palletNumber || 1) === pNo).length;
+                          return (
+                            <button
+                              key={pNo}
+                              onClick={() => setSelectedStudioPallet(pNo)}
+                              className={`p-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-between border ${
+                                selectedStudioPallet === pNo
+                                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg'
+                                  : 'bg-slate-950 text-slate-300 border-indigo-900/60 hover:border-amber-400'
+                              }`}
+                            >
+                              <span>Paleta #{pNo}</span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900/60 text-white font-bold">
+                                {pElsCount}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-indigo-900/40">
+                    <button
+                      onClick={handleAddNewPallet}
+                      className="w-full py-2 bg-indigo-950 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 hover:text-white rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Plus className="w-4 h-4 text-amber-400" /> + Shto Paletë te Re
+                    </button>
+                  </div>
+                </div>
+
+                {/* COLUMN 2: PALLET VIEW STAGE & BOTTOM DRAWER (Center 6 cols) */}
+                <div className="lg:col-span-6 bg-slate-900/90 p-5 rounded-3xl border border-indigo-900/60 space-y-4 shadow-2xl flex flex-col justify-between">
+                  
+                  {/* Canvas View Controls Bar */}
+                  <div className="flex items-center justify-between border-b border-indigo-900/40 pb-3">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                      Pallet View (Paleta #{activePNo})
+                    </h4>
+
+                    {/* View Controls: 2D View / 3D View / Fit */}
+                    <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-indigo-900/80">
+                      <button
+                        onClick={() => setStudioViewMode('2D')}
+                        className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                          studioViewMode === '2D' ? 'bg-amber-400 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        2D View
+                      </button>
+                      <button
+                        onClick={() => setStudioViewMode('3D')}
+                        className={`px-3 py-1 text-xs font-black rounded-lg transition-all cursor-pointer ${
+                          studioViewMode === '3D' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        3D View
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ISOMETRIC 3D WOODEN PALLET STAGE WITH GREY RECTANGULAR CABINET BOXES */}
+                  <div className="relative min-h-[360px] bg-slate-950 rounded-2xl border border-indigo-900/80 flex items-center justify-center p-6 overflow-hidden">
+                    {/* Background Grid Pattern */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e1b4b15_1px,transparent_1px),linear-gradient(to_bottom,#1e1b4b15_1px,transparent_1px)] bg-[size:24px_24px]" />
+
+                    {/* 3D Wooden Pallet & Placed Boxes Platform */}
+                    <div className="relative z-10 w-full max-w-lg flex flex-col items-center justify-center">
+                      
+                      {/* Top Stacked Cabinet Boxes (Kaçat) */}
+                      <div className="flex items-end justify-center gap-2 mb-[-8px] z-20">
+                        {palletEls.length > 0 ? (
+                          palletEls.map((el, idx) => {
+                            // Dynamic height scaling for box visuals
+                            const hPx = Math.min(130, Math.max(70, el.heightMm / 8));
+                            const wPx = Math.min(120, Math.max(55, el.widthMm / 8));
+
+                            return (
+                              <div 
+                                key={el.id}
+                                style={{ height: `${hPx}px`, width: `${wPx}px` }}
+                                className="bg-slate-700/90 border-2 border-slate-400 rounded-lg shadow-2xl flex flex-col items-center justify-center p-1 text-center relative group hover:border-amber-400 transition-all cursor-pointer"
+                              >
+                                <div className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-slate-500 border border-slate-300" />
+                                <span className="text-[10px] font-black text-white leading-tight font-mono drop-shadow">
+                                  {el.widthMm} × {el.heightMm}
+                                </span>
+                                <span className="text-[9px] font-bold text-amber-300 font-mono">
+                                  {calculateElementBreakdown(el).totalLineKg} kg
+                                </span>
+                                <span className="text-[8px] text-slate-300 truncate max-w-full px-1">
+                                  {el.name}
+                                </span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="py-8 text-center space-y-1">
+                            <Box className="w-8 h-8 text-slate-600 mx-auto" />
+                            <span className="text-xs text-slate-500 font-medium block">
+                              Paleta #{activePNo} është bosh. Klikoni mbi elementet më poshtë për t'i shtuar!
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* EPAL 3D Wooden Pallet Base Structure */}
+                      <div className="w-full bg-amber-950/70 border-2 border-amber-700 rounded-xl p-3 shadow-2xl space-y-1.5">
+                        <div className="h-4 bg-amber-800 rounded border border-amber-600 flex items-center justify-between px-3 text-[10px] font-black font-mono text-amber-200">
+                          <span>EPAL 80x120 CM</span>
+                          <span>MAX 1500 KG</span>
+                        </div>
+                        <div className="h-3 bg-amber-800 rounded border border-amber-600" />
+                        <div className="h-3 bg-amber-800 rounded border border-amber-600" />
+                        <div className="flex justify-between px-4 pt-1">
+                          <div className="w-8 h-4 bg-amber-900 rounded border border-amber-700" />
+                          <div className="w-8 h-4 bg-amber-900 rounded border border-amber-700" />
+                          <div className="w-8 h-4 bg-amber-900 rounded border border-amber-700" />
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Stage Toolbar (Rotate, Snap, Clear, Optimize) */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950 p-3 rounded-2xl border border-indigo-900/60">
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={studioRotateDeg}
+                        onChange={(e) => setStudioRotateDeg(Number(e.target.value))}
+                        className="bg-slate-900 border border-indigo-900/80 text-white text-xs font-bold rounded-xl px-2.5 py-1 outline-none cursor-pointer"
+                      >
+                        <option value={0}>Rotate: 0°</option>
+                        <option value={90}>Rotate: 90°</option>
+                        <option value={180}>Rotate: 180°</option>
+                        <option value={270}>Rotate: 270°</option>
+                      </select>
+
+                      <button
+                        onClick={() => setStudioSnapOn(prev => !prev)}
+                        className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer border ${
+                          studioSnapOn ? 'bg-indigo-950 text-indigo-300 border-indigo-700' : 'bg-slate-900 text-slate-500 border-slate-800'
+                        }`}
+                      >
+                        Snap: {studioSnapOn ? 'On' : 'Off'}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setKitchenElements(prev => prev.map(x => (x.palletNumber || 1) === activePNo ? { ...x, palletNumber: 2 } : x));
+                        }}
+                        className="px-3 py-1 bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                      >
+                        Clear Pallet
+                      </button>
+
+                      <button
+                        onClick={() => handleAutoDistributePallets(350)}
+                        className="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5" /> Optimize Layout
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* BOTTOM "ADD ELEMENTS" CAROUSEL DRAWER (Photo 3 matching) */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-indigo-900/60 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-amber-300 tracking-wider">
+                        Add Elements to Pallet #{activePNo}
+                      </span>
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                        <span>Zgjidh katin ose elementin më poshtë:</span>
+                      </div>
+                    </div>
+
+                    {/* Horizontal Scroll Carousel of Cabinets */}
+                    <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-indigo-900">
+                      {PRESET_CATALOG_ITEMS.map(preset => (
+                        <div
+                          key={preset.id}
+                          onClick={() => handleAddPresetToKitchenElements(preset, activePNo)}
+                          className="min-w-[140px] bg-slate-900 p-3 rounded-2xl border border-indigo-900/80 hover:border-amber-400 cursor-pointer transition-all shadow space-y-1.5 flex flex-col justify-between group"
+                        >
+                          <div className="w-full h-12 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center p-1 group-hover:border-indigo-700">
+                            <Box className="w-5 h-5 text-indigo-400 group-hover:text-amber-400 transition-colors" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-[11px] text-white block truncate">
+                              {preset.name}
+                            </span>
+                            <span className="text-[10px] font-mono text-amber-300 block">
+                              {preset.widthMm} × {preset.depthMm} × {preset.heightMm}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-indigo-900/40 text-[10px]">
+                            <span className="font-mono text-emerald-400 font-bold">{preset.approxKg} kg</span>
+                            <span className="text-amber-400 font-black">+ Shto</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* COLUMN 3: PALLET INFORMATION & ELEMENT STACK (Right 3 cols) */}
+                <div className="lg:col-span-3 bg-slate-900/90 p-5 rounded-3xl border border-indigo-900/60 space-y-5 shadow-2xl flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 border-b border-indigo-900/40 pb-2">
+                      Pallet Information
+                    </h4>
+
+                    {/* Pallet Specs Table */}
+                    <div className="bg-slate-950 p-3 rounded-2xl border border-indigo-900/60 text-xs space-y-2 font-medium">
+                      <div className="flex justify-between border-b border-indigo-900/40 pb-1.5">
+                        <span className="text-slate-400">Pallet Type:</span>
+                        <strong className="text-white">{studioPalletType === 'euro' ? 'Euro Pallet' : 'American Pallet'}</strong>
+                      </div>
+                      <div className="flex justify-between border-b border-indigo-900/40 pb-1.5">
+                        <span className="text-slate-400">Dimensions:</span>
+                        <strong className="text-amber-300 font-mono">{studioPalletType === 'euro' ? '1200 × 800 mm' : '1200 × 1000 mm'}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Max Load:</span>
+                        <strong className="text-emerald-400 font-mono">1500 kg</strong>
+                      </div>
+                    </div>
+
+                    {/* Current Status Section */}
+                    <div className="space-y-3 pt-2">
+                      <span className="text-[11px] font-black uppercase text-indigo-300 block">
+                        Current Status
+                      </span>
+
+                      {/* Area Usage Progress Bar */}
+                      <div className="space-y-1.5 bg-slate-950 p-3 rounded-2xl border border-indigo-900/60">
+                        <div className="flex justify-between text-xs font-mono">
+                          <span className="text-slate-400">Occupied Area:</span>
+                          <strong className="text-amber-300">{areaPercentage.toFixed(1)}%</strong>
+                        </div>
+                        <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                          <div 
+                            className="bg-amber-400 h-full transition-all duration-500"
+                            style={{ width: `${areaPercentage}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-slate-500 font-mono pt-0.5">
+                          <span>Remaining Area: {remainingPercentage.toFixed(1)}%</span>
+                        </div>
+                      </div>
+
+                      {/* Total Weight & Elements Count */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-slate-950 p-3 rounded-2xl border border-emerald-900/60 text-center">
+                          <span className="text-[10px] font-black uppercase text-slate-400 block">Total Weight</span>
+                          <span className="text-lg font-black font-mono text-emerald-400 block mt-0.5">
+                            {totalPalletKg.toFixed(1)} kg
+                          </span>
+                        </div>
+                        <div className="bg-slate-950 p-3 rounded-2xl border border-indigo-900/60 text-center">
+                          <span className="text-[10px] font-black uppercase text-slate-400 block">Total Elements</span>
+                          <span className="text-lg font-black font-mono text-white block mt-0.5">
+                            {palletEls.length}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Element List on this Pallet */}
+                    <div className="space-y-2 pt-2 border-t border-indigo-900/40">
+                      <span className="text-[11px] font-black uppercase text-indigo-300 block">
+                        Element List ({palletEls.length})
+                      </span>
+
+                      {palletEls.length > 0 ? (
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {palletEls.map(el => (
+                            <div 
+                              key={el.id}
+                              className="p-3 bg-slate-950 rounded-2xl border border-indigo-900/60 flex items-center justify-between text-xs"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-slate-900 rounded-xl text-indigo-400 border border-slate-800">
+                                  <Box className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <span className="font-bold text-white block">{el.name}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    {el.widthMm} × {el.heightMm} × {el.depthMm} mm
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-right flex items-center gap-2">
+                                <span className="font-mono font-black text-emerald-400 text-xs">
+                                  {calculateElementBreakdown(el).totalLineKg} kg
+                                </span>
+                                <button
+                                  onClick={() => setKitchenElements(prev => prev.filter(x => x.id !== el.id))}
+                                  className="text-slate-500 hover:text-rose-400 p-1"
+                                  title="Fshij nga paleta"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 bg-slate-950/60 rounded-2xl border border-dashed border-indigo-900/50">
+                          <span className="text-xs text-slate-500 font-medium">Kjo paletë është e zbrazët.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Complete / Seal Pallet Action Button */}
+                  <div className="pt-3 border-t border-indigo-900/40">
+                    {completedPallets.includes(activePNo) ? (
+                      <button
+                        onClick={() => handleReopenPallet(activePNo)}
+                        className="w-full py-2 bg-slate-950 hover:bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <Unlock className="w-3.5 h-3.5 text-amber-400" /> 🔓 Rihap Paletën #{activePNo}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleFinishPallet(activePNo)}
+                        className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 text-xs font-black rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> ✅ Përfundo Paletën #{activePNo}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          );
+        })()}
 
         {/* TAB 3: SINGLE CABINET BUILDER & DETAILED CALCULATOR */}
         {activeTab === 'single' && (
@@ -1936,17 +2950,32 @@ export function KitchenWeightCalculator() {
             
             {/* Builder Controls Form */}
             <div className="lg:col-span-2 bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-5">
-              <div className="flex items-center justify-between border-b border-indigo-900/40 pb-3">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Calculator className="w-5 h-5 text-indigo-400" /> Ndërto Modul te Ri (Konfigurim i Detajuar)
-                </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-900/40 pb-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-indigo-400" /> Ndërtuesi & Regjistruesi i Modulit Standard
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Ndërtoni modulin dhe regjistrojeni te "Kërko Elementet me Pesha" për përdorim të ardhshëm me 1 klik.
+                  </p>
+                </div>
 
-                <button
-                  onClick={handleAddBuilderToKitchen}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-indigo-600 text-white font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> Shto këtë Element në Projekti
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleSaveBuilderToPresetCatalog}
+                    className="px-3.5 py-2 bg-slate-950 hover:bg-slate-800 border border-amber-500/60 text-amber-300 hover:text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Ruaj këtë modul si model standard te Kërko Elementet me Pesha"
+                  >
+                    <Save className="w-4 h-4 text-amber-400" /> 💾 Regjistro te Katalogu
+                  </button>
+
+                  <button
+                    onClick={handleAddBuilderToKitchen}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 text-slate-950" /> Shto në Projekt
+                  </button>
+                </div>
               </div>
 
               {/* Element Name & Category */}
@@ -2404,6 +3433,875 @@ export function KitchenWeightCalculator() {
         )}
 
       </div>
+      )}
+
+      {/* PALLET INSPECTION & 2D MAP MODAL OVERLAY */}
+      {activePalletModal !== null && (() => {
+        const palletNo = activePalletModal;
+        const palletElements = kitchenElements.filter(el => (el.palletNumber || 1) === palletNo);
+        const palletKg = palletElements.reduce((sum, el) => sum + (calculateElementBreakdown(el).totalLineKg), 0);
+        const isDone = completedPallets.includes(palletNo);
+
+        // Footprint calculation for Euro Pallet (800mm x 1200mm = 0.96 m²)
+        const totalFloorM2 = 0.96;
+        const usedFloorM2 = palletElements.reduce((sum, el) => {
+          return sum + ((el.widthMm / 1000) * (el.depthMm / 1000) * el.quantity);
+        }, 0);
+        const floorPercentage = Math.min(100, Math.round((usedFloorM2 / totalFloorM2) * 100));
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-slate-900 border-2 border-emerald-500/80 rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+              
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 bg-slate-950 border-b border-indigo-900/60 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-950 rounded-2xl border border-emerald-800 text-emerald-400">
+                    <Truck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-black text-white">
+                        📦 Detajet & Inspektimi i Paletës #{palletNo}
+                      </h3>
+                      {isDone ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold text-[10px] flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> E Mbyllur
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 font-bold text-[10px]">
+                          ⏳ Në Punë
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                      Kodi: <span className="text-amber-300 font-bold">{kitchenCode}</span> | Klienti: <span className="text-white font-bold">{kitchenName}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Modal Tab Controls */}
+                  <div className="flex items-center bg-slate-900 p-1 rounded-2xl border border-indigo-900">
+                    <button
+                      onClick={() => setInspectModalTab('list')}
+                      className={`px-3 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer ${
+                        inspectModalTab === 'list' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      📋 Lista & Ndryshimi
+                    </button>
+                    <button
+                      onClick={() => setInspectModalTab('map2d')}
+                      className={`px-3 py-1.5 text-xs font-black rounded-xl transition-all flex items-center gap-1 cursor-pointer ${
+                        inspectModalTab === 'map2d' ? 'bg-amber-500 text-slate-950 shadow font-black' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" /> 🗺️ Harta 2D (80x120cm)
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setActivePalletModal(null)}
+                    className="p-2 text-slate-400 hover:text-white bg-slate-950 hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body Content */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
+                
+                {/* TAB 1: LIST & DIRECT EDIT */}
+                {inspectModalTab === 'list' && (
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950 p-4 rounded-2xl border border-indigo-900/60">
+                      <div>
+                        <span className="text-xs font-black uppercase text-amber-300 block">
+                          Përmbledhja e Paletës #{palletNo}:
+                        </span>
+                        <p className="text-xs text-slate-400">
+                          {palletElements.length} element(e) në këtë paletë | Pesha: <strong className="text-emerald-400 font-mono text-sm">{palletKg.toFixed(1)} KG</strong>
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleAddElementDirectlyToPallet(palletNo)}
+                        className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" /> + Shto Element drejtpërdrejt këtu
+                      </button>
+                    </div>
+
+                    {palletElements.length > 0 ? (
+                      <div className="overflow-x-auto rounded-2xl border border-indigo-900/60 bg-slate-950/60">
+                        <table className="w-full text-left text-xs text-slate-300">
+                          <thead>
+                            <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
+                              <th className="p-3">Kategoria</th>
+                              <th className="p-3">Anësorja</th>
+                              <th className="p-3">Emri i Modulit</th>
+                              <th className="p-3">Përmasat WxHxD (mm)</th>
+                              <th className="p-3">Fronti</th>
+                              <th className="p-3 text-center">Sasi</th>
+                              <th className="p-3 text-right">Pesha</th>
+                              <th className="p-3 text-center">Veprime</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-indigo-900/40 font-medium">
+                            {palletElements.map(el => {
+                              const breakdown = calculateElementBreakdown(el);
+                              const doorMat = getMaterial(el.doorMaterialId);
+                              const is22 = doorMat.thicknessMm === 22 || doorMat.name.includes('22');
+
+                              return (
+                                <tr key={el.id} className="hover:bg-indigo-950/40">
+                                  <td className="p-3">
+                                    <select
+                                      value={el.position}
+                                      onChange={(e) => {
+                                        const val = e.target.value as ElementPosition;
+                                        setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, position: val } : x));
+                                      }}
+                                      className={`text-[10px] font-black uppercase px-2 py-1 rounded border outline-none cursor-pointer ${getPositionBadgeColor(el.position)}`}
+                                    >
+                                      <option value="lart">Lart</option>
+                                      <option value="posht">Poshtë</option>
+                                      <option value="kolone">Kolonë</option>
+                                      <option value="raft_lart">Raft Lart</option>
+                                      <option value="raft_posht">Raft Poshtë</option>
+                                    </select>
+                                  </td>
+
+                                  <td className="p-3">
+                                    <select
+                                      value={el.sideTag || 'majtas'}
+                                      onChange={(e) => {
+                                        const val = e.target.value as SideTag;
+                                        setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, sideTag: val } : x));
+                                      }}
+                                      className="bg-slate-950 text-amber-300 font-black text-[10px] uppercase border border-amber-900/80 rounded px-1.5 py-1 outline-none cursor-pointer"
+                                    >
+                                      <option value="majtas">⬅️ Majtas</option>
+                                      <option value="djathtas">➡️ Djathtas</option>
+                                      <option value="qender">⏹️ Qendër</option>
+                                      <option value="kend">📐 Kënd</option>
+                                    </select>
+                                  </td>
+
+                                  <td className="p-3">
+                                    <input 
+                                      type="text"
+                                      value={el.name}
+                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, name: e.target.value } : x))}
+                                      className="bg-transparent text-white font-black text-xs outline-none focus:border-b focus:border-amber-400 w-full"
+                                    />
+                                  </td>
+
+                                  <td className="p-3 font-mono text-amber-300 font-bold">
+                                    <div className="flex items-center gap-1">
+                                      <input 
+                                        type="number" 
+                                        value={el.widthMm}
+                                        onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, widthMm: Number(e.target.value) } : x))}
+                                        className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
+                                      />
+                                      <span>x</span>
+                                      <input 
+                                        type="number" 
+                                        value={el.heightMm}
+                                        onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, heightMm: Number(e.target.value) } : x))}
+                                        className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
+                                      />
+                                      <span>x</span>
+                                      <input 
+                                        type="number" 
+                                        value={el.depthMm}
+                                        onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, depthMm: Number(e.target.value) } : x))}
+                                        className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-center text-[11px]"
+                                      />
+                                    </div>
+                                  </td>
+
+                                  <td className="p-3">
+                                    <select
+                                      value={is22 ? 'mat-mdf-22' : 'mat-mdf-19'}
+                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: e.target.value } : x))}
+                                      className="bg-slate-950 border border-slate-700 text-indigo-300 font-mono text-[10px] rounded px-1 py-0.5 outline-none"
+                                    >
+                                      <option value="mat-mdf-19">Fronte 19mm</option>
+                                      <option value="mat-mdf-22">Fronte 22mm</option>
+                                    </select>
+                                  </td>
+
+                                  <td className="p-3 text-center">
+                                    <input 
+                                      type="number"
+                                      min={1}
+                                      value={el.quantity}
+                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, quantity: Math.max(1, Number(e.target.value)) } : x))}
+                                      className="w-12 bg-slate-950 border border-slate-700 text-center font-mono font-bold text-white rounded px-1 py-0.5"
+                                    />
+                                  </td>
+
+                                  <td className="p-3 text-right font-mono font-black text-amber-300">
+                                    {breakdown.totalLineKg} kg
+                                  </td>
+
+                                  <td className="p-3 text-center">
+                                    <button
+                                      onClick={() => {
+                                        // Reassign to default Paleta 1 or remove from this pallet
+                                        const targetPallet = palletNo === 1 ? 2 : 1;
+                                        setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, palletNumber: targetPallet } : x));
+                                      }}
+                                      className="px-2 py-1 bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 rounded text-[10px] font-bold cursor-pointer"
+                                      title="Hiq nga kjo paletë"
+                                    >
+                                      Lëviz
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-10 bg-slate-950/60 rounded-2xl border border-dashed border-indigo-900/50 space-y-2">
+                        <Box className="w-10 h-10 text-slate-600 mx-auto" />
+                        <p className="text-slate-400 text-xs">Kjo paletë është tërësisht bosh.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: VISUAL 2D PALLET MAP */}
+                {inspectModalTab === 'map2d' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-slate-950 p-3 rounded-2xl border border-indigo-900/60">
+                        <span className="text-[10px] uppercase font-black text-slate-400 block">Sipërfaqja e dyshemesë Euro Paletë:</span>
+                        <span className="text-base font-mono font-black text-amber-300">
+                          {usedFloorM2.toFixed(2)} / 0.96 m² ({floorPercentage}%)
+                        </span>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-2xl border border-indigo-900/60">
+                        <span className="text-[10px] uppercase font-black text-slate-400 block">Pesha e Ngarkuar:</span>
+                        <span className={`text-base font-mono font-black ${palletKg > 400 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          {palletKg.toFixed(1)} / 400 kg
+                        </span>
+                      </div>
+                      <div className="bg-slate-950 p-3 rounded-2xl border border-indigo-900/60">
+                        <span className="text-[10px] uppercase font-black text-slate-400 block">Numri i Elementeve:</span>
+                        <span className="text-base font-mono font-black text-white">
+                          {palletElements.length} copë
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Realistic Wooden Pallet Render & Floor Plan Canvas (Matching Photo 2) */}
+                    <div className="bg-slate-950 p-5 rounded-3xl border-2 border-amber-500/60 space-y-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-black text-amber-300 border-b border-indigo-900/40 pb-2">
+                        <span className="flex items-center gap-1.5 text-sm">
+                          <LayoutGrid className="w-5 h-5 text-amber-400" /> Harta Vizuale Reale e Paletës me Druri (120x80cm):
+                        </span>
+
+                        <div className="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-amber-500/40">
+                          <span className="text-[10px] text-slate-400 uppercase">Lloji i Paletës:</span>
+                          <select
+                            value={palletType}
+                            onChange={(e) => setPalletType(e.target.value as 'euro' | 'american')}
+                            className="bg-transparent text-amber-300 font-mono font-bold text-xs outline-none cursor-pointer"
+                          >
+                            <option value="euro" className="bg-slate-900 text-white">EUROPALETTEN (1200 x 800 mm)</option>
+                            <option value="american" className="bg-slate-900 text-white">AMERICAN PALLET (1200 x 1000 mm)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Realistic 3D Pine Wooden Pallet Container */}
+                      <div className="relative w-full max-w-lg mx-auto min-h-[460px] bg-gradient-to-b from-stone-900 via-amber-950/40 to-stone-950 rounded-3xl border-4 border-amber-800/80 p-5 flex flex-col justify-between shadow-2xl overflow-hidden space-y-3">
+                        
+                        {/* Realistic Wooden Planks Background Layer */}
+                        <div className="absolute inset-0 grid grid-rows-5 gap-1.5 p-3 pointer-events-none opacity-40">
+                          <div className="bg-gradient-to-r from-amber-800 via-amber-700 to-amber-800 border-y border-amber-600 rounded-sm shadow-inner" />
+                          <div className="bg-gradient-to-r from-amber-800 via-amber-700 to-amber-800 border-y border-amber-600 rounded-sm shadow-inner" />
+                          <div className="bg-gradient-to-r from-amber-800 via-amber-700 to-amber-800 border-y border-amber-600 rounded-sm shadow-inner" />
+                          <div className="bg-gradient-to-r from-amber-800 via-amber-700 to-amber-800 border-y border-amber-600 rounded-sm shadow-inner" />
+                          <div className="bg-gradient-to-r from-amber-800 via-amber-700 to-amber-800 border-y border-amber-600 rounded-sm shadow-inner" />
+                        </div>
+
+                        {/* Pallet Stamp Branding (EPAL / EURO) */}
+                        <div className="absolute bottom-3 right-4 z-10 flex items-center gap-2 pointer-events-none opacity-80">
+                          <div className="px-2 py-0.5 rounded border-2 border-amber-600/60 font-mono font-black text-[9px] text-amber-500 uppercase tracking-widest bg-slate-950/80">
+                            EPAL 1200x800
+                          </div>
+                        </div>
+
+                        {/* Stacked Cabinet Boxes ("Kaçat") Container */}
+                        <div className="relative z-10 space-y-2.5 h-full overflow-y-auto pr-1">
+                          {palletElements.length > 0 ? (
+                            palletElements.map((el, idx) => {
+                              const breakdown = calculateElementBreakdown(el);
+                              const doorMat = getMaterial(el.doorMaterialId);
+                              const is22 = doorMat.thicknessMm === 22 || doorMat.name.includes('22');
+
+                              let badgeColor = 'bg-slate-900/95 border-amber-500 text-amber-200';
+                              if (el.position === 'posht') badgeColor = 'bg-slate-900/95 border-emerald-500 text-emerald-200';
+                              else if (el.position === 'kolone') badgeColor = 'bg-slate-900/95 border-purple-500 text-purple-200';
+                              else if (el.position === 'raft_lart' || el.position === 'raft_posht') badgeColor = 'bg-slate-900/95 border-cyan-500 text-cyan-200';
+
+                              return (
+                                <div 
+                                  key={el.id}
+                                  className={`p-3.5 rounded-2xl border-2 shadow-xl transition-all flex items-center justify-between gap-3 ${badgeColor} hover:scale-[1.01]`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow">
+                                      #{idx+1}
+                                    </div>
+
+                                    <div>
+                                      <span className="font-black text-xs text-white block">{el.name}</span>
+                                      <div className="flex items-center gap-1.5 text-[10px] font-mono mt-1 flex-wrap">
+                                        <span className="px-1.5 py-0.5 rounded bg-slate-950 font-bold border border-slate-700">
+                                          {el.widthMm}x{el.depthMm}mm (L:{el.heightMm})
+                                        </span>
+                                        {el.sideTag && (
+                                          <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-black uppercase text-[9px]">
+                                            {el.sideTag}
+                                          </span>
+                                        )}
+                                        <span className={`px-1.5 py-0.5 rounded font-black ${is22 ? 'bg-purple-600 text-white' : 'bg-indigo-600 text-white'}`}>
+                                          {is22 ? 'Front 22mm' : 'Front 19mm'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right shrink-0">
+                                    <span className="font-mono font-black text-sm text-amber-300 block">
+                                      {breakdown.totalLineKg} kg
+                                    </span>
+                                    <span className="text-[9px] font-mono text-slate-400 font-bold">
+                                      {el.quantity}x copë
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-8 text-amber-400/60 font-medium space-y-2">
+                              <Box className="w-12 h-12 stroke-[1.5]" />
+                              <p className="text-xs font-bold">Kjo paletë me druri është tërësisht bosh.</p>
+                              <p className="text-[10px] text-slate-500">Përdorni butonin "Shto Element" më sipër për të ngarkuar kaçat e kuzhinës.</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Wooden Pallet Base Runner Legs */}
+                        <div className="relative z-10 pt-2 border-t-2 border-amber-700/60 flex items-center justify-between text-[10px] font-mono font-bold text-amber-400">
+                          <span>📦 Përmasa: {palletType === 'euro' ? '800 x 1200 mm' : '1000 x 1200 mm'}</span>
+                          <span>Max Kapaciteti: 400 KG</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Modal Footer Controls */}
+              <div className="p-4 bg-slate-950 border-t border-indigo-900/60 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-xs text-slate-400">
+                  <span className="font-bold text-white">Paleta #{palletNo}</span>: {palletElements.length} elemente, {palletKg.toFixed(1)} kg totales.
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isDone ? (
+                    <button
+                      onClick={() => handleReopenPallet(palletNo)}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Unlock className="w-4 h-4 text-amber-400" /> 🔓 Rihap këtë Paletë
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handleFinishPallet(palletNo);
+                        setActivePalletModal(palletNo + 1);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> ✅ Përfundo Paletën #{palletNo} & Kalo te Paleta #{palletNo + 1} ➔
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setActivePalletModal(null)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Mbyll
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL 1: ⚡ QUICK ELEMENT / DOOR ADDITION MODAL */}
+      {isQuickElementModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-amber-500/80 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-indigo-900/50 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-gradient-to-br from-amber-500 to-indigo-600 rounded-xl text-slate-950 font-black">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">⚡ Shto Derë apo Element të Shpejtë</h3>
+                  <p className="text-[11px] text-slate-400">Përcaktoni dimensionet për t'i shtuar te lista e këtij projekti.</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsQuickElementModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddQuickElementSubmit} className="space-y-4">
+              {/* Element / Door Name */}
+              <div>
+                <label className="block text-xs font-black uppercase text-amber-300 mb-1">
+                  Emri i Elementit apo Derës:
+                </label>
+                <input 
+                  type="text"
+                  required
+                  value={quickForm.name}
+                  onChange={(e) => setQuickForm({ ...quickForm, name: e.target.value })}
+                  placeholder="e.g. Derë MDF 60x72 ose Kabinë Baza 60"
+                  className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-3 py-2 text-white font-bold text-xs outline-none focus:border-amber-400"
+                />
+              </div>
+
+              {/* Position & Category Selector */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Pozicioni / Lloji:</label>
+                  <select
+                    value={quickForm.position}
+                    onChange={(e) => {
+                      const pos = e.target.value as ElementPosition;
+                      let h = quickForm.heightMm;
+                      let d = quickForm.depthMm;
+                      if (pos === 'kolone') { h = 2100; d = 560; }
+                      else if (pos === 'lart' || pos === 'raft_lart') { h = 720; d = 340; }
+                      else { h = 720; d = 560; }
+                      setQuickForm({ ...quickForm, position: pos, heightMm: h, depthMm: d });
+                    }}
+                    className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-3 py-2 text-amber-300 font-bold text-xs"
+                  >
+                    <option value="posht">Poshtë (Baza 72cm)</option>
+                    <option value="lart">Lart (Vise 72cm)</option>
+                    <option value="kolone">Kolonë / Shpajz (Tall 210cm)</option>
+                    <option value="raft_lart">Raft Lart (I Hapur)</option>
+                    <option value="raft_posht">Raft Poshtë (I Hapur)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Anësoret / Korpusi:</label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setQuickForm({ ...quickForm, ansoresThickness: 18 })}
+                      className={`flex-1 py-1.5 text-xs font-black rounded-lg transition-all ${
+                        quickForm.ansoresThickness === 18 ? 'bg-indigo-600 text-white' : 'bg-slate-950 text-slate-400 border border-slate-800'
+                      }`}
+                    >
+                      18 mm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickForm({ ...quickForm, ansoresThickness: 22 })}
+                      className={`flex-1 py-1.5 text-xs font-black rounded-lg transition-all ${
+                        quickForm.ansoresThickness === 22 ? 'bg-purple-600 text-white' : 'bg-slate-950 text-slate-400 border border-slate-800'
+                      }`}
+                    >
+                      22 mm
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dimensions: W x H x D */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Gjerësia (W mm):</label>
+                  <input 
+                    type="number" 
+                    min={100}
+                    max={2500}
+                    value={quickForm.widthMm}
+                    onChange={(e) => {
+                      const w = parseInt(e.target.value) || 600;
+                      setQuickForm({ 
+                        ...quickForm, 
+                        widthMm: w,
+                        door1WidthMm: Math.max(100, quickForm.numDoors === 2 ? Math.floor(w / 2) - 3 : w - 3),
+                        door2WidthMm: Math.max(100, Math.floor(w / 2) - 3)
+                      });
+                    }}
+                    className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-2.5 py-1.5 text-amber-300 font-mono font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Lartësia (H mm):</label>
+                  <input 
+                    type="number" 
+                    min={100}
+                    max={3000}
+                    value={quickForm.heightMm}
+                    onChange={(e) => {
+                      const h = parseInt(e.target.value) || 720;
+                      setQuickForm({ 
+                        ...quickForm, 
+                        heightMm: h,
+                        door1HeightMm: Math.max(100, h - 4),
+                        door2HeightMm: Math.max(100, h - 4)
+                      });
+                    }}
+                    className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-2.5 py-1.5 text-amber-300 font-mono font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Thellësia (D mm):</label>
+                  <input 
+                    type="number" 
+                    min={50}
+                    max={1200}
+                    value={quickForm.depthMm}
+                    onChange={(e) => setQuickForm({ ...quickForm, depthMm: parseInt(e.target.value) || 560 })}
+                    className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-2.5 py-1.5 text-amber-300 font-mono font-bold text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Raftat & Dyer Setup */}
+              <div className="grid grid-cols-2 gap-3 bg-slate-950 p-3 rounded-2xl border border-indigo-900/60">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                    Raftat e Brendshëm:
+                  </label>
+                  <select
+                    value={quickForm.numShelves}
+                    onChange={(e) => setQuickForm({ ...quickForm, numShelves: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-white font-bold text-xs"
+                  >
+                    <option value={0}>Jo Raft (Bosh)</option>
+                    <option value={1}>1 Raft</option>
+                    <option value={2}>2 Rafta</option>
+                    <option value={3}>3 Rafta</option>
+                    <option value={4}>4 Rafta (Kolonë)</option>
+                    <option value={5}>5 Rafta (Kolonë Max)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
+                    Numri i Dyerve:
+                  </label>
+                  <select
+                    value={quickForm.numDoors}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value) || 0;
+                      const w = quickForm.widthMm;
+                      setQuickForm({ 
+                        ...quickForm, 
+                        numDoors: n,
+                        door1WidthMm: n === 2 ? Math.floor(w / 2) - 3 : Math.max(100, w - 3),
+                        door2WidthMm: Math.floor(w / 2) - 3
+                      });
+                    }}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-white font-bold text-xs"
+                  >
+                    <option value={0}>Pa Derë (Kornizë / Raft i Hapur)</option>
+                    <option value={1}>1 Derë (Vetëm 1 Derë)</option>
+                    <option value={2}>2 Dyer (Dera 1 & Dera 2)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Door Details (If numDoors > 0) */}
+              {quickForm.numDoors > 0 && (
+                <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/30 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-amber-300">Përmasat e Derës / Dyerve:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setQuickForm({ ...quickForm, doorThickness: 19 })}
+                        className={`px-2 py-0.5 text-[10px] font-black rounded ${
+                          quickForm.doorThickness === 19 ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        19 mm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickForm({ ...quickForm, doorThickness: 22 })}
+                        className={`px-2 py-0.5 text-[10px] font-black rounded ${
+                          quickForm.doorThickness === 22 ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        22 mm
+                      </button>
+                    </div>
+                  </div>
+
+                  {quickForm.numDoors >= 1 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400">Derë 1 - Gjerësia (W):</label>
+                        <input
+                          type="number"
+                          value={quickForm.door1WidthMm}
+                          onChange={(e) => setQuickForm({ ...quickForm, door1WidthMm: parseInt(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400">Derë 1 - Lartësia (H):</label>
+                        <input
+                          type="number"
+                          value={quickForm.door1HeightMm}
+                          onChange={(e) => setQuickForm({ ...quickForm, door1HeightMm: parseInt(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs font-bold"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {quickForm.numDoors >= 2 && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400">Derë 2 - Gjerësia (W):</label>
+                        <input
+                          type="number"
+                          value={quickForm.door2WidthMm}
+                          onChange={(e) => setQuickForm({ ...quickForm, door2WidthMm: parseInt(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400">Derë 2 - Lartësia (H):</label>
+                        <input
+                          type="number"
+                          value={quickForm.door2HeightMm}
+                          onChange={(e) => setQuickForm({ ...quickForm, door2HeightMm: parseInt(e.target.value) || 0 })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs font-bold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Backing & Quantity */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center">
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-950 p-2.5 rounded-xl border border-indigo-900/60 w-full text-xs text-slate-300 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={quickForm.hasBacking}
+                      onChange={(e) => setQuickForm({ ...quickForm, hasBacking: e.target.checked })}
+                      className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
+                    />
+                    <span>Përmban Shpinë HDF 3mm</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Sasia (Cope):</label>
+                  <input 
+                    type="number" 
+                    min={1}
+                    max={50}
+                    value={quickForm.quantity}
+                    onChange={(e) => setQuickForm({ ...quickForm, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                    className="w-full bg-slate-950 border border-indigo-800 rounded-xl px-3 py-2 text-white font-mono font-bold text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Save to Preset Catalog Checkbox */}
+              <div className="pt-2">
+                <label className="flex items-center gap-2 cursor-pointer bg-slate-950 p-3 rounded-2xl border border-indigo-900/60 text-xs text-slate-300 font-medium">
+                  <input 
+                    type="checkbox"
+                    checked={quickForm.saveToPresetCatalog}
+                    onChange={(e) => setQuickForm({ ...quickForm, saveToPresetCatalog: e.target.checked })}
+                    className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
+                  />
+                  <span>Ruaj edhe te Katalogu Standard <strong>("Kërko Elementet me Pesha")</strong> për përdorim të mëvonshëm</span>
+                </label>
+              </div>
+
+              {/* Buttons */}
+              <div className="pt-3 border-t border-indigo-900/50 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickElementModalOpen(false)}
+                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs rounded-xl"
+                >
+                  Anulo
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" /> Shto në Listë (1-Klik)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: 📦 PALLET OVERVIEW MODAL */}
+      {isPalletModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-6 max-w-3xl w-full space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-indigo-900/50 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-950 rounded-2xl border border-emerald-800 text-emerald-400">
+                  <Truck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-white">📦 Shpërndarja ne Paleta Logjistike</h3>
+                  <p className="text-xs text-slate-400">Inspektoni elementet e ndara sipas Paletës 1, 2, 3 dhe shihni peshën totale për transport.</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsPalletModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-950"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Actions Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950 p-3.5 rounded-2xl border border-indigo-900/60">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAddNewPallet}
+                  className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> + Shto Paletë e Re
+                </button>
+
+                <button
+                  onClick={() => handleAutoDistributePallets(350)}
+                  className="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-black text-xs rounded-xl cursor-pointer flex items-center gap-1"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-400" /> Auto-Shpërndaj (Max 350kg)
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-400 font-mono">
+                Gjithsej <strong className="text-emerald-400">{customPallets.length} Paleta</strong> në sistem
+              </div>
+            </div>
+
+            {/* Pallets List Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {customPallets.map(pNo => {
+                const pEls = kitchenElements.filter(el => (el.palletNumber || 1) === pNo);
+                const pKg = pEls.reduce((sum, el) => sum + calculateElementBreakdown(el).totalLineKg, 0);
+                const isCompleted = completedPallets.includes(pNo);
+
+                return (
+                  <div 
+                    key={pNo}
+                    className={`p-4 rounded-2xl border-2 space-y-3 transition-all ${
+                      isCompleted 
+                        ? 'bg-emerald-950/30 border-emerald-500/60' 
+                        : 'bg-slate-950 border-indigo-900/80 hover:border-amber-400/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-sm text-white">Paleta #{pNo}</span>
+                        {isCompleted && (
+                          <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full text-[10px] font-mono font-black">
+                            ✓ E kryer
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="font-mono font-black text-emerald-400 text-sm">
+                        {pKg.toFixed(1)} KG
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-slate-400 font-mono">
+                      {pEls.length} elemente të vendosura
+                    </div>
+
+                    {/* Progress Capacity Bar (Target ~350kg) */}
+                    <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                      <div 
+                        className={`h-full transition-all duration-300 ${pKg > 400 ? 'bg-rose-500' : 'bg-emerald-400'}`}
+                        style={{ width: `${Math.min(100, Math.round((pKg / 350) * 100))}%` }}
+                      />
+                    </div>
+
+                    <div className="pt-2 border-t border-indigo-900/40 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => {
+                          setIsPalletModalOpen(false);
+                          setActivePalletModal(pNo);
+                        }}
+                        className="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-800 rounded-xl text-xs font-black cursor-pointer flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-amber-400" /> Shiko Hartën Vizuale
+                      </button>
+
+                      {customPallets.length > 1 && (
+                        <button
+                          onClick={() => handleRemovePallet(pNo)}
+                          className="p-1 text-slate-500 hover:text-rose-400"
+                          title="Fshij këtë paletë"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-4 border-t border-indigo-900/50 flex items-center justify-end">
+              <button
+                onClick={() => setIsPalletModalOpen(false)}
+                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Mbyll
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

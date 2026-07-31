@@ -20,7 +20,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
       setPin(nextPin);
       setPinError(false);
       if (nextPin.length === 4) {
-        if (nextPin === '1996') {
+        if (nextPin === '1994') {
           setShowPinModal(false);
           setPin('');
           if (onSelectTvWall) onSelectTvWall();
@@ -39,7 +39,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
 
   const handlePinSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (pin === '1996') {
+    if (pin === '1994') {
       setShowPinModal(false);
       setPin('');
       setPinError(false);
@@ -223,7 +223,11 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
             whileHover={{ y: -8, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            onClick={onSelectTvWall}
+            onClick={() => {
+              setShowPinModal(true);
+              setPin('');
+              setPinError(false);
+            }}
             className="group relative cursor-pointer rounded-[36px] bg-gradient-to-b from-slate-900/90 via-indigo-950/90 to-purple-950/80 p-6 sm:p-8 border border-amber-400/40 shadow-[0_15px_50px_rgba(0,0,0,0.6)] backdrop-blur-2xl overflow-hidden hover:border-amber-300 hover:shadow-[0_20px_60px_rgba(245,158,11,0.35)] transition-all duration-500"
           >
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
@@ -345,9 +349,9 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-black text-white">Aksesi i Mbrojtur: Kuzhina Pro</h3>
+                  <h3 className="text-xl font-black text-white">Aksesi i Mbrojtur: Dizajn TV Wall</h3>
                   <p className="text-xs text-slate-300 font-medium mt-1">
-                    Moduli është i mbrojtur. Ju lutem shkruani kodin hyrës <span className="text-amber-300 font-bold">4-shifror</span> për të vazhduar:
+                    Moduli është i mbrojtur me kod. Ju lutem shkruani kodin hyrës <span className="text-amber-300 font-bold">4-shifror</span> për të vazhduar:
                   </p>
                 </div>
 
@@ -395,7 +399,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
                       setPin(val);
                       setPinError(false);
                       if (val.length === 4) {
-                        if (val === '1996') {
+                        if (val === '1994') {
                           setShowPinModal(false);
                           setPin('');
                           if (onSelectTvWall) onSelectTvWall();
@@ -405,7 +409,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
                         }
                       }
                     }}
-                    placeholder="Shkruaj kodin 1996..."
+                    placeholder="Shkruaj kodin..."
                     className="w-full bg-slate-950 border border-indigo-900/80 rounded-xl px-4 py-3 text-center text-white font-mono font-black text-lg tracking-[0.5em] focus:outline-none focus:border-amber-400 shadow-inner"
                     autoFocus
                   />
@@ -443,7 +447,7 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
                 </div>
 
                 <div className="pt-2 text-[11px] text-slate-400 font-medium">
-                  Moduli "Kuzhina Pro" • MergimGroup Pro Studio
+                  Studio 3D & 2D • MergimGroup TV Wall
                 </div>
               </div>
             </motion.div>
