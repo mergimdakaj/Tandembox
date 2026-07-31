@@ -303,6 +303,17 @@ const DEFAULT_KITCHEN_ELEMENTS: KitchenElementItem[] = [
   }
 ];
 
+export const getAlbanianCategoryLabel = (pos: ElementPosition | string, customCatLabel?: string): string => {
+  if (customCatLabel && !['Base Cabinets', 'Wall Cabinets', 'Tall Cabinets', 'Drawer Units'].includes(customCatLabel)) {
+    return customCatLabel;
+  }
+  if (pos === 'kolone' || customCatLabel === 'Tall Cabinets') return 'Kolonë (Spajz)';
+  if (pos === 'lart' || pos === 'raft_lart' || customCatLabel === 'Wall Cabinets') return 'Lart (Pezull)';
+  if (pos === 'posht' || customCatLabel === 'Base Cabinets') return 'Poshtë (Baza)';
+  if (customCatLabel === 'Drawer Units') return 'Fioka';
+  return customCatLabel || 'Poshtë (Baza)';
+};
+
 export interface CatalogPresetItem {
   id: string;
   name: string;
@@ -322,7 +333,7 @@ export interface CatalogPresetItem {
   hardwareKg: number;
   quantity: number;
   approxKg: number;
-  categoryLabel: 'Base Cabinets' | 'Wall Cabinets' | 'Tall Cabinets' | 'Drawer Units';
+  categoryLabel: string;
 }
 
 export const PRESET_CATALOG_ITEMS: CatalogPresetItem[] = [
@@ -335,7 +346,7 @@ export const PRESET_CATALOG_ITEMS: CatalogPresetItem[] = [
     carcaseMaterialId: 'mat-iv-18', numShelves: 4, shelfMaterialId: 'mat-iv-18',
     numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 1040,
     hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 4.5, quantity: 1,
-    approxKg: 65.0, categoryLabel: 'Tall Cabinets'
+    approxKg: 65.0, categoryLabel: 'Kolonë (Spajz)'
   }
 ];
 
@@ -388,7 +399,7 @@ export function KitchenWeightCalculator() {
 
   // Catalog search & filter state
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
-  const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<'all' | 'Base Cabinets' | 'Wall Cabinets' | 'Tall Cabinets' | 'Drawer Units'>('all');
+  const [catalogCategoryFilter, setCatalogCategoryFilter] = useState<string>('all');
 
   // Pallet Studio 3D Interactive View State (Photo 3 matching)
   const [selectedStudioPallet, setSelectedStudioPallet] = useState<number>(1);
@@ -451,15 +462,18 @@ export function KitchenWeightCalculator() {
 
   // Explicit Pallets List State (e.g. Paleta 1, Paleta 2...)
   const [customPallets, setCustomPallets] = useState<number[]>(() => {
-    const saved = localStorage.getItem('mergim_custom_pallets_list');
+    const saved = localStorage.getItem('mergim_custom_pallets_list_v6');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) { /* fallback */ }
     }
-    return [1, 2, 3];
+    return [1];
   });
 
   useEffect(() => {
-    localStorage.setItem('mergim_custom_pallets_list', JSON.stringify(customPallets));
+    localStorage.setItem('mergim_custom_pallets_list_v6', JSON.stringify(customPallets));
   }, [customPallets]);
 
   const handleRemovePallet = (palletNoToRemove: number) => {
@@ -592,10 +606,10 @@ export function KitchenWeightCalculator() {
     if (quickForm.saveToPresetCatalog) {
       const calc = calculateElementBreakdown(newItem);
       const catLabel = quickForm.position === 'lart' || quickForm.position === 'raft_lart' 
-        ? 'Wall Cabinets' 
+        ? 'Lart (Pezull)' 
         : quickForm.position === 'kolone' 
-        ? 'Tall Cabinets' 
-        : 'Base Cabinets';
+        ? 'Kolonë (Spajz)' 
+        : 'Poshtë (Baza)';
 
       const newPreset: CatalogPresetItem = {
         id: `preset-custom-${Date.now()}`,
@@ -629,10 +643,10 @@ export function KitchenWeightCalculator() {
   const handleSaveBuilderToPresetCatalog = () => {
     const calc = calculateElementBreakdown(builderForm);
     const catLabel = builderForm.position === 'lart' || builderForm.position === 'raft_lart' 
-      ? 'Wall Cabinets' 
+      ? 'Lart (Pezull)' 
       : builderForm.position === 'kolone' 
-      ? 'Tall Cabinets' 
-      : 'Base Cabinets';
+      ? 'Kolonë (Spajz)' 
+      : 'Poshtë (Baza)';
 
     const newPreset: CatalogPresetItem = {
       id: `preset-builder-${Date.now()}`,
@@ -1752,7 +1766,7 @@ export function KitchenWeightCalculator() {
 
                     {/* Category Filter Pills */}
                     <div className="flex flex-wrap gap-1">
-                      {(['all', 'Base Cabinets', 'Wall Cabinets', 'Tall Cabinets', 'Drawer Units'] as const).map(cat => (
+                      {(['all', 'Poshtë (Baza)', 'Lart (Pezull)', 'Kolonë (Spajz)', 'Fioka'] as const).map(cat => (
                         <button
                           key={cat}
                           onClick={() => setCatalogCategoryFilter(cat)}
@@ -1768,54 +1782,63 @@ export function KitchenWeightCalculator() {
                     {/* Scrollable Catalog Preset Items */}
                     <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
                       {presetCatalog.filter(item => {
+                        const itemCatLabel = getAlbanianCategoryLabel(item.position, item.categoryLabel);
                         const matchesQuery = item.name.toLowerCase().includes(catalogSearchQuery.toLowerCase()) || 
                           `${item.widthMm}x${item.heightMm}`.includes(catalogSearchQuery);
-                        const matchesCat = catalogCategoryFilter === 'all' || item.categoryLabel === catalogCategoryFilter;
+                        const matchesCat = catalogCategoryFilter === 'all' || itemCatLabel === catalogCategoryFilter;
                         return matchesQuery && matchesCat;
-                      }).map(preset => (
-                        <div 
-                          key={preset.id}
-                          className="p-3 bg-slate-900/90 rounded-2xl border border-indigo-900/60 hover:border-amber-400/80 transition-all shadow-md space-y-2 group"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <span className="font-black text-xs text-white block group-hover:text-amber-300 transition-colors">
-                                {preset.name}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
-                                {preset.widthMm} × {preset.heightMm} × {preset.depthMm} mm
+                      }).map(preset => {
+                        const displayCat = getAlbanianCategoryLabel(preset.position, preset.categoryLabel);
+                        return (
+                          <div 
+                            key={preset.id}
+                            className="p-3 bg-slate-900/90 rounded-2xl border border-indigo-900/60 hover:border-amber-400/80 transition-all shadow-md space-y-2 group"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-black text-xs text-white block group-hover:text-amber-300 transition-colors">
+                                    {preset.name}
+                                  </span>
+                                  <span className="px-1.5 py-0.2 text-[9px] font-black text-amber-300 bg-amber-950/80 border border-amber-800/60 rounded">
+                                    {displayCat}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                                  {preset.widthMm} × {preset.heightMm} × {preset.depthMm} mm
+                                </span>
+                              </div>
+                              <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-mono text-[10px] font-black shrink-0">
+                                ~{preset.approxKg} kg
                               </span>
                             </div>
-                            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded-full font-mono text-[10px] font-black">
-                              ~{preset.approxKg} kg
-                            </span>
-                          </div>
 
-                          {/* Quick Add Buttons */}
-                          <div className="flex items-center justify-between gap-1 pt-1 border-t border-indigo-900/40">
-                            <button
-                              onClick={() => handleAddPresetToKitchenElements(preset)}
-                              className="px-2.5 py-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-800 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1"
-                            >
-                              <Plus className="w-3 h-3 text-amber-400" /> Shto në Listë
-                            </button>
+                            {/* Quick Add Buttons */}
+                            <div className="flex items-center justify-between gap-1 pt-1 border-t border-indigo-900/40">
+                              <button
+                                onClick={() => handleAddPresetToKitchenElements(preset)}
+                                className="px-2.5 py-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-800 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3 text-amber-400" /> Shto në Listë
+                              </button>
 
-                            {/* Direct Pallet Selector Buttons */}
-                            <div className="flex items-center gap-1">
-                              {customPallets.slice(0, 3).map(pNo => (
-                                <button
-                                  key={pNo}
-                                  onClick={() => handleAddPresetToKitchenElements(preset, pNo)}
-                                  className="px-1.5 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 rounded-lg text-[9px] font-mono font-bold cursor-pointer"
-                                  title={`Shto drejtpërdrejt te Paleta #${pNo}`}
-                                >
+                              {/* Direct Pallet Selector Buttons */}
+                              <div className="flex items-center gap-1">
+                                {customPallets.map(pNo => (
+                                  <button
+                                    key={pNo}
+                                    onClick={() => handleAddPresetToKitchenElements(preset, pNo)}
+                                    className="px-1.5 py-0.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 rounded-lg text-[9px] font-mono font-bold cursor-pointer"
+                                    title={`Shto drejtpërdrejt te Paleta #${pNo}`}
+                                  >
                                   +P#{pNo}
                                 </button>
                               ))}
                             </div>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                   </div>
 
