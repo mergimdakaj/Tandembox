@@ -69,6 +69,12 @@ export interface DoorDimension {
   heightMm?: number;
 }
 
+// Shelf Dimensions interface
+export interface ShelfDimension {
+  widthMm?: number;
+  depthMm?: number;
+}
+
 export type ElementPosition = 'lart' | 'posht' | 'kolone' | 'raft_lart' | 'raft_posht';
 export type SideTag = 'majtas' | 'djathtas' | 'qender' | 'kend';
 
@@ -82,12 +88,14 @@ export interface KitchenElementItem {
   heightMm: number; // e.g. 720
   depthMm: number;  // e.g. 560
   carcaseMaterialId: string;
+  hasTopBottom?: boolean;
   
   // Shelves
   numShelves: number;
   shelfMaterialId: string;
   shelfWidthMm?: number;  // Custom shelf width in mm
   shelfDepthMm?: number;  // Custom shelf depth in mm
+  customShelves?: ShelfDimension[]; // Dimensions for each shelf (Rafti 1, Rafti 2, etc.)
 
   // Doors
   numDoors: number;
@@ -322,8 +330,12 @@ export interface CatalogPresetItem {
   heightMm: number;
   depthMm: number;
   carcaseMaterialId: string;
+  hasTopBottom?: boolean;
   numShelves: number;
   shelfMaterialId: string;
+  shelfWidthMm?: number;
+  shelfDepthMm?: number;
+  customShelves?: ShelfDimension[];
   numDoors: number;
   doorMaterialId: string;
   doorWidthMm?: number;
@@ -382,7 +394,10 @@ export function KitchenWeightCalculator() {
     depthMm: 560,
     hasAnsores: true,
     ansoresThickness: 18 as 18 | 22,
+    hasTopBottom: true,
     numShelves: 1, // 0 for Jo Raft, 1+ for Raft
+    shelfWidthMm: 564,
+    shelfDepthMm: 540,
     numDoors: 1, // 0 for Pa Derë, 1 for 1 Derë, 2 for 2 Dyer
     doorThickness: 22 as 19 | 22,
     door1WidthMm: 597,
@@ -523,6 +538,7 @@ export function KitchenWeightCalculator() {
     heightMm: 720,
     depthMm: 560,
     carcaseMaterialId: 'mat-iv-18',
+    hasTopBottom: true,
     numShelves: 1,
     shelfMaterialId: 'mat-iv-18',
     shelfWidthMm: 564,
@@ -572,6 +588,20 @@ export function KitchenWeightCalculator() {
       });
     }
     
+    // Custom shelves array if numShelves > 0
+    const defaultSW = quickForm.shelfWidthMm || Math.max(10, quickForm.widthMm - 36);
+    const defaultSD = quickForm.shelfDepthMm || Math.max(10, quickForm.depthMm - 20);
+    const customShelves: ShelfDimension[] = [];
+    if (quickForm.numShelves > 0) {
+      for (let i = 0; i < quickForm.numShelves; i++) {
+        const existing = quickForm.customShelves && quickForm.customShelves[i];
+        customShelves.push({
+          widthMm: existing?.widthMm ?? defaultSW,
+          depthMm: existing?.depthMm ?? defaultSD
+        });
+      }
+    }
+
     const newItem: KitchenElementItem = {
       id: newId,
       name: quickForm.name || (quickForm.position === 'kolone' ? 'Kolonë / Shpajz' : 'Element i Shpejtë'),
@@ -580,10 +610,12 @@ export function KitchenWeightCalculator() {
       heightMm: quickForm.heightMm,
       depthMm: quickForm.depthMm,
       carcaseMaterialId: carcaseMatId,
+      hasTopBottom: quickForm.hasTopBottom !== false,
       numShelves: quickForm.numShelves,
       shelfMaterialId: 'mat-iv-18',
-      shelfWidthMm: Math.max(100, quickForm.widthMm - 36),
-      shelfDepthMm: Math.max(100, quickForm.depthMm - 20),
+      shelfWidthMm: defaultSW,
+      shelfDepthMm: defaultSD,
+      customShelves: customShelves.length > 0 ? customShelves : undefined,
       numDoors: quickForm.numDoors,
       doorMaterialId: doorMatId,
       doorWidthMm: customDoors[0]?.widthMm || Math.max(100, quickForm.widthMm - 3),
@@ -619,6 +651,9 @@ export function KitchenWeightCalculator() {
         carcaseMaterialId: newItem.carcaseMaterialId,
         numShelves: newItem.numShelves,
         shelfMaterialId: newItem.shelfMaterialId,
+        shelfWidthMm: newItem.shelfWidthMm,
+        shelfDepthMm: newItem.shelfDepthMm,
+        customShelves: newItem.customShelves,
         numDoors: newItem.numDoors,
         doorMaterialId: newItem.doorMaterialId,
         doorWidthMm: newItem.doorWidthMm,
@@ -654,8 +689,12 @@ export function KitchenWeightCalculator() {
       heightMm: builderForm.heightMm,
       depthMm: builderForm.depthMm,
       carcaseMaterialId: builderForm.carcaseMaterialId,
+      hasTopBottom: builderForm.hasTopBottom !== false,
       numShelves: builderForm.numShelves,
       shelfMaterialId: builderForm.shelfMaterialId,
+      shelfWidthMm: builderForm.shelfWidthMm,
+      shelfDepthMm: builderForm.shelfDepthMm,
+      customShelves: builderForm.customShelves,
       numDoors: builderForm.numDoors,
       doorMaterialId: builderForm.doorMaterialId,
       doorWidthMm: builderForm.doorWidthMm,
@@ -684,10 +723,12 @@ export function KitchenWeightCalculator() {
       heightMm: preset.heightMm,
       depthMm: preset.depthMm,
       carcaseMaterialId: preset.carcaseMaterialId,
+      hasTopBottom: preset.hasTopBottom !== false,
       numShelves: preset.numShelves,
       shelfMaterialId: preset.shelfMaterialId,
-      shelfWidthMm: preset.widthMm - 36,
-      shelfDepthMm: preset.depthMm - 20,
+      shelfWidthMm: preset.shelfWidthMm || Math.max(10, preset.widthMm - 36),
+      shelfDepthMm: preset.shelfDepthMm || Math.max(10, preset.depthMm - 20),
+      customShelves: preset.customShelves,
       numDoors: preset.numDoors,
       doorMaterialId: preset.doorMaterialId,
       doorWidthMm: preset.doorWidthMm,
@@ -742,33 +783,46 @@ export function KitchenWeightCalculator() {
     });
 
     // 2. Tavan / Dysheme (Top & Bottom panels)
-    const topBotWidthM = Math.max(0, wM - (2 * tM));
-    const topBotArea = 2 * (topBotWidthM * dM);
-    const topBotKg = topBotArea * carcaseMat.weightPerM2;
-    components.push({
-      partName: 'Tavan & Dysheme',
-      count: 2,
-      widthMm: Math.round(topBotWidthM * 1000),
-      heightMm: el.depthMm,
-      areaM2: Number(topBotArea.toFixed(3)),
-      materialName: carcaseMat.name,
-      weightPerM2: carcaseMat.weightPerM2,
-      totalKg: Number(topBotKg.toFixed(2))
-    });
+    let topBotKg = 0;
+    if (el.hasTopBottom !== false) {
+      const topBotWidthM = Math.max(0, wM - (2 * tM));
+      const topBotArea = 2 * (topBotWidthM * dM);
+      topBotKg = topBotArea * carcaseMat.weightPerM2;
+      components.push({
+        partName: 'Tavan & Dysheme',
+        count: 2,
+        widthMm: Math.round(topBotWidthM * 1000),
+        heightMm: el.depthMm,
+        areaM2: Number(topBotArea.toFixed(3)),
+        materialName: carcaseMat.name,
+        weightPerM2: carcaseMat.weightPerM2,
+        totalKg: Number(topBotKg.toFixed(2))
+      });
+    }
 
-    // 3. Raftet (Shelves) - custom or calculated
+    // 3. Raftet (Shelves) - custom per shelf or default
     if (el.numShelves > 0) {
-      const sW = (el.shelfWidthMm && el.shelfWidthMm > 0) ? el.shelfWidthMm : Math.round((wM - (2 * tM)) * 1000);
-      const sD = (el.shelfDepthMm && el.shelfDepthMm > 0) ? el.shelfDepthMm : Math.round((dM - 0.02) * 1000);
-      const shelfArea = el.numShelves * ((sW / 1000) * (sD / 1000));
-      const shelfKg = shelfArea * shelfMat.weightPerM2;
+      let totalShelfArea = 0;
+      const defaultSW = (el.shelfWidthMm && el.shelfWidthMm > 0) ? el.shelfWidthMm : Math.round((wM - (2 * tM)) * 1000);
+      const defaultSD = (el.shelfDepthMm && el.shelfDepthMm > 0) ? el.shelfDepthMm : Math.round((dM - 0.02) * 1000);
+      const shelfListDesc: string[] = [];
+
+      for (let i = 0; i < el.numShelves; i++) {
+        const custom = el.customShelves && el.customShelves[i];
+        const sW = (custom && custom.widthMm !== undefined && custom.widthMm > 0) ? custom.widthMm : defaultSW;
+        const sD = (custom && custom.depthMm !== undefined && custom.depthMm > 0) ? custom.depthMm : defaultSD;
+        totalShelfArea += (sW / 1000) * (sD / 1000);
+        shelfListDesc.push(el.numShelves > 1 ? `R${i+1}:${sW}x${sD}` : `${sW}x${sD}mm`);
+      }
+
+      const shelfKg = totalShelfArea * shelfMat.weightPerM2;
 
       components.push({
-        partName: `${el.numShelves} Raft(e) (${sW}x${sD}mm)`,
+        partName: `${el.numShelves} Raft(e) (${shelfListDesc.join(', ')})`,
         count: el.numShelves,
-        widthMm: sW,
-        heightMm: sD,
-        areaM2: Number(shelfArea.toFixed(3)),
+        widthMm: defaultSW,
+        heightMm: defaultSD,
+        areaM2: Number(totalShelfArea.toFixed(3)),
         materialName: shelfMat.name,
         weightPerM2: shelfMat.weightPerM2,
         totalKg: Number(shelfKg.toFixed(2))
@@ -2233,7 +2287,9 @@ export function KitchenWeightCalculator() {
                                           <p className="text-slate-300 font-medium">
                                             {el.numShelves === 0 
                                               ? 'Jo Raft (Modul me hapësirë krejtësisht bosh)' 
-                                              : `${el.numShelves} Raft/a me përmasa saktësisht ${Math.max(100, el.widthMm - 36)} mm (gjerësi) × ${Math.max(100, el.depthMm - 20)} mm (thellësi)`
+                                              : el.customShelves && el.customShelves.length > 0
+                                              ? `${el.numShelves} Raft/a: ${el.customShelves.map((s, idx) => `Rafti ${idx + 1}: ${s.widthMm ?? Math.max(10, el.widthMm - 36)} × ${s.depthMm ?? Math.max(10, el.depthMm - 20)} mm`).join(' | ')}`
+                                              : `${el.numShelves} Raft/a me përmasa saktësisht ${el.shelfWidthMm || Math.max(10, el.widthMm - 36)} mm (gjerësi) × ${el.shelfDepthMm || Math.max(10, el.depthMm - 20)} mm (thellësi)`
                                             }
                                           </p>
                                         </div>
@@ -2887,9 +2943,9 @@ export function KitchenWeightCalculator() {
                 </div>
               </div>
 
-              {/* Carcase Material */}
-              <div>
-                <label className="block text-slate-400 text-[10px] font-bold mb-1">Materiali i Korpusit (Ivericë / MDF):</label>
+              {/* Carcase Material & Top/Bottom option */}
+              <div className="space-y-2">
+                <label className="block text-slate-400 text-[10px] font-bold">Materiali i Korpusit (Ivericë / MDF):</label>
                 <select
                   value={builderForm.carcaseMaterialId}
                   onChange={(e) => setBuilderForm({ ...builderForm, carcaseMaterialId: e.target.value })}
@@ -2899,6 +2955,19 @@ export function KitchenWeightCalculator() {
                     <option key={m.id} value={m.id}>{m.name} ({m.weightPerM2} kg/m²)</option>
                   ))}
                 </select>
+
+                <div className="flex items-center gap-2 pt-1 bg-slate-950/80 p-2.5 rounded-xl border border-indigo-900/60">
+                  <input 
+                    type="checkbox"
+                    id="hasTopBottomCheck"
+                    checked={builderForm.hasTopBottom !== false}
+                    onChange={(e) => setBuilderForm({ ...builderForm, hasTopBottom: e.target.checked })}
+                    className="w-4 h-4 accent-amber-400 cursor-pointer"
+                  />
+                  <label htmlFor="hasTopBottomCheck" className="text-white text-xs font-bold cursor-pointer">
+                    Përfshij Tavan & Dysheme automatikisht (2 pllaka korpusi)
+                  </label>
+                </div>
               </div>
 
               {/* Shelves & Backing Section */}
@@ -2914,7 +2983,21 @@ export function KitchenWeightCalculator() {
                       type="number"
                       min={0}
                       value={builderForm.numShelves}
-                      onChange={(e) => setBuilderForm({ ...builderForm, numShelves: Number(e.target.value) })}
+                      onChange={(e) => {
+                        const num = Number(e.target.value);
+                        setBuilderForm(prev => {
+                          const carcaseMat = getMaterial(prev.carcaseMaterialId);
+                          const tMm = carcaseMat.thicknessMm || 18;
+                          const autoW = Math.max(10, prev.widthMm - (2 * tMm));
+                          const autoD = Math.max(10, prev.depthMm - 20);
+                          return {
+                            ...prev,
+                            numShelves: num,
+                            shelfWidthMm: prev.shelfWidthMm || autoW,
+                            shelfDepthMm: prev.shelfDepthMm || autoD
+                          };
+                        });
+                      }}
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold text-xs"
                     />
                   </div>
@@ -2932,6 +3015,115 @@ export function KitchenWeightCalculator() {
                     </select>
                   </div>
                 </div>
+
+                {/* Custom Shelf Dimensions */}
+                {builderForm.numShelves > 0 && (
+                  <div className="bg-slate-950 p-3.5 rounded-2xl border border-amber-500/40 space-y-3 mt-2">
+                    <div className="flex items-center justify-between border-b border-indigo-900/40 pb-2">
+                      <span className="text-[10px] font-black uppercase text-amber-300">
+                        Përmasat e Rafteve (Sipas dëshirës për secilin raft):
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const carcaseMat = getMaterial(builderForm.carcaseMaterialId);
+                          const tMm = carcaseMat.thicknessMm || 18;
+                          const autoW = Math.max(10, builderForm.widthMm - (2 * tMm));
+                          const autoD = Math.max(10, builderForm.depthMm - 20);
+                          setBuilderForm(prev => ({
+                            ...prev,
+                            shelfWidthMm: autoW,
+                            shelfDepthMm: autoD,
+                            customShelves: Array.from({ length: prev.numShelves }).map(() => ({ widthMm: autoW, depthMm: autoD }))
+                          }));
+                        }}
+                        className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                      >
+                        Reset / Rekalkulo Auto
+                      </button>
+                    </div>
+
+                    {/* Standard fallback defaults */}
+                    <div className="grid grid-cols-2 gap-3 pb-1 border-b border-indigo-900/30">
+                      <div>
+                        <label className="block text-slate-400 text-[10px] mb-1">Gjerësia Standarde (mm):</label>
+                        <input 
+                          type="number"
+                          value={builderForm.shelfWidthMm ?? Math.max(10, builderForm.widthMm - 36)}
+                          onChange={(e) => setBuilderForm({ ...builderForm, shelfWidthMm: Number(e.target.value) })}
+                          className="w-full bg-slate-900 border border-amber-500/60 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-black text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 text-[10px] mb-1">Thellësia Standarde (mm):</label>
+                        <input 
+                          type="number"
+                          value={builderForm.shelfDepthMm ?? Math.max(10, builderForm.depthMm - 20)}
+                          onChange={(e) => setBuilderForm({ ...builderForm, shelfDepthMm: Number(e.target.value) })}
+                          className="w-full bg-slate-900 border border-amber-500/60 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-black text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Individual shelf dimension inputs */}
+                    <div className="space-y-2 pt-1">
+                      <span className="text-[10px] font-bold text-slate-400 block">
+                        Përmasat individuale për secilin raft (mm):
+                      </span>
+                      {Array.from({ length: builderForm.numShelves }).map((_, shelfIdx) => {
+                        const shelfDim = (builderForm.customShelves && builderForm.customShelves[shelfIdx]) || {};
+                        const defaultW = builderForm.shelfWidthMm ?? Math.max(10, builderForm.widthMm - 36);
+                        const defaultD = builderForm.shelfDepthMm ?? Math.max(10, builderForm.depthMm - 20);
+                        const currentW = shelfDim.widthMm !== undefined ? shelfDim.widthMm : defaultW;
+                        const currentD = shelfDim.depthMm !== undefined ? shelfDim.depthMm : defaultD;
+
+                        return (
+                          <div key={shelfIdx} className="p-2.5 bg-slate-900/90 rounded-xl border border-indigo-900/50 space-y-1">
+                            <span className="text-[10px] font-black text-amber-300 block">
+                              {builderForm.numShelves === 1 ? 'Rafti:' : `Rafti ${shelfIdx + 1}:`}
+                            </span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-slate-400 text-[9px] mb-0.5 font-bold">Gjerësia W (mm):</label>
+                                <input 
+                                  type="number"
+                                  value={currentW}
+                                  onChange={(e) => {
+                                    const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                    const newCustomShelves = [...(builderForm.customShelves || [])];
+                                    while (newCustomShelves.length < builderForm.numShelves) {
+                                      newCustomShelves.push({ widthMm: defaultW, depthMm: defaultD });
+                                    }
+                                    newCustomShelves[shelfIdx] = { ...newCustomShelves[shelfIdx], widthMm: val };
+                                    setBuilderForm({ ...builderForm, customShelves: newCustomShelves });
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs font-bold"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-slate-400 text-[9px] mb-0.5 font-bold">Thellësia D (mm):</label>
+                                <input 
+                                  type="number"
+                                  value={currentD}
+                                  onChange={(e) => {
+                                    const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                    const newCustomShelves = [...(builderForm.customShelves || [])];
+                                    while (newCustomShelves.length < builderForm.numShelves) {
+                                      newCustomShelves.push({ widthMm: defaultW, depthMm: defaultD });
+                                    }
+                                    newCustomShelves[shelfIdx] = { ...newCustomShelves[shelfIdx], depthMm: val };
+                                    setBuilderForm({ ...builderForm, customShelves: newCustomShelves });
+                                  }}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs font-bold"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div className="flex items-center gap-2">
@@ -3790,6 +3982,18 @@ export function KitchenWeightCalculator() {
                       22 mm
                     </button>
                   </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input 
+                      type="checkbox"
+                      id="quickFormHasTopBottom"
+                      checked={quickForm.hasTopBottom !== false}
+                      onChange={(e) => setQuickForm({ ...quickForm, hasTopBottom: e.target.checked })}
+                      className="w-4 h-4 accent-amber-400 cursor-pointer"
+                    />
+                    <label htmlFor="quickFormHasTopBottom" className="text-white text-xs font-bold cursor-pointer">
+                      Përfshij Tavan & Dysheme
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -3854,7 +4058,15 @@ export function KitchenWeightCalculator() {
                   </label>
                   <select
                     value={quickForm.numShelves}
-                    onChange={(e) => setQuickForm({ ...quickForm, numShelves: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const ns = parseInt(e.target.value) || 0;
+                      setQuickForm({ 
+                        ...quickForm, 
+                        numShelves: ns,
+                        shelfWidthMm: quickForm.shelfWidthMm || Math.max(10, quickForm.widthMm - 36),
+                        shelfDepthMm: quickForm.shelfDepthMm || Math.max(10, quickForm.depthMm - 20)
+                      });
+                    }}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-white font-bold text-xs"
                   >
                     <option value={0}>Jo Raft (Bosh)</option>
@@ -3890,6 +4102,86 @@ export function KitchenWeightCalculator() {
                   </select>
                 </div>
               </div>
+
+              {/* Shelf Custom Dimensions */}
+              {quickForm.numShelves > 0 && (
+                <div className="bg-slate-950 p-3 rounded-2xl border border-amber-500/30 space-y-3">
+                  <div className="flex justify-between items-center border-b border-indigo-900/40 pb-1.5">
+                    <span className="text-[10px] font-black uppercase text-amber-300">Përmasat e Rafteve (mm):</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const autoW = Math.max(10, quickForm.widthMm - 36);
+                        const autoD = Math.max(10, quickForm.depthMm - 20);
+                        setQuickForm({
+                          ...quickForm,
+                          shelfWidthMm: autoW,
+                          shelfDepthMm: autoD,
+                          customShelves: Array.from({ length: quickForm.numShelves }).map(() => ({ widthMm: autoW, depthMm: autoD }))
+                        });
+                      }}
+                      className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                    >
+                      Rekalkulo Auto
+                    </button>
+                  </div>
+
+                  {/* Individual shelf dimension inputs for Rafti 1, Rafti 2, Rafti 3, Rafti 4, etc. */}
+                  <div className="space-y-2">
+                    {Array.from({ length: quickForm.numShelves }).map((_, shelfIdx) => {
+                      const shelfDim = (quickForm.customShelves && quickForm.customShelves[shelfIdx]) || {};
+                      const defaultW = quickForm.shelfWidthMm ?? Math.max(10, quickForm.widthMm - 36);
+                      const defaultD = quickForm.shelfDepthMm ?? Math.max(10, quickForm.depthMm - 20);
+                      const currentW = shelfDim.widthMm !== undefined ? shelfDim.widthMm : defaultW;
+                      const currentD = shelfDim.depthMm !== undefined ? shelfDim.depthMm : defaultD;
+
+                      return (
+                        <div key={shelfIdx} className="p-2 bg-slate-900/90 rounded-xl border border-indigo-900/50 space-y-1">
+                          <span className="text-[10px] font-black text-amber-300 block">
+                            {quickForm.numShelves === 1 ? 'Rafti 1:' : `Rafti ${shelfIdx + 1}:`}
+                          </span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Gjerësia W (mm):</label>
+                              <input 
+                                type="number"
+                                value={currentW}
+                                onChange={(e) => {
+                                  const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                  const newCustomShelves = [...(quickForm.customShelves || [])];
+                                  while (newCustomShelves.length < quickForm.numShelves) {
+                                    newCustomShelves.push({ widthMm: defaultW, depthMm: defaultD });
+                                  }
+                                  newCustomShelves[shelfIdx] = { ...newCustomShelves[shelfIdx], widthMm: val };
+                                  setQuickForm({ ...quickForm, customShelves: newCustomShelves });
+                                }}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">Thellësia D (mm):</label>
+                              <input 
+                                type="number"
+                                value={currentD}
+                                onChange={(e) => {
+                                  const val = e.target.value !== '' ? Number(e.target.value) : undefined;
+                                  const newCustomShelves = [...(quickForm.customShelves || [])];
+                                  while (newCustomShelves.length < quickForm.numShelves) {
+                                    newCustomShelves.push({ widthMm: defaultW, depthMm: defaultD });
+                                  }
+                                  newCustomShelves[shelfIdx] = { ...newCustomShelves[shelfIdx], depthMm: val };
+                                  setQuickForm({ ...quickForm, customShelves: newCustomShelves });
+                                }}
+                                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-mono text-xs font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Door Details (If numDoors > 0) */}
               {quickForm.numDoors > 0 && (
