@@ -326,139 +326,6 @@ export interface CatalogPresetItem {
 }
 
 export const PRESET_CATALOG_ITEMS: CatalogPresetItem[] = [
-  // Base Cabinets (Poshtë)
-  {
-    id: 'preset-baza-30',
-    name: 'Baza 30 cm (1 Derë)',
-    position: 'posht',
-    widthMm: 300, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 297, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.5, quantity: 1,
-    approxKg: 24.5, categoryLabel: 'Base Cabinets'
-  },
-  {
-    id: 'preset-baza-40',
-    name: 'Baza 40 cm (1 Derë)',
-    position: 'posht',
-    widthMm: 400, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.8, quantity: 1,
-    approxKg: 28.5, categoryLabel: 'Base Cabinets'
-  },
-  {
-    id: 'preset-baza-50',
-    name: 'Baza 50 cm (1 Derë)',
-    position: 'posht',
-    widthMm: 500, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 497, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.0, quantity: 1,
-    approxKg: 32.5, categoryLabel: 'Base Cabinets'
-  },
-  {
-    id: 'preset-baza-60',
-    name: 'Baza 60 cm (1 Derë)',
-    position: 'posht',
-    widthMm: 600, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.2, quantity: 1,
-    approxKg: 37.0, categoryLabel: 'Base Cabinets'
-  },
-  {
-    id: 'preset-baza-80',
-    name: 'Baza 80 cm (2 Dyer)',
-    position: 'posht',
-    widthMm: 800, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.8, quantity: 1,
-    approxKg: 45.0, categoryLabel: 'Base Cabinets'
-  },
-  {
-    id: 'preset-baza-90',
-    name: 'Baza 90 cm (2 Dyer)',
-    position: 'posht',
-    widthMm: 900, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 447, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 3.0, quantity: 1,
-    approxKg: 49.0, categoryLabel: 'Base Cabinets'
-  },
-  // Drawer Units (Fioka)
-  {
-    id: 'preset-fioka-60',
-    name: 'Fioka Baza 60 cm (3 Fioka)',
-    position: 'posht',
-    widthMm: 600, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 0, shelfMaterialId: 'mat-iv-18',
-    numDoors: 3, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 236,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 5.5, quantity: 1,
-    approxKg: 41.5, categoryLabel: 'Drawer Units'
-  },
-  {
-    id: 'preset-fioka-80',
-    name: 'Fioka Baza 80 cm (3 Fioka)',
-    position: 'posht',
-    widthMm: 800, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 0, shelfMaterialId: 'mat-iv-18',
-    numDoors: 3, doorMaterialId: 'mat-mdf-22', doorWidthMm: 797, doorHeightMm: 236,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 6.2, quantity: 1,
-    approxKg: 47.8, categoryLabel: 'Drawer Units'
-  },
-  {
-    id: 'preset-fioka-90',
-    name: 'Fioka Baza 90 cm (3 Fioka)',
-    position: 'posht',
-    widthMm: 900, heightMm: 720, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 0, shelfMaterialId: 'mat-iv-18',
-    numDoors: 3, doorMaterialId: 'mat-mdf-22', doorWidthMm: 897, doorHeightMm: 236,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 7.0, quantity: 1,
-    approxKg: 52.0, categoryLabel: 'Drawer Units'
-  },
-  // Wall Cabinets (Pezull / Lart)
-  {
-    id: 'preset-lart-40',
-    name: 'Pezull Lart 40 cm (1 Derë)',
-    position: 'lart',
-    widthMm: 400, heightMm: 720, depthMm: 350,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-iv-18',
-    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.5, quantity: 1,
-    approxKg: 18.2, categoryLabel: 'Wall Cabinets'
-  },
-  {
-    id: 'preset-lart-60',
-    name: 'Pezull Lart 60 cm (1 Derë)',
-    position: 'lart',
-    widthMm: 600, heightMm: 720, depthMm: 350,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-iv-18',
-    numDoors: 1, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 1.8, quantity: 1,
-    approxKg: 23.5, categoryLabel: 'Wall Cabinets'
-  },
-  {
-    id: 'preset-lart-80',
-    name: 'Pezull Lart 80 cm (2 Dyer)',
-    position: 'lart',
-    widthMm: 800, heightMm: 720, depthMm: 350,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-iv-18',
-    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 397, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 2.5, quantity: 1,
-    approxKg: 29.8, categoryLabel: 'Wall Cabinets'
-  },
-  {
-    id: 'preset-lart-vitrine-80',
-    name: 'Pezull Vitrinë me Xham 80 cm',
-    position: 'lart',
-    widthMm: 800, heightMm: 720, depthMm: 350,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 2, shelfMaterialId: 'mat-xham-4',
-    numDoors: 2, doorMaterialId: 'mat-xham-4', doorWidthMm: 397, doorHeightMm: 716,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 3.2, quantity: 1,
-    approxKg: 28.0, categoryLabel: 'Wall Cabinets'
-  },
   // Tall Cabinets (Kolonë / Spajz)
   {
     id: 'preset-kolone-60',
@@ -469,16 +336,6 @@ export const PRESET_CATALOG_ITEMS: CatalogPresetItem[] = [
     numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 1040,
     hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 4.5, quantity: 1,
     approxKg: 65.0, categoryLabel: 'Tall Cabinets'
-  },
-  {
-    id: 'preset-kolone-frigo-60',
-    name: 'Kolonë Frigorifer 60x210 cm',
-    position: 'kolone',
-    widthMm: 600, heightMm: 2100, depthMm: 560,
-    carcaseMaterialId: 'mat-iv-18', numShelves: 1, shelfMaterialId: 'mat-iv-18',
-    numDoors: 2, doorMaterialId: 'mat-mdf-22', doorWidthMm: 597, doorHeightMm: 1040,
-    hasBacking: true, backingMaterialId: 'mat-hdf-3', hardwareKg: 3.8, quantity: 1,
-    approxKg: 58.5, categoryLabel: 'Tall Cabinets'
   }
 ];
 
@@ -487,7 +344,7 @@ export function KitchenWeightCalculator() {
 
   // Preset catalog state (persisted in localStorage, allowing standard created items to be saved into Kërko Elementet me Pesha)
   const [presetCatalog, setPresetCatalog] = useState<CatalogPresetItem[]>(() => {
-    const saved = localStorage.getItem('mergim_preset_catalog_v2');
+    const saved = localStorage.getItem('mergim_preset_catalog_v5');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -500,7 +357,7 @@ export function KitchenWeightCalculator() {
   });
 
   useEffect(() => {
-    localStorage.setItem('mergim_preset_catalog_v2', JSON.stringify(presetCatalog));
+    localStorage.setItem('mergim_preset_catalog_v5', JSON.stringify(presetCatalog));
   }, [presetCatalog]);
 
   // Quick Element Modal State
@@ -1083,27 +940,16 @@ export function KitchenWeightCalculator() {
     return list;
   }, [kitchenElements, materials, customPallets]);
 
-  // Displayed elements according to selected position filter & front thickness filter
+  // Displayed elements according to selected position filter
   const displayedElements = useMemo(() => {
     return kitchenElements.filter(el => {
-      // 1. Filter by position
+      // Filter by position
       if (filterPosition !== 'all' && el.position !== filterPosition) {
         return false;
       }
-
-      // 2. Filter by Front Thickness (19mm vs 22mm)
-      if (frontThicknessFilter !== 'all') {
-        const doorMat = getMaterial(el.doorMaterialId);
-        const is22 = doorMat.thicknessMm === 22 || doorMat.name.includes('22');
-        const is19 = doorMat.thicknessMm === 19 || doorMat.thicknessMm === 18 || doorMat.name.includes('19');
-
-        if (frontThicknessFilter === '22mm' && !is22) return false;
-        if (frontThicknessFilter === '19mm' && !is19) return false;
-      }
-
       return true;
     });
-  }, [kitchenElements, filterPosition, frontThicknessFilter, materials]);
+  }, [kitchenElements, filterPosition]);
 
   // Function to Add a New Pallet ("Shto Paletë")
   const handleAddNewPallet = () => {
@@ -1829,64 +1675,18 @@ export function KitchenWeightCalculator() {
             {/* CATEGORY FILTER & FRONT THICKNESS CONTROLS & KITCHEN ELEMENTS WORKSPACE */}
             <div className="bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-6">
               
-              {/* Front Thickness Selector & Quick Actions */}
-              <div className="bg-slate-950 p-4 rounded-2xl border border-indigo-900/60 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
-                      <Sliders className="w-4 h-4 text-amber-400" /> Trashësia e Fronteve (Fronte 19 mm vs 22 mm):
-                    </span>
-                  </div>
+              {/* Quick Workspace Actions */}
+              <div className="bg-slate-950 p-4 rounded-2xl border border-indigo-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
+                    <Sliders className="w-4 h-4 text-amber-400" /> Lista e Elementeve të Projekti:
+                  </span>
                   <p className="text-[11px] text-slate-400">
-                    Zgjidhni apo ndryshoni të gjitha frontet e kuzhinës në 19 mm ose 22 mm me 1 klikim.
+                    Shtoni, ndryshoni përmasat apo trashësinë e fronteve (19mm / 22mm) për çdo modul.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                  {/* Filter tabs for Front Thickness */}
-                  <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-indigo-900/80">
-                    <button
-                      onClick={() => setFrontThicknessFilter('all')}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                        frontThicknessFilter === 'all' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      Të Gjitha
-                    </button>
-                    <button
-                      onClick={() => setFrontThicknessFilter('19mm')}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                        frontThicknessFilter === '19mm' ? 'bg-indigo-600 text-white font-black' : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      Fronte 19mm
-                    </button>
-                    <button
-                      onClick={() => setFrontThicknessFilter('22mm')}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                        frontThicknessFilter === '22mm' ? 'bg-purple-600 text-white font-black' : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      Fronte 22mm
-                    </button>
-                  </div>
-
-                  {/* Batch Converters */}
-                  <button
-                    onClick={() => handleBatchChangeFrontThickness(19)}
-                    className="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 border border-indigo-700 text-indigo-300 text-xs font-black rounded-xl transition-all cursor-pointer"
-                    title="Kthen të gjitha frontet e kuzhinës në 19 mm"
-                  >
-                    Kalo të gjitha ne 19 mm
-                  </button>
-                  <button
-                    onClick={() => handleBatchChangeFrontThickness(22)}
-                    className="px-3 py-1.5 bg-purple-950 hover:bg-purple-900 border border-purple-700 text-purple-300 text-xs font-black rounded-xl transition-all cursor-pointer"
-                    title="Kthen të gjitha frontet e kuzhinës në 22 mm"
-                  >
-                    Kalo të gjitha ne 22 mm
-                  </button>
-
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   {/* Clear Empty List Button */}
                   <button
                     onClick={handleClearKitchenElements}
@@ -2125,10 +1925,10 @@ export function KitchenWeightCalculator() {
                           <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
                             <th className="p-3 text-center">Prodhimi</th>
                             <th className="p-3">Kategoria</th>
-                            <th className="p-3">Anësorja</th>
                             <th className="p-3">Emri i Modulit</th>
                             <th className="p-3">Përmasat WxHxD (mm)</th>
                             <th className="p-3">Rafte & Dyer</th>
+                            <th className="p-3 text-center">Fronti (19mm / 22mm)</th>
                             <th className="p-3 text-center">Paleta (Zgjidh Paletën 1, 2, 3)</th>
                             <th className="p-3 text-center">Sasi</th>
                             <th className="p-3 text-right">Pesha per Njësi</th>
@@ -2183,23 +1983,6 @@ export function KitchenWeightCalculator() {
                                   </select>
                                 </td>
 
-                                {/* Side Orientation Tag */}
-                                <td className="p-3">
-                                  <select
-                                    value={el.sideTag || 'majtas'}
-                                    onChange={(e) => {
-                                      const val = e.target.value as SideTag;
-                                      setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, sideTag: val } : x));
-                                    }}
-                                    className="bg-slate-950 text-amber-300 font-black text-[10px] uppercase border border-amber-900/80 rounded px-1.5 py-1 outline-none cursor-pointer"
-                                  >
-                                    <option value="majtas">⬅️ Majtas</option>
-                                    <option value="djathtas">➡️ Djathtas</option>
-                                    <option value="qender">⏹️ Qendër</option>
-                                    <option value="kend">📐 Kënd</option>
-                                  </select>
-                                </td>
-
                                 {/* Element Name editable */}
                                 <td className="p-3">
                                   <input 
@@ -2245,6 +2028,44 @@ export function KitchenWeightCalculator() {
                                     <span className="text-slate-400 font-mono">Rafte: <strong className="text-white">{el.numShelves}</strong></span>
                                     <span className="text-slate-400 font-mono">Dyer: <strong className="text-white">{el.numDoors}</strong></span>
                                   </div>
+                                </td>
+
+                                {/* Front Thickness Selector (19mm vs 22mm) */}
+                                <td className="p-3 text-center">
+                                  {el.numDoors > 0 ? (
+                                    <div className="inline-flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-indigo-900/80 shadow-inner">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: 'mat-mdf-19' } : x));
+                                        }}
+                                        className={`px-2 py-0.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                                          el.doorMaterialId === 'mat-mdf-19' || el.doorMaterialId === 'mat-iv-18'
+                                            ? 'bg-indigo-600 text-white font-black shadow border border-indigo-400'
+                                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                                        }`}
+                                        title="Kalo frontin në 19mm"
+                                      >
+                                        19mm
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: 'mat-mdf-22' } : x));
+                                        }}
+                                        className={`px-2 py-0.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                                          el.doorMaterialId === 'mat-mdf-22' || el.doorMaterialId === 'mat-iv-22'
+                                            ? 'bg-purple-600 text-white font-black shadow border border-purple-400'
+                                            : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                                        }`}
+                                        title="Kalo frontin në 22mm"
+                                      >
+                                        22mm
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-500 font-mono italic">- Pa dyer</span>
+                                  )}
                                 </td>
 
                                 {/* Pallet Selector Pill Group */}
@@ -2352,10 +2173,9 @@ export function KitchenWeightCalculator() {
 
                                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-300">
                                         <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                                          <span className="text-[9px] uppercase font-bold text-slate-500 block">Pozicioni & Anësorja:</span>
+                                          <span className="text-[9px] uppercase font-bold text-slate-500 block">Kategoria e Modulit:</span>
                                           <strong className="text-white capitalize">
-                                            {el.position === 'kolone' ? 'Kolonë (Shpajz / Tall)' : el.position === 'lart' ? 'Lart (Vise)' : el.position === 'posht' ? 'Poshtë (Baza)' : el.position} 
-                                            {' - '}{(el.sideTag || 'majtas').toUpperCase()}
+                                            {el.position === 'kolone' ? 'Kolonë (Shpajz / Tall)' : el.position === 'lart' ? 'Lart (Vise)' : el.position === 'posht' ? 'Poshtë (Baza)' : el.position}
                                           </strong>
                                         </div>
 
@@ -3540,10 +3360,9 @@ export function KitchenWeightCalculator() {
                           <thead>
                             <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
                               <th className="p-3">Kategoria</th>
-                              <th className="p-3">Anësorja</th>
                               <th className="p-3">Emri i Modulit</th>
                               <th className="p-3">Përmasat WxHxD (mm)</th>
-                              <th className="p-3">Fronti</th>
+                              <th className="p-3 text-center">Fronti (19mm / 22mm)</th>
                               <th className="p-3 text-center">Sasi</th>
                               <th className="p-3 text-right">Pesha</th>
                               <th className="p-3 text-center">Veprime</th>
@@ -3552,8 +3371,6 @@ export function KitchenWeightCalculator() {
                           <tbody className="divide-y divide-indigo-900/40 font-medium">
                             {palletElements.map(el => {
                               const breakdown = calculateElementBreakdown(el);
-                              const doorMat = getMaterial(el.doorMaterialId);
-                              const is22 = doorMat.thicknessMm === 22 || doorMat.name.includes('22');
 
                               return (
                                 <tr key={el.id} className="hover:bg-indigo-950/40">
@@ -3571,22 +3388,6 @@ export function KitchenWeightCalculator() {
                                       <option value="kolone">Kolonë</option>
                                       <option value="raft_lart">Raft Lart</option>
                                       <option value="raft_posht">Raft Poshtë</option>
-                                    </select>
-                                  </td>
-
-                                  <td className="p-3">
-                                    <select
-                                      value={el.sideTag || 'majtas'}
-                                      onChange={(e) => {
-                                        const val = e.target.value as SideTag;
-                                        setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, sideTag: val } : x));
-                                      }}
-                                      className="bg-slate-950 text-amber-300 font-black text-[10px] uppercase border border-amber-900/80 rounded px-1.5 py-1 outline-none cursor-pointer"
-                                    >
-                                      <option value="majtas">⬅️ Majtas</option>
-                                      <option value="djathtas">➡️ Djathtas</option>
-                                      <option value="qender">⏹️ Qendër</option>
-                                      <option value="kend">📐 Kënd</option>
                                     </select>
                                   </td>
 
@@ -3624,15 +3425,41 @@ export function KitchenWeightCalculator() {
                                     </div>
                                   </td>
 
-                                  <td className="p-3">
-                                    <select
-                                      value={is22 ? 'mat-mdf-22' : 'mat-mdf-19'}
-                                      onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: e.target.value } : x))}
-                                      className="bg-slate-950 border border-slate-700 text-indigo-300 font-mono text-[10px] rounded px-1 py-0.5 outline-none"
-                                    >
-                                      <option value="mat-mdf-19">Fronte 19mm</option>
-                                      <option value="mat-mdf-22">Fronte 22mm</option>
-                                    </select>
+                                  <td className="p-3 text-center">
+                                    {el.numDoors > 0 ? (
+                                      <div className="inline-flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-indigo-900/80 shadow-inner">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: 'mat-mdf-19' } : x));
+                                          }}
+                                          className={`px-2 py-0.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                                            el.doorMaterialId === 'mat-mdf-19' || el.doorMaterialId === 'mat-iv-18'
+                                              ? 'bg-indigo-600 text-white font-black shadow border border-indigo-400'
+                                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                                          }`}
+                                          title="19mm"
+                                        >
+                                          19mm
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, doorMaterialId: 'mat-mdf-22' } : x));
+                                          }}
+                                          className={`px-2 py-0.5 text-[10px] font-black rounded-lg transition-all cursor-pointer ${
+                                            el.doorMaterialId === 'mat-mdf-22' || el.doorMaterialId === 'mat-iv-22'
+                                              ? 'bg-purple-600 text-white font-black shadow border border-purple-400'
+                                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                                          }`}
+                                          title="22mm"
+                                        >
+                                          22mm
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-500 font-mono italic">- Pa dyer</span>
+                                    )}
                                   </td>
 
                                   <td className="p-3 text-center">
