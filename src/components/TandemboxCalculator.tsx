@@ -22,8 +22,9 @@ interface Dimensions {
   drillingPositions?: number[];
 }
 
-type CalculatorType = 'fijoka-druri' | 'antaro' | 'nova-pro-one' | 'roboti';
+type CalculatorType = 'fijoka-druri' | 'antaro' | 'nova-pro-one' | 'legrabox' | 'roboti';
 type AntaroProfile = 'M' | 'K' | 'B' | 'C' | 'D';
+type LegraboxProfile = 'N' | 'M' | 'K' | 'C' | 'F';
 
 const ANTARO_HEIGHTS: Record<AntaroProfile, number> = {
   'M': 8.2,
@@ -31,6 +32,14 @@ const ANTARO_HEIGHTS: Record<AntaroProfile, number> = {
   'B': 13.2,
   'C': 16.4,
   'D': 20.0
+};
+
+const LEGRABOX_HEIGHTS: Record<LegraboxProfile, number> = {
+  'N': 6.65,
+  'M': 9.05,
+  'K': 12.85,
+  'C': 17.7,
+  'F': 24.1
 };
 
 export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
@@ -58,6 +67,7 @@ export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
   const [llageri, setLlageri] = useState<number>(50);
   const [boardThickness, setBoardThickness] = useState<number>(1.8);
   const [antaroProfile, setAntaroProfile] = useState<AntaroProfile>('M');
+  const [legraboxProfile, setLegraboxProfile] = useState<LegraboxProfile>('M');
   
   // Front overhang/overlay (FST) for vertical drilling calculations
   const [fst, setFst] = useState<number>(1.8); // Default 1.8cm for standard 18mm cabinet bottom
@@ -112,6 +122,23 @@ export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
         shpinaWidth,
         shpinaHeight,
       };
+    } else if (type === 'legrabox') {
+      // Blum LEGRABOX official specs from PDF Page 4:
+      // Podi (Bottom board): LW - 35mm (3.5 cm) x NL - 10mm (1.0 cm)
+      // Shpina (Back panel): LW - 38mm (3.8 cm) x Height Profile (N:6.65, M:9.05, K:12.85, C:17.7, F:24.1 cm)
+      const lw = Number((kaca - (boardThickness * 2)).toFixed(1));
+      const lesenitiWidth = Number((lw - 3.5).toFixed(1));
+      const lesenitiDepth = Number((llageri - 1.0).toFixed(1));
+      const shpinaWidth = Number((lw - 3.8).toFixed(1));
+      const shpinaHeight = LEGRABOX_HEIGHTS[legraboxProfile];
+
+      return {
+        lw,
+        lesenitiWidth,
+        lesenitiDepth,
+        shpinaWidth,
+        shpinaHeight,
+      };
     } else {
       const shelfWidth = Number((kaca - (boardThickness * 2)).toFixed(1));
       const shelfDepth = Number((cabinetDepth - recessDepth - 2).toFixed(1));
@@ -137,11 +164,11 @@ export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
         drillingPositions,
       };
     }
-  }, [type, kaca, llageri, boardThickness, antaroProfile, cabinetHeight, cabinetDepth, numShelves, recessDepth]);
+  }, [type, kaca, llageri, boardThickness, antaroProfile, legraboxProfile, cabinetHeight, cabinetDepth, numShelves, recessDepth]);
 
   const downloadCuttingList = () => {
     const content = `
-LISTA E PRERJES - ${type === 'roboti' ? 'RAFTA' : type === 'nova-pro-one' ? 'NOVAPRO ONE' : type.toUpperCase().replace('-', ' ')}
+LISTA E PRERJES - ${type === 'roboti' ? 'RAFTA' : type === 'nova-pro-one' ? 'NOVAPRO ONE' : type === 'legrabox' ? 'BLUM LEGRABOX' : type.toUpperCase().replace('-', ' ')}
 ---------------------------
 Data: ${new Date().toLocaleDateString()}
 Konfigurimi:
@@ -155,7 +182,7 @@ ${type === 'roboti' ? `
 - Gjatësia e Llagerit: ${llageri} cm
 `}
 - Trashësia e Pllakës: ${boardThickness * 10} mm
-${type === 'antaro' ? `- Profili Antaro: ${antaroProfile}` : ''}
+${type === 'antaro' ? `- Profili Antaro: ${antaroProfile}` : type === 'legrabox' ? `- Profili LEGRABOX: ${legraboxProfile}` : ''}
 
 DIMENSIONET PËR PRERJE:
 ${type === 'fijoka-druri' ? `
@@ -172,6 +199,15 @@ ${type === 'fijoka-druri' ? `
    - Vertikal (poshtme): ${(4.75 + fst).toFixed(2)} cm (${((4.75 + fst) * 10).toFixed(0)} mm)
    - Vertikal (sipërme): ${(4.75 + fst + 3.2).toFixed(2)} cm (${((4.75 + fst + 3.2) * 10).toFixed(0)} mm)
    - Horizontal (nga muri): 15.5 mm
+` : type === 'legrabox' ? `
+1. Shpina (Gjerësia): ${results.shpinaWidth} cm (LW - 38mm)
+2. Shpina (Lartësia): ${results.shpinaHeight} cm (Profili ${legraboxProfile})
+3. Podi (Gjerësia): ${results.lesenitiWidth} cm (LW - 35mm)
+4. Podi (Gjatësia): ${results.lesenitiDepth} cm (NL - 10mm)
+5. Shpimet e Frontit (FST = ${fst} cm):
+   - Vertikal (poshtme): ${(3.3 + fst).toFixed(2)} cm (${((3.3 + fst) * 10).toFixed(0)} mm)
+   - Vertikal (sipërme): ${(3.3 + fst + (legraboxProfile === 'N' ? 3.2 : legraboxProfile === 'M' ? 6.4 : legraboxProfile === 'K' ? 9.6 : 12.8)).toFixed(2)} cm
+   - Horizontal (nga muri): 16 mm + FST (16mm min)
 ` : type === 'nova-pro-one' ? `
 1. Shpina (Gjerësia): ${results.shpinaWidth} cm
 2. Shpina (Lartësia): ${results.shpinaHeight} cm (H90)
@@ -296,8 +332,8 @@ Gjeneruar nga MergimGroup Tool
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Zgjidh Llojin</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(['fijoka-druri', 'antaro', 'nova-pro-one', 'roboti'] as CalculatorType[]).map((t) => (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {(['fijoka-druri', 'antaro', 'nova-pro-one', 'legrabox', 'roboti'] as CalculatorType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => {
@@ -310,7 +346,7 @@ Gjeneruar nga MergimGroup Tool
                         : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'
                     }`}
                   >
-                    {t === 'roboti' ? 'Rafta' : t === 'fijoka-druri' ? 'Fijoka Druri' : t === 'nova-pro-one' ? 'NovaPro One' : 'Antaro'}
+                    {t === 'roboti' ? 'Rafta' : t === 'fijoka-druri' ? 'Fijoka Druri' : t === 'nova-pro-one' ? 'NovaPro One' : t === 'legrabox' ? 'Legrabox' : 'Antaro'}
                   </button>
                 ))}
               </div>
@@ -332,7 +368,7 @@ Gjeneruar nga MergimGroup Tool
               )}
             </div>
 
-            {(type === 'antaro' || type === 'nova-pro-one') && (
+            {(type === 'antaro' || type === 'nova-pro-one' || type === 'legrabox') && (
               <div className="pt-4 border-t border-slate-100 space-y-4">
                 <div className="flex justify-between items-center">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -370,7 +406,7 @@ Gjeneruar nga MergimGroup Tool
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Trashësia Pllakës (mm)</label>
               <div className="flex gap-2">
-                {(type === 'antaro' ? [1.8] : [1.6, 1.8, 1.9, 2.2]).map((t) => (
+                {(type === 'antaro' ? [1.8] : type === 'legrabox' ? [1.6, 1.8] : [1.6, 1.8, 1.9, 2.2]).map((t) => (
                   <button
                     key={t}
                     onClick={() => setBoardThickness(t)}
@@ -406,6 +442,27 @@ Gjeneruar nga MergimGroup Tool
                 </div>
               </div>
             )}
+
+            {type === 'legrabox' && (
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <label className="text-[10px] font-black uppercase text-amber-500 tracking-widest">Profili Blum LEGRABOX (Lartësia)</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {(['N', 'M', 'K', 'C', 'F'] as LegraboxProfile[]).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setLegraboxProfile(p)}
+                      className={`flex-1 min-w-[50px] py-2 text-xs font-bold rounded-lg border transition-all ${
+                        legraboxProfile === p 
+                          ? 'bg-amber-500 text-slate-950 font-black border-amber-500 shadow-sm' 
+                          : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {p} ({LEGRABOX_HEIGHTS[p]}cm)
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100">
@@ -416,6 +473,8 @@ Gjeneruar nga MergimGroup Tool
                   <p><strong>Fijoka Druri:</strong> Ballorja = Kaca - (2 x {boardThickness}cm) - 1.8cm = {(kaca - boardThickness * 2 - 1.8).toFixed(1)}cm. Muret e sirtarit llogariten me trashësi 1.2cm. Leseniti = (Ballorja - 1.2) x (Llageri - 1.2).</p>
                 ) : type === 'antaro' ? (
                   <p><strong>Antaro:</strong> Podi = LW - 7.5cm / Llageri - 2.5cm. Shpina = LW - 8.7cm / Lartësia {ANTARO_HEIGHTS[antaroProfile]}cm.</p>
+                ) : type === 'legrabox' ? (
+                  <p><strong>Blum LEGRABOX (Sipas PDF):</strong> Podi = LW - 3.5cm (35mm) / NL - 1.0cm (10mm). Shpina = LW - 3.8cm (38mm) / Lartësia {LEGRABOX_HEIGHTS[legraboxProfile]}cm. Pritja e këndit të pasëm të podit: 38mm × 8mm.</p>
                 ) : type === 'nova-pro-one' ? (
                   <p><strong>NovaPro One:</strong> Podi dhe Shpina përgatiten nga pllaka 16mm (1.6cm). Gjerësia e podit dhe shpinës = LW - 2xEB (ku EB është {boardThickness === 1.8 ? '3.0' : '2.9'}cm). Gjatësia e podit = Llageri - 1.9cm.</p>
                 ) : (
@@ -565,6 +624,55 @@ Gjeneruar nga MergimGroup Tool
 
                   <div className="p-4 bg-slate-50 text-center">
                     <p className="text-[10px] font-black uppercase text-slate-400">LW (Internal Width): {results.lw} cm | EB (Zgjatimi): {boardThickness === 1.8 ? '3.0' : '2.9'} cm</p>
+                  </div>
+                </>
+              ) : type === 'legrabox' ? (
+                <>
+                  <ResultItem label={`Shpina (Profili ${legraboxProfile})`} value={`${results.shpinaWidth} x ${results.shpinaHeight} cm`} subtitle="Gjerësi (LW - 3.8 cm) x Lartësi" />
+                  <ResultItem label="Podi (Leseniti/Dyshemeja)" value={`${results.lesenitiWidth} x ${results.lesenitiDepth} cm`} subtitle="Gjerësi (LW - 3.5 cm) x Gjatësi (NL - 1.0 cm)" highlight />
+                  
+                  <div className="p-6 bg-amber-50/40 space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-amber-700 tracking-wider mb-2">Dimensionet zyrtare nga Manuali Blum LEGRABOX (PDF)</p>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Për profilin <strong className="font-bold">LEGRABOX {legraboxProfile}</strong> (Lartësia shpinës: <strong className="font-bold">{results.shpinaHeight} cm</strong>) me mbulesë <strong className="font-bold">{fst} cm</strong>:
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div className="bg-white p-3.5 rounded-xl border border-amber-200 shadow-sm space-y-2">
+                        <p className="font-extrabold text-slate-900">Formulat e Prerjes (Faqe 4 e PDF)</p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Gjerësia e Podit: <strong className="text-amber-700">LW – 35 mm</strong> (<strong className="text-indigo-600">{results.lesenitiWidth} cm</strong>)
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Gjatësia e Podit: <strong className="text-amber-700">NL – 10 mm</strong> (<strong className="text-indigo-600">{results.lesenitiDepth} cm</strong>)
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Gjerësia e Shpinës: <strong className="text-amber-700">LW – 38 mm</strong> (<strong className="text-indigo-600">{results.shpinaWidth} cm</strong>)
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Pritja e këndeve të podit mbrapa: <strong className="text-amber-700">38 mm × 8 mm</strong> (trashësia pllakës 16 mm).
+                        </p>
+                      </div>
+
+                      <div className="bg-white p-3.5 rounded-xl border border-amber-200 shadow-sm space-y-2">
+                        <p className="font-extrabold text-slate-900">Shpimi i Frontit (Dera - LEGRABOX)</p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Vrima e poshtme vertikale: <strong className="text-amber-700">{(3.3 + fst).toFixed(2)} cm ({((3.3 + fst) * 10).toFixed(1)} mm)</strong> nga fundi i derës.
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Vrima e sipërme vertikale: <strong className="text-amber-700">{(3.3 + fst + (legraboxProfile === 'N' ? 3.2 : legraboxProfile === 'M' ? 6.4 : legraboxProfile === 'K' ? 9.6 : 12.8)).toFixed(2)} cm</strong> (Distanca {legraboxProfile === 'N' ? '32mm' : legraboxProfile === 'M' ? '64mm' : legraboxProfile === 'K' ? '96mm' : '128mm'}).
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Pozicioni horizontal (anash): <strong className="text-amber-700">1.6 cm (16 mm) + FA</strong> nga skaji.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-900 text-center text-amber-300">
+                    <p className="text-[10px] font-black uppercase tracking-widest">LW (Internal Width): {results.lw} cm | NL (Llageri): {llageri} cm | Shpina: {results.shpinaWidth} x {results.shpinaHeight} cm</p>
                   </div>
                 </>
               ) : (
@@ -1029,12 +1137,67 @@ function CabinetVisualizer({
             <text x="170" y="181" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">LW: {lw}cm</text>
           </svg>
         )}
+
+        {type === 'legrabox' && (
+          <svg className="w-full max-w-[340px] h-[200px]" viewBox="0 0 340 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Outer Cabinet Walls */}
+            <rect x="20" y="30" width="22" height="130" rx="3" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" />
+            <text x="31" y="95" fill="#475569" fontSize="10" fontWeight="bold" textAnchor="middle" transform="rotate(-90, 31, 95)">
+              Muri {btMm}mm
+            </text>
+
+            <rect x="298" y="30" width="22" height="130" rx="3" fill="#cbd5e1" stroke="#94a3b8" strokeWidth="1" />
+            <text x="309" y="95" fill="#475569" fontSize="10" fontWeight="bold" textAnchor="middle" transform="rotate(90, 309, 95)">
+              Muri {btMm}mm
+            </text>
+
+            {/* Cabinet Boundaries */}
+            <line x1="42" y1="30" x2="298" y2="30" stroke="#94a3b8" strokeDasharray="3 3" />
+            <line x1="42" y1="160" x2="298" y2="160" stroke="#94a3b8" strokeDasharray="3 3" />
+
+            {/* Legrabox ultra-thin straight metal sides */}
+            <rect x="42" y="60" width="12" height="80" rx="1.5" fill="#334155" stroke="#1e293b" strokeWidth="1" />
+            <text x="48" y="100" fill="#f8fafc" fontSize="7" fontWeight="black" textAnchor="middle" transform="rotate(-90, 48, 100)">LEGRABOX</text>
+
+            <rect x="286" y="60" width="12" height="80" rx="1.5" fill="#334155" stroke="#1e293b" strokeWidth="1" />
+            <text x="292" y="100" fill="#f8fafc" fontSize="7" fontWeight="black" textAnchor="middle" transform="rotate(90, 292, 100)">LEGRABOX</text>
+
+            {/* Bottom panel (Podi: LW - 35mm) */}
+            <rect x="54" y="125" width="232" height="12" rx="1" fill="#fef3c7" stroke="#f59e0b" strokeWidth="1" />
+            <text x="170" y="134" fill="#92400e" fontSize="8" fontWeight="bold" textAnchor="middle">
+              Podi (LW-35mm): {results.lesenitiWidth} cm
+            </text>
+
+            {/* Back panel (Shpina: LW - 38mm) */}
+            <rect x="58" y="65" width="224" height="14" rx="2" fill="#dbeafe" stroke="#3b82f6" strokeWidth="1" />
+            <text x="170" y="75" fill="#1e40af" fontSize="8" fontWeight="extrabold" textAnchor="middle">
+              Shpina (LW-38mm): {results.shpinaWidth} cm
+            </text>
+
+            {/* Dimensions */}
+            {/* Kaca */}
+            <line x1="20" y1="15" x2="320" y2="15" stroke="#4f46e5" strokeWidth="1.5" />
+            <polygon points="20,15 26,11 26,19" fill="#4f46e5" />
+            <polygon points="320,15 314,11 314,19" fill="#4f46e5" />
+            <rect x="140" y="5" width="60" height="16" rx="4" fill="#6366f1" />
+            <text x="170" y="16" fill="#ffffff" fontSize="9" fontWeight="black" textAnchor="middle">KACA: {kaca}cm</text>
+
+            {/* LW */}
+            <line x1="42" y1="180" x2="298" y2="180" stroke="#0ea5e9" strokeWidth="1.2" />
+            <polygon points="42,180 48,177 48,183" fill="#0ea5e9" />
+            <polygon points="298,180 292,177 292,183" fill="#0ea5e9" />
+            <rect x="135" y="171" width="70" height="15" rx="3" fill="#0284c7" />
+            <text x="170" y="181" fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle">LW: {lw}cm</text>
+          </svg>
+        )}
       </div>
       <p className="text-[10px] text-slate-400 text-center font-medium">
         {type === 'fijoka-druri' 
           ? "Zhvendosja prej 1.8cm llogarit hapësirën teknike për mekanizmat Blum Tandem në të dy anët."
           : type === 'antaro'
           ? "Metalet anësore Antaro kërkojnë zbritje standarde prej 7.5cm për pod dhe 8.7cm për shpinë."
+          : type === 'legrabox'
+          ? "Sistemi premiun Blum LEGRABOX (sipas manualit PDF): Podi = LW – 35 mm / NL – 10 mm, Shpina = LW – 38 mm."
           : type === 'nova-pro-one'
           ? `Sistemi gjerman Grass NovaPro One kërkon zbritje standarde EB prej ${boardThickness === 1.8 ? '3.0' : '2.9'}cm nga muri i brendshëm dhe shpimet e frontit fiks në 1.75cm.`
           : "Raftat priten saktësisht duke zbritur dyfishin e trashësisë së mureve anësore."}

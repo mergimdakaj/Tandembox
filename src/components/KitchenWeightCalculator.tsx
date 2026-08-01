@@ -4,6 +4,7 @@ import {
   Plus, 
   Trash2, 
   Save, 
+  Edit,
   Printer, 
   CheckCircle2, 
   Layers, 
@@ -363,7 +364,14 @@ export const PRESET_CATALOG_ITEMS: CatalogPresetItem[] = [
 ];
 
 export function KitchenWeightCalculator() {
-  const [activeTab, setActiveTab] = useState<'kitchen-project' | 'single' | 'materials-db' | 'saved-projects'>('kitchen-project');
+  const [activeTab, setActiveTab] = useState<'kitchen-project' | 'single' | 'elements-edit' | 'materials-db' | 'saved-projects'>('kitchen-project');
+
+  // Inline element editor state for direct modifications inside Elementet e Ruajtura / Ndryshime tab
+  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
+  const [inlineEditForm, setInlineEditForm] = useState<KitchenElementItem | null>(null);
+
+  // Width slider state for "Emri i Modulit" column
+  const [moduleColumnWidth, setModuleColumnWidth] = useState<number>(260);
 
   // Preset catalog state (persisted in localStorage, allowing standard created items to be saved into Kërko Elementet me Pesha)
   const [presetCatalog, setPresetCatalog] = useState<CatalogPresetItem[]>(() => {
@@ -529,7 +537,9 @@ export function KitchenWeightCalculator() {
   const [activePalletModal, setActivePalletModal] = useState<number | null>(null);
   const [inspectModalTab, setInspectModalTab] = useState<'list' | 'map2d'>('list');
 
-  // Single Element Builder Form State
+  // Single Element Builder Form State & Editing Selection
+  const [editingElementId, setEditingElementId] = useState<string | null>(null);
+
   const [builderForm, setBuilderForm] = useState<KitchenElementItem>({
     id: 'temp-1',
     name: 'Kabinë / Element i Ri',
@@ -538,7 +548,7 @@ export function KitchenWeightCalculator() {
     heightMm: 720,
     depthMm: 560,
     carcaseMaterialId: 'mat-iv-18',
-    hasTopBottom: true,
+    hasTopBottom: false,
     numShelves: 1,
     shelfMaterialId: 'mat-iv-18',
     shelfWidthMm: 564,
@@ -554,6 +564,60 @@ export function KitchenWeightCalculator() {
     isCompleted: false,
     palletNumber: 1
   });
+
+  // Load an element from created elements into builder form for editing
+  const handleSelectElementForEditing = (el: KitchenElementItem) => {
+    setEditingElementId(el.id);
+    setBuilderForm({ ...el });
+    setActiveTab('single');
+  };
+
+  // Cancel editing mode and reset builder form to blank template
+  const handleCancelEditing = () => {
+    setEditingElementId(null);
+    setBuilderForm({
+      id: `temp-${Date.now()}`,
+      name: 'Kabinë / Element i Ri',
+      position: 'posht',
+      widthMm: 600,
+      heightMm: 720,
+      depthMm: 560,
+      carcaseMaterialId: 'mat-iv-18',
+      hasTopBottom: false,
+      numShelves: 1,
+      shelfMaterialId: 'mat-iv-18',
+      shelfWidthMm: 564,
+      shelfDepthMm: 540,
+      numDoors: 1,
+      doorMaterialId: 'mat-mdf-22',
+      doorWidthMm: 597,
+      doorHeightMm: 716,
+      hasBacking: true,
+      backingMaterialId: 'mat-hdf-3',
+      hardwareKg: 2.0,
+      quantity: 1,
+      isCompleted: false,
+      palletNumber: 1
+    });
+  };
+
+  // Save or Update builder form item in kitchenElements
+  const handleAddBuilderToKitchen = () => {
+    if (editingElementId) {
+      setKitchenElements(prev => prev.map(item => item.id === editingElementId ? { ...builderForm, id: editingElementId } : item));
+      alert(`Moduli "${builderForm.name}" u përditësua me sukses!`);
+      setEditingElementId(null);
+    } else {
+      const newId = `builder-el-${Date.now()}`;
+      const newItem: KitchenElementItem = {
+        ...builderForm,
+        id: newId,
+        palletNumber: selectedActivePallet || 1
+      };
+      setKitchenElements(prev => [...prev, newItem]);
+      alert(`Moduli "${newItem.name}" u shtua me sukses në Projekt!`);
+    }
+  };
 
   // New custom material input state
   const [newMatName, setNewMatName] = useState('');
@@ -1241,16 +1305,6 @@ export function KitchenWeightCalculator() {
     setSavedProjects(prev => prev.filter(p => p.id !== id));
   };
 
-  // Add calculated builder element to active kitchen project
-  const handleAddBuilderToKitchen = () => {
-    const newEl: KitchenElementItem = {
-      ...builderForm,
-      id: `k-el-${Date.now()}`
-    };
-    setKitchenElements(prev => [...prev, newEl]);
-    setActiveTab('kitchen-project');
-  };
-
   // Handle adding new custom material
   const handleAddMaterial = () => {
     if (!newMatName.trim()) return;
@@ -1630,6 +1684,18 @@ export function KitchenWeightCalculator() {
             </button>
 
             <button
+              onClick={() => setActiveTab('elements-edit')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'elements-edit'
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-lg scale-[1.02]'
+                  : 'text-amber-400 hover:text-amber-200 hover:bg-slate-800/60 border border-amber-500/30'
+              }`}
+            >
+              <Edit className="w-4 h-4 text-slate-950" />
+              <span>Elementet e Ruajtura / Ndryshime ({kitchenElements.length})</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('materials-db')}
               className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
                 activeTab === 'materials-db'
@@ -1996,6 +2062,60 @@ export function KitchenWeightCalculator() {
 
                   </div>
 
+                  {/* Column Width Slider & Controls for "Emri i Modulit" */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/90 p-3 rounded-2xl border border-amber-500/40 shadow-md text-xs">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-amber-300 font-black">
+                        <Sliders className="w-4 h-4 text-amber-400" />
+                        <span>Shiriti i Gjerësisë ("Emri i Modulit"):</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min={140} 
+                        max={600} 
+                        step={10}
+                        value={moduleColumnWidth}
+                        onChange={(e) => setModuleColumnWidth(Number(e.target.value))}
+                        className="w-40 sm:w-56 accent-amber-400 cursor-pointer"
+                        title="Lëviz shiritin për të ngushtuar ose zgjeruar kolonën e Emrit të Modulit"
+                      />
+                      <span className="font-mono font-black text-amber-300 bg-slate-900 px-2.5 py-1 rounded-xl border border-amber-500/30 text-xs shadow-inner">
+                        {moduleColumnWidth} px
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">Përshtatje e shpejtë:</span>
+                      <button 
+                        type="button"
+                        onClick={() => setModuleColumnWidth(160)} 
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-xl border cursor-pointer transition-all ${
+                          moduleColumnWidth === 160 ? 'bg-amber-400 text-slate-950 border-amber-400 font-black' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        Ngushto (160px)
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setModuleColumnWidth(260)} 
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-xl border cursor-pointer transition-all ${
+                          moduleColumnWidth === 260 ? 'bg-amber-400 text-slate-950 border-amber-400 font-black' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        Mesatare (260px)
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setModuleColumnWidth(420)} 
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-xl border cursor-pointer transition-all ${
+                          moduleColumnWidth === 420 ? 'bg-amber-400 text-slate-950 border-amber-400 font-black' : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                        }`}
+                      >
+                        Zgjero (420px)
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Elements Table OR Empty State */}
                   {displayedElements.length > 0 ? (
                     <div className="overflow-x-auto rounded-2xl border border-indigo-900/60 bg-slate-950/40">
@@ -2004,7 +2124,15 @@ export function KitchenWeightCalculator() {
                           <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
                             <th className="p-3 text-center">Prodhimi</th>
                             <th className="p-3">Kategoria</th>
-                            <th className="p-3">Emri i Modulit</th>
+                            <th 
+                              className="p-3 text-amber-300 font-black"
+                              style={{ width: `${moduleColumnWidth}px`, minWidth: `${moduleColumnWidth}px` }}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span>Emri i Modulit</span>
+                                <Sliders className="w-3.5 h-3.5 text-amber-400 opacity-90" />
+                              </div>
+                            </th>
                             <th className="p-3">Përmasat WxHxD (mm)</th>
                             <th className="p-3">Rafte & Dyer</th>
                             <th className="p-3 text-center">Fronti (19mm / 22mm)</th>
@@ -2062,8 +2190,11 @@ export function KitchenWeightCalculator() {
                                   </select>
                                 </td>
 
-                                {/* Element Name editable */}
-                                <td className="p-3">
+                                {/* Element Name editable with resizable width */}
+                                <td 
+                                  className="p-3"
+                                  style={{ width: `${moduleColumnWidth}px`, minWidth: `${moduleColumnWidth}px` }}
+                                >
                                   <input 
                                     type="text"
                                     value={el.name}
@@ -2071,7 +2202,8 @@ export function KitchenWeightCalculator() {
                                       const val = e.target.value;
                                       setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, name: val } : x));
                                     }}
-                                    className="bg-transparent text-white font-black text-xs outline-none focus:border-b focus:border-amber-400 w-full"
+                                    className="bg-slate-900/60 border border-slate-700/80 rounded-lg px-2 py-1 text-white font-black text-xs outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 w-full transition-all"
+                                    style={{ minWidth: `${Math.max(100, moduleColumnWidth - 24)}px` }}
                                   />
                                 </td>
 
@@ -2851,13 +2983,30 @@ export function KitchenWeightCalculator() {
             
             {/* Builder Controls Form */}
             <div className="lg:col-span-2 bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-5">
+              
+              {/* Editing Status Banner */}
+              {editingElementId && (
+                <div className="bg-amber-500/15 border border-amber-500/50 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-md">
+                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
+                    <Edit className="w-4 h-4 text-amber-400" />
+                    <span>Po ndryshoni me radhë modulin: <strong className="text-white underline font-black">{builderForm.name}</strong></span>
+                  </div>
+                  <button
+                    onClick={handleCancelEditing}
+                    className="px-3 py-1 bg-slate-950 hover:bg-slate-800 text-amber-300 hover:text-white text-xs font-black rounded-xl border border-amber-500/40 cursor-pointer shadow-sm transition-all flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" /> Anulo (Krijo Modul të Ri)
+                  </button>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-900/40 pb-4">
                 <div>
                   <h3 className="text-base font-black text-white flex items-center gap-2">
                     <Calculator className="w-5 h-5 text-indigo-400" /> Ndërtuesi & Regjistruesi i Modulit Standard
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Ndërtoni modulin dhe regjistrojeni te "Kërko Elementet me Pesha" për përdorim të ardhshëm me 1 klik.
+                    Ndërtoni modulin dhe regjistrojeni te "Kërko Elementet me Pesha" ose ndryshoni elementet ekzistuese.
                   </p>
                 </div>
 
@@ -2872,9 +3021,21 @@ export function KitchenWeightCalculator() {
 
                   <button
                     onClick={handleAddBuilderToKitchen}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    className={`px-4 py-2 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      editingElementId 
+                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 ring-2 ring-amber-300/50' 
+                        : 'bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-slate-950'
+                    }`}
                   >
-                    <Plus className="w-4 h-4 text-slate-950" /> Shto në Projekt
+                    {editingElementId ? (
+                      <>
+                        <Check className="w-4 h-4 text-slate-950" /> Ruaj Ndryshimet te Moduli
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 text-slate-950" /> Shto në Projekt
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2943,7 +3104,7 @@ export function KitchenWeightCalculator() {
                 </div>
               </div>
 
-              {/* Carcase Material & Top/Bottom option */}
+              {/* Carcase Material */}
               <div className="space-y-2">
                 <label className="block text-slate-400 text-[10px] font-bold">Materiali i Korpusit (Ivericë / MDF):</label>
                 <select
@@ -2955,19 +3116,6 @@ export function KitchenWeightCalculator() {
                     <option key={m.id} value={m.id}>{m.name} ({m.weightPerM2} kg/m²)</option>
                   ))}
                 </select>
-
-                <div className="flex items-center gap-2 pt-1 bg-slate-950/80 p-2.5 rounded-xl border border-indigo-900/60">
-                  <input 
-                    type="checkbox"
-                    id="hasTopBottomCheck"
-                    checked={builderForm.hasTopBottom !== false}
-                    onChange={(e) => setBuilderForm({ ...builderForm, hasTopBottom: e.target.checked })}
-                    className="w-4 h-4 accent-amber-400 cursor-pointer"
-                  />
-                  <label htmlFor="hasTopBottomCheck" className="text-white text-xs font-bold cursor-pointer">
-                    Përfshij Tavan & Dysheme automatikisht (2 pllaka korpusi)
-                  </label>
-                </div>
               </div>
 
               {/* Shelves & Backing Section */}
@@ -3043,33 +3191,8 @@ export function KitchenWeightCalculator() {
                       </button>
                     </div>
 
-                    {/* Standard fallback defaults */}
-                    <div className="grid grid-cols-2 gap-3 pb-1 border-b border-indigo-900/30">
-                      <div>
-                        <label className="block text-slate-400 text-[10px] mb-1">Gjerësia Standarde (mm):</label>
-                        <input 
-                          type="number"
-                          value={builderForm.shelfWidthMm ?? Math.max(10, builderForm.widthMm - 36)}
-                          onChange={(e) => setBuilderForm({ ...builderForm, shelfWidthMm: Number(e.target.value) })}
-                          className="w-full bg-slate-900 border border-amber-500/60 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-black text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-400 text-[10px] mb-1">Thellësia Standarde (mm):</label>
-                        <input 
-                          type="number"
-                          value={builderForm.shelfDepthMm ?? Math.max(10, builderForm.depthMm - 20)}
-                          onChange={(e) => setBuilderForm({ ...builderForm, shelfDepthMm: Number(e.target.value) })}
-                          className="w-full bg-slate-900 border border-amber-500/60 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-black text-xs"
-                        />
-                      </div>
-                    </div>
-
                     {/* Individual shelf dimension inputs */}
                     <div className="space-y-2 pt-1">
-                      <span className="text-[10px] font-bold text-slate-400 block">
-                        Përmasat individuale për secilin raft (mm):
-                      </span>
                       {Array.from({ length: builderForm.numShelves }).map((_, shelfIdx) => {
                         const shelfDim = (builderForm.customShelves && builderForm.customShelves[shelfIdx]) || {};
                         const defaultW = builderForm.shelfWidthMm ?? Math.max(10, builderForm.widthMm - 36);
@@ -3286,6 +3409,472 @@ export function KitchenWeightCalculator() {
 
             </div>
 
+            {/* SECTION: ELEMENTET E KRIJUARA NË KËTË PROJEKT */}
+            <div className="lg:col-span-3 bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-900/40 pb-3">
+                <div>
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-amber-400" /> Elementet e Krijuara me Radhë ({kitchenElements.length})
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Këtu janë të gjitha elementet tuaja. Klikoni "Edito / Ndrysho" në cilindo element për ta ngarkuar te Ndërtuesi i Modulit dhe për ta modifikuar sipas dëshirës.
+                  </p>
+                </div>
+                {kitchenElements.length > 0 && (
+                  <span className="text-xs font-mono font-bold text-amber-300 bg-slate-950 px-3 py-1.5 rounded-xl border border-amber-500/30">
+                    Pesha Totale Projektit: {projectSummary.grandTotalKg} KG
+                  </span>
+                )}
+              </div>
+
+              {kitchenElements.length === 0 ? (
+                <div className="text-center py-8 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                  <p className="text-xs text-slate-400 font-medium">Nuk keni asnjë element të krijuar ende në këtë projekt.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Përdorni formularin më sipër për të ndërtuar elemente dhe ato do të shfaqen këtu me radhë.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {kitchenElements.map((el, index) => {
+                    const breakDown = calculateElementBreakdown(el);
+                    const isEditingThis = editingElementId === el.id;
+
+                    return (
+                      <div 
+                        key={el.id} 
+                        className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                          isEditingThis 
+                            ? 'bg-amber-950/40 border-amber-400 ring-2 ring-amber-400/50 shadow-lg' 
+                            : 'bg-slate-950 border-indigo-900/50 hover:border-indigo-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-black uppercase text-indigo-400 tracking-wider block">
+                              #{index + 1} • {el.position === 'lart' ? 'Lart' : el.position === 'posht' ? 'Poshtë' : el.position === 'kolone' ? 'Kolonë' : 'Raft'}
+                            </span>
+                            <h4 className="text-sm font-black text-white leading-tight mt-0.5">{el.name}</h4>
+                          </div>
+                          <span className="text-xs font-mono font-black text-emerald-400 bg-slate-900 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                            {breakDown.finalUnitKg} kg
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 font-mono">
+                          <div>
+                            <span className="text-slate-500 block text-[9px]">Përmasat:</span>
+                            <span className="font-bold text-amber-300">{el.widthMm} × {el.heightMm} × {el.depthMm} mm</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block text-[9px]">Sasia / Paleta:</span>
+                            <span className="font-bold text-slate-200">{el.quantity || 1} copë (Pal: #{el.palletNumber || 1})</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block text-[9px]">Raftat:</span>
+                            <span className="font-bold text-indigo-300">{el.numShelves} raft(e)</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block text-[9px]">Dyer:</span>
+                            <span className="font-bold text-indigo-300">{el.numDoors} derë(a)</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            onClick={() => handleSelectElementForEditing(el)}
+                            className={`flex-1 py-1.5 px-2 font-bold text-xs rounded-xl shadow transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                              isEditingThis 
+                                ? 'bg-amber-400 text-slate-950 font-black' 
+                                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                            }`}
+                          >
+                            <Edit className="w-3.5 h-3.5" /> {isEditingThis ? 'Në Editim...' : 'Edito / Ndrysho'}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              const cloned: KitchenElementItem = {
+                                ...el,
+                                id: `cloned-el-${Date.now()}`,
+                                name: `${el.name} (Kopje)`
+                              };
+                              setKitchenElements(prev => [...prev, cloned]);
+                            }}
+                            className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700 cursor-pointer"
+                            title="Dupliko këtë element"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (editingElementId === el.id) handleCancelEditing();
+                              setKitchenElements(prev => prev.filter(x => x.id !== el.id));
+                            }}
+                            className="p-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200 rounded-xl border border-rose-900/60 cursor-pointer"
+                            title="Fshij elementin"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB: ELEMENTET E RUAJTURA / NDRYSHIME DHE MODIFIKIME */}
+        {activeTab === 'elements-edit' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900/90 p-6 rounded-3xl border border-indigo-900/60 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-900/40 pb-4">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <Edit className="w-5 h-5 text-amber-400" /> Elementet e Ruajtura / Ndërhyrje & Ndryshime ({kitchenElements.length})
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Këtu mund të modifikoni drejtpërdrejt përmasat, sasinë, raftat, dyer-t, materialet ose paletën për çdo element të krijuar, ose ta hapni atë te Ndërtuesi i Modulit.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      handleCancelEditing();
+                      setActiveTab('single');
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 text-slate-950" /> Shto Modul të Ri te Ndërtuesi
+                  </button>
+                </div>
+              </div>
+
+              {kitchenElements.length === 0 ? (
+                <div className="text-center py-12 bg-slate-950/60 rounded-2xl border border-dashed border-slate-800">
+                  <Edit className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                  <p className="text-sm text-slate-300 font-bold">Nuk keni asnjë element të ruajtur në projekt.</p>
+                  <p className="text-xs text-slate-500 mt-1">Shtoni ose ndërtoni elemente të reja te "Ndërtuesi i Modulit" dhe ato do të shfaqen këtu për modifikim.</p>
+                  <button
+                    onClick={() => setActiveTab('single')}
+                    className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl cursor-pointer"
+                  >
+                    Kalo te Ndërtuesi i Modulit
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {kitchenElements.map((el, index) => {
+                    const breakdown = calculateElementBreakdown(el);
+                    const isInlineEditing = inlineEditId === el.id;
+                    const isBuilderEditing = editingElementId === el.id;
+
+                    return (
+                      <div 
+                        key={el.id} 
+                        className={`p-5 rounded-3xl border transition-all ${
+                          isInlineEditing 
+                            ? 'bg-amber-950/30 border-amber-400 ring-2 ring-amber-400/40 shadow-2xl' 
+                            : isBuilderEditing
+                            ? 'bg-indigo-950/40 border-indigo-500 ring-1 ring-indigo-400 shadow-xl'
+                            : 'bg-slate-950 border-indigo-900/60 hover:border-indigo-700'
+                        }`}
+                      >
+                        {/* Header of Item Card */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-900/40">
+                          <div className="flex items-center gap-3">
+                            <span className="w-8 h-8 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-black font-mono text-xs flex items-center justify-center">
+                              #{index + 1}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-base font-black text-white">{el.name}</h4>
+                                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-indigo-900/60 text-indigo-300 border border-indigo-800">
+                                  {el.position === 'lart' ? 'Kabinë Lart' : el.position === 'posht' ? 'Kabinë Poshtë' : el.position === 'kolone' ? 'Kolonë' : 'Raft'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 font-mono mt-0.5">
+                                Përmasat: <strong className="text-amber-300">{el.widthMm} × {el.heightMm} × {el.depthMm} mm</strong> | Paleta: #{el.palletNumber || 1}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-black text-emerald-400 bg-slate-900 px-3 py-1.5 rounded-xl border border-emerald-500/30">
+                              {breakdown.finalUnitKg} kg / copë (Gjithsej: {breakdown.totalLineKg} kg)
+                            </span>
+
+                            {/* Main Action Buttons */}
+                            <button
+                              onClick={() => handleSelectElementForEditing(el)}
+                              className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                              title="Ngarko me të gjitha detajet te Ndërtuesi i Modulit"
+                            >
+                              <Edit className="w-3.5 h-3.5" /> Edito te Ndërtuesi
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (isInlineEditing) {
+                                  setInlineEditId(null);
+                                  setInlineEditForm(null);
+                                } else {
+                                  setInlineEditId(el.id);
+                                  setInlineEditForm({ ...el });
+                                }
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer border ${
+                                isInlineEditing 
+                                  ? 'bg-amber-400 text-slate-950 border-amber-400 font-black' 
+                                  : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-amber-500/40'
+                              }`}
+                            >
+                              <Sliders className="w-3.5 h-3.5" /> {isInlineEditing ? 'Mbyll Ndryshimin' : 'Ndrysho Këtu'}
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                const cloneItem: KitchenElementItem = {
+                                  ...el,
+                                  id: `cloned-el-${Date.now()}`,
+                                  name: `${el.name} (Kopje)`
+                                };
+                                setKitchenElements(prev => [...prev, cloneItem]);
+                              }}
+                              className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700 cursor-pointer"
+                              title="Dupliko elementin"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (editingElementId === el.id) handleCancelEditing();
+                                if (inlineEditId === el.id) {
+                                  setInlineEditId(null);
+                                  setInlineEditForm(null);
+                                }
+                                setKitchenElements(prev => prev.filter(x => x.id !== el.id));
+                              }}
+                              className="p-2 bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200 rounded-xl border border-rose-900/60 cursor-pointer"
+                              title="Fshij elementin"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Inline Quick Editor Form (When activated for this item) */}
+                        {isInlineEditing && inlineEditForm && (
+                          <div className="mt-4 p-4 bg-slate-900/90 rounded-2xl border border-amber-500/50 space-y-4 shadow-inner">
+                            <div className="flex items-center justify-between border-b border-indigo-900/40 pb-2">
+                              <span className="text-xs font-black text-amber-300 flex items-center gap-1.5 uppercase tracking-wider">
+                                <Edit className="w-4 h-4" /> Ndërhyrje / Modifiko Këtë Element: {el.name}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setKitchenElements(prev => prev.map(item => item.id === inlineEditForm.id ? inlineEditForm : item));
+                                    setInlineEditId(null);
+                                    setInlineEditForm(null);
+                                  }}
+                                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow cursor-pointer flex items-center gap-1"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Ruaj Ndryshimet
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setInlineEditId(null);
+                                    setInlineEditForm(null);
+                                  }}
+                                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl cursor-pointer"
+                                >
+                                  Anulo
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                              {/* Name */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Emri i Modulit:</label>
+                                <input
+                                  type="text"
+                                  value={inlineEditForm.name}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, name: e.target.value })}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Width */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Gjerësia W (mm):</label>
+                                <input
+                                  type="number"
+                                  value={inlineEditForm.widthMm}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, widthMm: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Height */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Lartësia H (mm):</label>
+                                <input
+                                  type="number"
+                                  value={inlineEditForm.heightMm}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, heightMm: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Depth */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Thellësia D (mm):</label>
+                                <input
+                                  type="number"
+                                  value={inlineEditForm.depthMm}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, depthMm: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-1.5 text-amber-300 font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Position */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Pozicioni:</label>
+                                <select
+                                  value={inlineEditForm.position}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, position: e.target.value as any })}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs font-bold"
+                                >
+                                  <option value="posht">Kabinë Poshtë</option>
+                                  <option value="lart">Kabinë Lart</option>
+                                  <option value="kolone">Kolonë (High cabinet)</option>
+                                  <option value="raft">Raft / Tjetër</option>
+                                </select>
+                              </div>
+
+                              {/* Carcase Material */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Materiali i Korpusit:</label>
+                                <select
+                                  value={inlineEditForm.carcaseMaterialId}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, carcaseMaterialId: e.target.value })}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white text-xs font-bold"
+                                >
+                                  {materials.map(m => (
+                                    <option key={m.id} value={m.id}>{m.name} ({m.weightPerM2} kg/m²)</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* Num Shelves */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Numri i Rafteve:</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={12}
+                                  value={inlineEditForm.numShelves}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, numShelves: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-indigo-500/50 rounded-xl px-3 py-1.5 text-indigo-300 font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Num Doors */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Numri i Dyerve:</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={8}
+                                  value={inlineEditForm.numDoors}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, numDoors: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-indigo-500/50 rounded-xl px-3 py-1.5 text-indigo-300 font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Quantity */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Sasia (Copë):</label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={inlineEditForm.quantity || 1}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, quantity: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-1.5 text-emerald-300 font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Pallet Number */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Nr. Paletës:</label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={inlineEditForm.palletNumber || 1}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, palletNumber: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
+                                />
+                              </div>
+
+                              {/* Hardware weight */}
+                              <div>
+                                <label className="block text-slate-400 text-[10px] font-bold mb-1">Oskuri / Hardware (kg):</label>
+                                <input
+                                  type="number"
+                                  step={0.1}
+                                  value={inlineEditForm.hardwareKg}
+                                  onChange={(e) => setInlineEditForm({ ...inlineEditForm, hardwareKg: Number(e.target.value) })}
+                                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-white font-mono font-bold text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Read-Only Specs Breakdown */}
+                        {!isInlineEditing && (
+                          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] bg-slate-900/60 p-3 rounded-2xl border border-indigo-900/40 font-mono">
+                            <div>
+                              <span className="text-slate-500 block text-[9px]">Materiali Korpusit:</span>
+                              <span className="font-bold text-slate-200">{materials.find(m=>m.id===el.carcaseMaterialId)?.name || 'Ivericë 18mm'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block text-[9px]">Raftet ({el.numShelves}):</span>
+                              <span className="font-bold text-indigo-300">
+                                {el.numShelves === 0 
+                                  ? 'Mos përfshij raft' 
+                                  : `${el.numShelves} copë (${materials.find(m=>m.id===(el.shelfMaterialId||el.carcaseMaterialId))?.name || '18mm'})`
+                                }
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block text-[9px]">Dyert ({el.numDoors}):</span>
+                              <span className="font-bold text-amber-300">
+                                {el.numDoors === 0 
+                                  ? 'Pa dyer' 
+                                  : `${el.numDoors} derë (${materials.find(m=>m.id===el.doorMaterialId)?.name || 'MDF'})`
+                                }
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block text-[9px]">Shpina & Oskurët:</span>
+                              <span className="font-bold text-slate-300">
+                                {el.hasBacking ? 'HDF 3mm' : 'Pa shpinë'} + {el.hardwareKg} kg hardver
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -3577,7 +4166,12 @@ export function KitchenWeightCalculator() {
                           <thead>
                             <tr className="bg-slate-950 text-indigo-300 font-black uppercase text-[10px] tracking-wider border-b border-indigo-900/60">
                               <th className="p-3">Kategoria</th>
-                              <th className="p-3">Emri i Modulit</th>
+                              <th 
+                                className="p-3 text-amber-300 font-black"
+                                style={{ width: `${moduleColumnWidth}px`, minWidth: `${moduleColumnWidth}px` }}
+                              >
+                                Emri i Modulit
+                              </th>
                               <th className="p-3">Përmasat WxHxD (mm)</th>
                               <th className="p-3 text-center">Fronti (19mm / 22mm)</th>
                               <th className="p-3 text-center">Sasi</th>
@@ -3608,12 +4202,16 @@ export function KitchenWeightCalculator() {
                                     </select>
                                   </td>
 
-                                  <td className="p-3">
+                                  <td 
+                                    className="p-3"
+                                    style={{ width: `${moduleColumnWidth}px`, minWidth: `${moduleColumnWidth}px` }}
+                                  >
                                     <input 
                                       type="text"
                                       value={el.name}
                                       onChange={(e) => setKitchenElements(prev => prev.map(x => x.id === el.id ? { ...x, name: e.target.value } : x))}
-                                      className="bg-transparent text-white font-black text-xs outline-none focus:border-b focus:border-amber-400 w-full"
+                                      className="bg-slate-900/60 border border-slate-700/80 rounded-lg px-2 py-1 text-white font-black text-xs outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 w-full transition-all"
+                                      style={{ minWidth: `${Math.max(100, moduleColumnWidth - 24)}px` }}
                                     />
                                   </td>
 
@@ -3981,18 +4579,6 @@ export function KitchenWeightCalculator() {
                     >
                       22 mm
                     </button>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <input 
-                      type="checkbox"
-                      id="quickFormHasTopBottom"
-                      checked={quickForm.hasTopBottom !== false}
-                      onChange={(e) => setQuickForm({ ...quickForm, hasTopBottom: e.target.checked })}
-                      className="w-4 h-4 accent-amber-400 cursor-pointer"
-                    />
-                    <label htmlFor="quickFormHasTopBottom" className="text-white text-xs font-bold cursor-pointer">
-                      Përfshij Tavan & Dysheme
-                    </label>
                   </div>
                 </div>
               </div>

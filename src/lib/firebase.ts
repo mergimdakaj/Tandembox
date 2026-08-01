@@ -11,15 +11,17 @@ import {
   getDocFromServer
 } from "firebase/firestore";
 
+import rawFirebaseConfig from "../../firebase-applet-config.json";
+
 // Support dynamic configurations via standard Vite environment variables for custom deployment (e.g. Vercel)
 const firebaseConfig = {
-  apiKey: ((import.meta as any).env?.VITE_FIREBASE_API_KEY as string) || "AIzaSyBw5D_zEoST0LfI5b3KwBJN-93LlHLuARM",
-  authDomain: ((import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN as string) || "gen-lang-client-0460187845.firebaseapp.com",
-  projectId: ((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID as string) || "gen-lang-client-0460187845",
-  storageBucket: ((import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET as string) || "gen-lang-client-0460187845.firebasestorage.app",
-  messagingSenderId: ((import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || "832520150761",
-  appId: ((import.meta as any).env?.VITE_FIREBASE_APP_ID as string) || "1:832520150761:web:c908f6cb8b9643821e5a78",
-  firestoreDatabaseId: ((import.meta as any).env?.VITE_FIREBASE_DATABASE_ID as string) || "ai-studio-982785fb-cf0e-43b3-aeaa-09d43b58f9af"
+  apiKey: ((import.meta as any).env?.VITE_FIREBASE_API_KEY as string) || rawFirebaseConfig.apiKey || "AIzaSyBw5D_zEoST0LfI5b3KwBJN-93LlHLuARM",
+  authDomain: ((import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN as string) || rawFirebaseConfig.authDomain || "gen-lang-client-0460187845.firebaseapp.com",
+  projectId: ((import.meta as any).env?.VITE_FIREBASE_PROJECT_ID as string) || rawFirebaseConfig.projectId || "gen-lang-client-0460187845",
+  storageBucket: ((import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET as string) || rawFirebaseConfig.storageBucket || "gen-lang-client-0460187845.firebasestorage.app",
+  messagingSenderId: ((import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || rawFirebaseConfig.messagingSenderId || "832520150761",
+  appId: ((import.meta as any).env?.VITE_FIREBASE_APP_ID as string) || rawFirebaseConfig.appId || "1:832520150761:web:c908f6cb8b9643821e5a78",
+  firestoreDatabaseId: ((import.meta as any).env?.VITE_FIREBASE_DATABASE_ID as string) || rawFirebaseConfig.firestoreDatabaseId || "ai-studio-982785fb-cf0e-43b3-aeaa-09d43b58f9af"
 };
 
 // Initialize Firebase App
@@ -55,10 +57,13 @@ export interface FirestoreErrorInfo {
 
 // Global error handler specified in SKILL.md
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  const errCode = (error as any)?.code || '';
+  
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errCode ? `[${errCode}] ${errMessage}` : errMessage,
     authInfo: {
-      userId: 'local-session', // simplified session context since we are using local employee-db login
+      userId: 'local-session',
       email: null,
       emailVerified: null,
       isAnonymous: true,
@@ -68,6 +73,19 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
+  
+  const isOffline = 
+    errCode === 'unavailable' || 
+    errCode === 'deadline-exceeded' ||
+    errMessage.toLowerCase().includes('could not reach cloud firestore') ||
+    errMessage.toLowerCase().includes('client is offline') ||
+    errMessage.toLowerCase().includes('network error');
+
+  if (isOffline) {
+    console.warn(`Firestore offline warning (${operationType} on ${path}):`, errMessage);
+    return;
+  }
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
