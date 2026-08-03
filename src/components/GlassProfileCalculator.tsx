@@ -71,8 +71,8 @@ export function GlassProfileCalculator() {
     const doorHeight = Math.max(0, kacaHeight - doorGap);
     const doorWidth = Math.max(0, effKacaWidth - doorGap);
 
-    // Black Aluminum Vertical Profile Cut (e.g. 720 - 13 = 707mm)
-    const verticalProfileCut = Math.max(0, kacaHeight - profileHeightTrim);
+    // Black Aluminum Vertical Profile Cut (e.g. 720 - 3 gap - 10 trim = 707mm)
+    const verticalProfileCut = Math.max(0, kacaHeight - doorGap - profileHeightTrim);
 
     // Door Glass Dimensions (6mm thickness)
     const glassDoorHeight = Math.max(0, kacaHeight - glassHeightDeduction);
@@ -596,7 +596,7 @@ export function GlassProfileCalculator() {
                 • <strong>Raftat e Xhamit (4mm):</strong> Thellësia: <strong>D - 45 mm</strong> ({kacaDepth}-45 = <strong className="text-emerald-700 font-bold">{calculations.shelfDepth} mm</strong>) | Gjerësia: <strong>W - {calculations.shelfWidthDeduction} mm</strong> ({kacaWidth}-{calculations.shelfWidthDeduction} = <strong className="text-emerald-700 font-bold">{calculations.shelfWidth} mm</strong>).
               </li>
               <li>
-                • <strong>Profilet Vertikale të Zeza:</strong> Lartësia: <strong>H - {profileHeightTrim} mm</strong> ({kacaHeight}-{profileHeightTrim} = <strong className="text-emerald-700 font-bold">{calculations.verticalProfileCut} mm</strong>).
+                • <strong>Profilet Vertikale të Zeza:</strong> Lartësia: <strong>H - {doorGap} - {profileHeightTrim} mm</strong> ({kacaHeight} - {doorGap} - {profileHeightTrim} = <strong className="text-emerald-700 font-bold">{calculations.verticalProfileCut} mm</strong>).
               </li>
               <li>
                 • <strong>Masa e Jashtme e Derës me Alumin:</strong> Lartësia/Gjerësia: <strong>H/W - {doorGap} mm</strong> ({kacaHeight}-{doorGap} = <strong className="text-indigo-700 font-bold">{calculations.doorHeight} mm</strong> x {calculations.effKacaWidth}-{doorGap} = <strong className="text-indigo-700 font-bold">{calculations.doorWidth} mm</strong>).
@@ -720,7 +720,7 @@ export function GlassProfileCalculator() {
                       {calculations.verticalProfileCut} mm
                     </p>
                     <p className="text-[11px] text-slate-400 font-medium mt-1">
-                      Formula: {kacaHeight} mm - {profileHeightTrim} mm
+                      Formula: {kacaHeight} mm - {doorGap} mm (gap) - {profileHeightTrim} mm (trim)
                     </p>
                   </div>
                   <div className="text-right">
@@ -1024,7 +1024,7 @@ export function GlassProfileCalculator() {
               {/* 3. Profilet e zeza */}
               <tr>
                 <td className="p-2 border-r border-slate-300 font-black">3. PROFILET E ZEZA TË ALUMININ</td>
-                <td className="p-2 border-r border-slate-300 text-slate-700">H-{profileHeightTrim} mm (Vertikale)</td>
+                <td className="p-2 border-r border-slate-300 text-slate-700">H-{doorGap}-{profileHeightTrim} mm (Vertikale)</td>
                 <td className="p-2 border-r border-slate-300 font-black text-slate-900 text-sm">{calculations.verticalProfileCut} mm</td>
                 <td className="p-2 border-r border-slate-300">{(calculations.verticalProfileCut / 10).toFixed(1)} cm</td>
                 <td className="p-2 font-black">{calculations.verticalProfileCount} copë profile</td>
