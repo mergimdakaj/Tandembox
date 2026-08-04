@@ -68,11 +68,11 @@ export function GlassProfileCalculator() {
     const effKacaWidth = doorType === 'double' ? kacaWidth / 2 : kacaWidth;
 
     // Outer Door Dimensions (Masat e Jashtme të Derës me Alumin)
-    const doorHeight = Math.max(0, kacaHeight - doorGap - profileHeightTrim);
+    const doorHeight = Math.max(0, kacaHeight - doorGap);
     const doorWidth = Math.max(0, effKacaWidth - doorGap);
 
-    // Black Aluminum Vertical Profile Cut (e.g. 720 - 3 gap - 10 trim = 707mm)
-    const verticalProfileCut = doorHeight;
+    // Black Aluminum Vertical Profile Cut (e.g. 2640 - 3 gap - 13 trim = 2624mm)
+    const verticalProfileCut = Math.max(0, kacaHeight - doorGap - profileHeightTrim);
 
     // Door Glass Dimensions (6mm thickness)
     const glassDoorHeight = Math.max(0, kacaHeight - glassHeightDeduction);
@@ -599,7 +599,7 @@ export function GlassProfileCalculator() {
                 • <strong>Profilet Vertikale të Zeza:</strong> Lartësia: <strong>H - {doorGap} - {profileHeightTrim} mm</strong> ({kacaHeight} - {doorGap} - {profileHeightTrim} = <strong className="text-emerald-700 font-bold">{calculations.verticalProfileCut} mm</strong>).
               </li>
               <li>
-                • <strong>Masa e Jashtme e Derës me Alumin:</strong> Lartësia/Gjerësia: <strong>H - {doorGap} - {profileHeightTrim} mm / W - {doorGap} mm</strong> ({kacaHeight}-{doorGap}-{profileHeightTrim} = <strong className="text-indigo-700 font-bold">{calculations.doorHeight} mm</strong> x {calculations.effKacaWidth}-{doorGap} = <strong className="text-indigo-700 font-bold">{calculations.doorWidth} mm</strong>).
+                • <strong>Masa e Jashtme e Derës me Alumin:</strong> Lartësia/Gjerësia: <strong>H - {doorGap} mm / W - {doorGap} mm</strong> ({kacaHeight}-{doorGap} = <strong className="text-indigo-700 font-bold">{calculations.doorHeight} mm</strong> x {calculations.effKacaWidth}-{doorGap} = <strong className="text-indigo-700 font-bold">{calculations.doorWidth} mm</strong>).
               </li>
             </ul>
           </div>
@@ -741,7 +741,7 @@ export function GlassProfileCalculator() {
                     Masa e Jashtme e Derës me Alumini
                   </p>
                   <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                    Hapësirë dritë {doorGap}mm gap + {profileHeightTrim}mm trim (Formula: H-{doorGap}-{profileHeightTrim} x W-{doorGap})
+                    Hapësirë dritë {doorGap}mm gap (Formula: H-{doorGap} x W-{doorGap})
                   </p>
                 </div>
                 <div className="text-right">
@@ -1033,7 +1033,7 @@ export function GlassProfileCalculator() {
               {/* 4. Masat e jashtme te deres */}
               <tr className="text-slate-600 font-normal">
                 <td className="p-2 border-r border-slate-300 text-slate-600 font-medium">4. MASA E JASHTME E DERËS ME ALUMIN</td>
-                <td className="p-2 border-r border-slate-300 text-slate-500">H-{doorGap}-{profileHeightTrim} x W-{doorGap} mm</td>
+                <td className="p-2 border-r border-slate-300 text-slate-500">H-{doorGap} x W-{doorGap} mm</td>
                 <td className="p-2 border-r border-slate-300 text-slate-800 font-semibold">{calculations.doorHeight} x {calculations.doorWidth} mm</td>
                 <td className="p-2 border-r border-slate-300 text-slate-600">{(calculations.doorHeight / 10).toFixed(1)} x {(calculations.doorWidth / 10).toFixed(1)} cm</td>
                 <td className="p-2 text-slate-700 font-medium">{calculations.doorGlassCount} copë derë</td>
