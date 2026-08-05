@@ -371,12 +371,12 @@ export default function App() {
 
     return (
       // Slate background enclosing a highly polished iPhone/Smartphone container
-      <div className="bg-[#0f111a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-0 sm:p-4 md:p-6 flex items-center justify-center min-h-screen text-slate-800 font-sans select-none overflow-hidden relative">
+      <div className="bg-[#0f111a] bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-0 sm:p-4 md:p-6 flex items-center justify-center h-screen max-h-screen text-slate-800 font-sans select-none overflow-hidden relative">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none" />
 
         {/* Dynamic Smartphone Mockup Layout Frame */}
-        <div className="w-full max-w-sm sm:max-w-md bg-[#fafbfe] sm:min-h-[85vh] sm:max-h-[94vh] sm:rounded-[48px] sm:ring-[14px] sm:ring-slate-800/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden border border-slate-700/30 h-screen sm:h-auto">
+        <div className="w-full max-w-sm sm:max-w-md bg-[#fafbfe] h-[100dvh] sm:h-[92vh] sm:max-h-[860px] sm:rounded-[48px] sm:ring-[14px] sm:ring-slate-800/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden border border-slate-700/30">
           
           {/* TOAST PANEL OVERLAY */}
           <div className="absolute top-4 left-4 right-4 z-50 pointer-events-none space-y-2">
@@ -414,16 +414,15 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          {/* TOP APPLET SCROLLING HEADER BODY */}
-          <div className="flex-1 overflow-y-auto px-6 pt-7 pb-28 space-y-6 scrollbar-thin">
-            
+          {/* FIXED TOP HEADER & NAVIGATION BAR - INSTANT ACCESS WITHOUT SCROLLING */}
+          <div className="bg-[#fafbfe]/95 backdrop-blur-md px-5 pt-6 pb-3 border-b border-slate-200/60 z-30 space-y-3 shrink-0">
             {/* Top Shell Row Layout (Icon, title, buttons) */}
-            <div className="flex items-center justify-between pb-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {/* Logo Indigo Circle with Spinning Face */}
                 <div 
                   onClick={() => setAppMode('portal')}
-                  className="w-11 h-11 bg-[#4239b3] rounded-full overflow-hidden flex items-center justify-center text-white border-2 border-indigo-500 shadow-md transform hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  className="w-10 h-10 bg-[#4239b3] rounded-full overflow-hidden flex items-center justify-center text-white border-2 border-indigo-500 shadow-md transform hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   title="Kthehu në portal"
                 >
                   <img 
@@ -446,26 +445,67 @@ export default function App() {
                 {/* Logout button */}
                 <button 
                   onClick={logout} 
-                  className="w-9 h-9 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 text-rose-500 shadow-sm hover:bg-rose-100 transition-all active:scale-95"
+                  className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 text-rose-500 shadow-sm hover:bg-rose-100 transition-all active:scale-95"
                   title="Shkyqu"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
                 
                 {/* Avatar Icon Profile */}
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-full bg-[#fcfcff] flex items-center justify-center border border-indigo-100 text-[#4239b3] font-black text-xs shadow-inner">
+                  <div className="w-8 h-8 rounded-full bg-[#fcfcff] flex items-center justify-center border border-indigo-100 text-[#4239b3] font-black text-xs shadow-inner">
                     {userInitial}
                   </div>
                   {/* Notifications Alert Dot badge count */}
                   {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-[#d11122] border-2 border-white rounded-full text-[8.5px] text-white flex items-center justify-center font-black leading-none">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#d11122] border-2 border-white rounded-full text-[8px] text-white flex items-center justify-center font-black leading-none">
                       {unreadNotificationsCount}
                     </span>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* TOP NAVIGATION TABS ROW - INSTANT ACCESS TO DETYRAT, KALENDARI, NJOFTIMET, PAGA WITHOUT SCROLLING */}
+            <div className="bg-slate-100/90 p-1 rounded-2xl border border-indigo-100/80 flex items-center justify-between gap-1 shadow-inner">
+              {navItems.map((item) => {
+                const isActive = currentView === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setCurrentView(item.id as View)}
+                    className={cn(
+                      "flex-1 flex flex-col items-center gap-0.5 py-1.5 px-0.5 rounded-xl transition-all relative outline-none select-none active:scale-95",
+                      isActive 
+                        ? "bg-[#4239b3] text-white font-black shadow-sm shadow-indigo-500/20" 
+                        : "text-slate-500 hover:text-slate-800 hover:bg-white/60 font-bold"
+                    )}
+                  >
+                    <div className="relative">
+                      <item.icon className={cn(
+                        "w-4 h-4 transition-transform",
+                        isActive ? "scale-110 stroke-[2.5]" : "stroke-[2]"
+                      )} />
+                      {item.badgeCount !== undefined && item.badgeCount > 0 && (
+                        <span className={cn(
+                          "absolute -top-1.5 -right-2 text-[8px] font-black w-3.5 h-3.5 rounded-full border flex items-center justify-center leading-none",
+                          isActive ? "bg-rose-500 text-white border-[#4239b3]" : "bg-[#d11122] text-white border-white"
+                        )}>
+                          {item.badgeCount}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[8.5px] uppercase tracking-tight truncate max-w-[55px]">
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SCROLLABLE INNER CONTENT BODY */}
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-20 space-y-4 scrollbar-thin">
 
             {/* HORIZONTAL DATE SELECTOR (ZGJIDHNI DATËN E PUNËS) */}
             <div className="space-y-2 mb-2">
@@ -523,7 +563,7 @@ export default function App() {
           </div>
 
           {/* BOTTOM PREMIUM FIXED NAVIGATION */}
-          <nav className="absolute bottom-0 left-0 right-0 bg-[#ffffff]/95 backdrop-blur-md border-t border-[#f1effc] py-3.5 px-3 flex justify-around items-center z-20 rounded-b-[44px]">
+          <nav className="shrink-0 bg-[#ffffff]/95 backdrop-blur-md border-t border-[#f1effc] py-2.5 px-3 flex justify-around items-center z-20 rounded-b-[44px]">
             {navItems.map((item) => {
               const isActive = currentView === item.id;
               return (
@@ -531,29 +571,29 @@ export default function App() {
                   key={item.id}
                   onClick={() => setCurrentView(item.id as View)}
                   className={cn(
-                    "flex flex-col items-center gap-1 px-3 py-1.5 rounded-[18px] transition-all relative outline-none select-none active:scale-90",
+                    "flex flex-col items-center gap-1 px-2.5 py-1 rounded-[18px] transition-all relative outline-none select-none active:scale-90",
                     isActive ? "text-[#4239b3]" : "text-slate-400 hover:text-slate-600"
                   )}
                 >
                   {/* Icon with scaling effect and dynamic badges */}
                   <div className="relative">
                     <item.icon className={cn(
-                      "w-[22px] h-[22px] transition-all duration-300",
+                      "w-[20px] h-[20px] transition-all duration-300",
                       isActive ? "scale-105 stroke-[2.5]" : "stroke-[2]"
                     )} />
                     {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-[#d11122] text-white text-[8.5px] font-black w-4.5 h-4.5 rounded-full border border-white flex items-center justify-center leading-none shadow-sm animate-pulse">
+                      <span className="absolute -top-1.5 -right-1.5 bg-[#d11122] text-white text-[8.5px] font-black w-4 h-4 rounded-full border border-white flex items-center justify-center leading-none shadow-sm animate-pulse">
                         {item.badgeCount}
                       </span>
                     )}
                   </div>
-                  <span className="text-[9px] font-black uppercase tracking-wider">{item.label}</span>
+                  <span className="text-[8.5px] font-black uppercase tracking-wider">{item.label}</span>
                   
                   {/* Small absolute indicator dot on active item */}
                   {isActive && (
                     <motion.div 
                       layoutId="activeIndicator"
-                      className="absolute -bottom-1 w-1.5 h-1.5 bg-[#4239b3] rounded-full" 
+                      className="absolute -bottom-0.5 w-1.5 h-1.5 bg-[#4239b3] rounded-full" 
                     />
                   )}
                 </button>
