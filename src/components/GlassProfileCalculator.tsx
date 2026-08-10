@@ -71,8 +71,8 @@ export function GlassProfileCalculator() {
     const verticalProfileCut = Math.max(0, kacaHeight - doorGap - profileHeightTrim);
 
     // Outer Door Dimensions (Masat e Jashtme të Derës me Alumin)
-    // Dynamic recalculation when profile trim or door gap changes
-    const doorHeight = Math.max(0, kacaHeight - doorGap - profileHeightTrim);
+    // Outer door height = Cabinet height minus outer door gap (H - doorGap)
+    const doorHeight = Math.max(0, kacaHeight - doorGap);
     const doorWidth = Math.max(0, effKacaWidth - doorGap);
 
     // Door Glass Dimensions (6mm thickness)
@@ -543,15 +543,15 @@ export function GlassProfileCalculator() {
 
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                   <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
-                    Zbritja Masës së Jashtme Derës (Gap):
+                    Hapësira Dritë / Gap Derës:
                   </span>
                   <div className="flex items-center gap-1 font-black text-slate-800">
-                    <span>Gap -</span>
+                    <span className="text-[11px] text-slate-500 font-mono">H/W -</span>
                     <input
                       type="number"
                       value={doorGap}
                       onChange={(e) => setDoorGap(Number(e.target.value))}
-                      className="w-12 bg-white border border-slate-300 rounded px-1.5 py-0.5 text-center text-indigo-700 outline-none focus:border-indigo-500"
+                      className="w-12 bg-white border border-slate-300 rounded px-1.5 py-0.5 text-center text-indigo-700 outline-none focus:border-indigo-500 font-bold"
                     />
                     <span>mm</span>
                   </div>
