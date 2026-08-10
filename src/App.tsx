@@ -414,8 +414,8 @@ export default function App() {
             </AnimatePresence>
           </div>
 
-          {/* FIXED TOP HEADER & NAVIGATION BAR - INSTANT ACCESS WITHOUT SCROLLING */}
-          <div className="bg-[#fafbfe]/95 backdrop-blur-md px-5 pt-6 pb-3 border-b border-slate-200/60 z-30 space-y-3 shrink-0">
+          {/* FIXED STICKY TOP HEADER & NAVIGATION BAR - INSTANT ACCESS WITHOUT SCROLLING */}
+          <div className="sticky top-0 z-40 bg-[#fafbfe]/98 backdrop-blur-md px-4 pt-3.5 pb-2 border-b border-slate-200/80 space-y-2 shrink-0 shadow-sm">
             {/* Top Shell Row Layout (Icon, title, buttons) */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
