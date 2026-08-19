@@ -406,7 +406,7 @@ Gjeneruar nga MergimGroup Tool
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Trashësia Pllakës (mm)</label>
               <div className="flex gap-2">
-                {(type === 'antaro' ? [1.8] : type === 'legrabox' ? [1.6, 1.8] : [1.6, 1.8, 1.9, 2.2]).map((t) => (
+                {[1.6, 1.8, 1.9, 2.2].map((t) => (
                   <button
                     key={t}
                     onClick={() => setBoardThickness(t)}
