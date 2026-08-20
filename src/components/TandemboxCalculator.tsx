@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PanelCuttingOptimizer } from './PanelCuttingOptimizer';
 import { GlassProfileCalculator } from './GlassProfileCalculator';
 import { KitchenWeightCalculator } from './KitchenWeightCalculator';
+import { AntaroFrontDrillingVisualizer } from './AntaroFrontDrillingVisualizer';
 import { LOGO_DATA_URL } from '../assets/logo';
 
 interface Dimensions {
@@ -522,6 +523,17 @@ Gjeneruar nga MergimGroup Tool
                   <ResultItem label="Shpina" value={`${results.shpinaWidth} x ${results.shpinaHeight} cm`} subtitle="Gjerësi x Lartësi" />
                   <ResultItem label="Podi" value={`${results.lesenitiWidth} x ${results.lesenitiDepth} cm`} subtitle="Gjerësi x Gjatësi" highlight />
                   
+                  {/* Antaro Visual Front Drilling Diagram (Foto / Skica Grafike e Shpimit të Ballinës) */}
+                  <div className="p-4 sm:p-6 bg-slate-950/40">
+                    <AntaroFrontDrillingVisualizer
+                      kaca={kaca}
+                      boardThickness={boardThickness}
+                      fst={fst}
+                      antaroProfile={antaroProfile}
+                      lw={results.lw || (kaca - boardThickness * 2)}
+                    />
+                  </div>
+
                   <div className="p-6 bg-indigo-50/30 space-y-4">
                     <div>
                       <p className="text-[10px] font-black uppercase text-indigo-500 tracking-wider mb-2">Shpimi i Frontit (Dera - Blum Antaro)</p>
