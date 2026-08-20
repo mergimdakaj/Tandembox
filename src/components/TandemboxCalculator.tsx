@@ -72,6 +72,7 @@ export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
   
   // Front overhang/overlay (FST) for vertical drilling calculations
   const [fst, setFst] = useState<number>(1.8); // Default 1.8cm for standard 18mm cabinet bottom
+  const [sideGapMm, setSideGapMm] = useState<number>(1.5); // Default 1.5mm side gap (e.g. 60cm element -> 59.7cm front)
   
   // Roboti specific state
   const [cabinetHeight, setCabinetHeight] = useState<number>(140);
@@ -196,10 +197,16 @@ ${type === 'fijoka-druri' ? `
 2. Shpina (Lartësia): ${results.shpinaHeight} cm
 3. Podi (Gjerësia): ${results.lesenitiWidth} cm
 4. Podi (Gjatësia): ${results.lesenitiDepth} cm
-5. Shpimet e Frontit (FST = ${fst} cm):
+5. Përmasa e Frontit (Fugë anash ${sideGapMm} mm): ${(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm (${(kaca * 10 - sideGapMm * 2).toFixed(0)} mm)
+6. Shpimet e Frontit (FST = ${fst} cm):
    - Vertikal (poshtme): ${(4.75 + fst).toFixed(2)} cm (${((4.75 + fst) * 10).toFixed(0)} mm)
    - Vertikal (sipërme): ${(4.75 + fst + 3.2).toFixed(2)} cm (${((4.75 + fst + 3.2) * 10).toFixed(0)} mm)
-   - Horizontal (nga muri): 15.5 mm
+   - Horizontal (nga muri brenda): 15.5 mm
+   - Horizontal (nga skaji jashtë): ${((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm
+7. Shpimet e Mureve Anësore për Llagerat:
+   - Nga Fundi në Zero: ${(4.0 + boardThickness).toFixed(1)} cm (${((4.0 + boardThickness) * 10).toFixed(0)} mm)
+   - Brenda Mbi Pos (Mbi Dysheme): 4.0 cm (40 mm)
+   - Nga Balli i Anësores: 37 mm (bira 1), 69 mm (bira 2)
 ` : type === 'legrabox' ? `
 1. Shpina (Gjerësia): ${results.shpinaWidth} cm (LW - 38mm)
 2. Shpina (Lartësia): ${results.shpinaHeight} cm (Profili ${legraboxProfile})
@@ -401,6 +408,56 @@ Gjeneruar nga MergimGroup Tool
                 <p className="text-[10px] text-slate-400 leading-relaxed">
                   <strong>FST</strong> është distanca sa zbret ballorja e derës nën dyshemenë e elementit. Standardi për pllakë 18mm është <strong className="text-slate-600">1.8 cm (18 mm)</strong>. Nëse dëshironi që dera të vijë fiks rrafsh me dyshemenë, vendoseni <strong className="text-indigo-600">0</strong>.
                 </p>
+
+                {/* Side Gap Control */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Fuga / Mbulesa Anash e Frontit
+                    </label>
+                    <span className="text-[10px] font-bold text-indigo-600">
+                      {sideGapMm === 0 ? 'Rrafsh (0 mm)' : `${sideGapMm} mm / anë (-${(sideGapMm * 2).toFixed(1)}mm)`}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSideGapMm(0)}
+                      className={`py-2 px-2 text-[10px] font-bold rounded-xl border transition-all text-center ${
+                        sideGapMm === 0
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      0 (Rrafsh)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSideGapMm(1.5)}
+                      className={`py-2 px-2 text-[10px] font-bold rounded-xl border transition-all text-center ${
+                        sideGapMm === 1.5
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      1.5mm (-3mm)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSideGapMm(2.0)}
+                      className={`py-2 px-2 text-[10px] font-bold rounded-xl border transition-all text-center ${
+                        sideGapMm === 2.0
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      2.0mm (-4mm)
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    P.sh. Elementi {kaca}cm &rarr; Fronti <strong className="text-slate-700 font-bold">{(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm ({(kaca * 10 - sideGapMm * 2).toFixed(0)} mm)</strong>.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -523,7 +580,7 @@ Gjeneruar nga MergimGroup Tool
                   <ResultItem label="Shpina" value={`${results.shpinaWidth} x ${results.shpinaHeight} cm`} subtitle="Gjerësi x Lartësi" />
                   <ResultItem label="Podi" value={`${results.lesenitiWidth} x ${results.lesenitiDepth} cm`} subtitle="Gjerësi x Gjatësi" highlight />
                   
-                  {/* Antaro Visual Front Drilling Diagram (Foto / Skica Grafike e Shpimit të Ballinës) */}
+                  {/* Antaro Visual Front & Side Drilling Diagram (Foto / Skica Grafike Teknike) */}
                   <div className="p-4 sm:p-6 bg-slate-950/40">
                     <AntaroFrontDrillingVisualizer
                       kaca={kaca}
@@ -531,45 +588,51 @@ Gjeneruar nga MergimGroup Tool
                       fst={fst}
                       antaroProfile={antaroProfile}
                       lw={results.lw || (kaca - boardThickness * 2)}
+                      llageri={llageri}
+                      sideGapMm={sideGapMm}
+                      onSideGapChange={setSideGapMm}
                     />
                   </div>
 
                   <div className="p-6 bg-indigo-50/30 space-y-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-indigo-500 tracking-wider mb-2">Shpimi i Frontit (Dera - Blum Antaro)</p>
+                      <p className="text-[10px] font-black uppercase text-indigo-500 tracking-wider mb-2">Përmbledhje Teknike e Shpimeve (Blum Antaro)</p>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Për profilin <strong className="font-bold">Antaro {antaroProfile}</strong> me mbulesë <strong className="font-bold">{fst} cm</strong>:
+                        Për profilin <strong className="font-bold">Antaro {antaroProfile}</strong> me kornizë <strong className="font-bold">{kaca} cm</strong> dhe pllakë <strong className="font-bold">{boardThickness * 10} mm</strong>:
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm space-y-2">
-                        <p className="font-extrabold text-indigo-950">Pozicionimi Vertikal (Lartësia)</p>
+                        <p className="font-extrabold text-indigo-950">1. Shpimi i Ballinës (Frontit)</p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Vrima e poshtme: <strong className="text-indigo-600">{(4.75 + fst).toFixed(2)} cm ({((4.75 + fst) * 10).toFixed(1)} mm)</strong> nga fundi i derës.
+                          - Gjerësia e prerjes së Frontit: <strong className="text-indigo-600">{(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm</strong> (Fugë {sideGapMm}mm anash).
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Vrima e sipërme: <strong className="text-indigo-600">{(4.75 + fst + 3.2).toFixed(2)} cm ({((4.75 + fst + 3.2) * 10).toFixed(1)} mm)</strong> (Hapësira fiks <strong className="text-indigo-600">32 mm</strong>).
+                          - Vrima e poshtme: <strong className="text-indigo-600">{(4.75 + fst).toFixed(2)} cm ({((4.75 + fst) * 10).toFixed(1)} mm)</strong> nga fundi.
                         </p>
-                        {Math.abs(fst - 1.75) < 0.1 || Math.abs(fst - 1.8) < 0.1 ? (
-                          <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-100 font-bold text-[10px] mt-2">
-                            ✓ Standardi Klasik: Me mbulesë standarde {fst} cm (për pllakë 18mm), bira e parë vjen fiks tek rreth <strong className="text-emerald-700">6.5 cm (65 mm)</strong> dhe e dyta tek <strong className="text-emerald-700">9.7 cm (97 mm)</strong>!
-                          </div>
-                        ) : fst === 0 ? (
-                          <div className="p-2 bg-amber-50 text-amber-800 rounded-lg border border-amber-100 text-[10px] mt-2">
-                            ℹ Nëse dera vjen rrafsh me dyshemenë (FST = 0), shpimet do të bëhen në lartësitë <strong className="text-amber-700">4.75 cm</strong> dhe <strong className="text-amber-700">7.95 cm</strong>.
-                          </div>
-                        ) : null}
+                        <p className="text-slate-600 leading-relaxed">
+                          - Vrima e sipërme: <strong className="text-indigo-600">{(4.75 + fst + 3.2).toFixed(2)} cm ({((4.75 + fst + 3.2) * 10).toFixed(1)} mm)</strong> (Hapësira fiks 32mm).
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Anash: <strong className="text-indigo-600">15.5 mm</strong> nga brenda ose <strong className="text-indigo-600">{((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm</strong> nga skaji jashtë.
+                        </p>
                       </div>
 
-                      <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm space-y-2">
-                        <p className="font-extrabold text-indigo-950">Pozicionimi Horizontal (Anash)</p>
+                      <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-sm space-y-2">
+                        <p className="font-extrabold text-amber-950">2. Shpimi i Anësores për Llagerat</p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Nga muri i brendshëm anësor: <strong className="text-indigo-600">1.55 cm (15.5 mm)</strong>.
+                          - Nga Fundi në Zero (Anësorja poshtë): <strong className="text-amber-700">{(4.0 + boardThickness).toFixed(1)} cm ({((4.0 + boardThickness) * 10).toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Distanca mes vrimave (maj-djat): <strong className="text-indigo-600">{(results.lw ? results.lw - 3.1 : 0).toFixed(1)} cm</strong>.
+                          - Brenda mbi Pos (Mbi Dysheme): <strong className="text-emerald-700">4.0 cm (40 mm)</strong>.
                         </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Nga Balli i Anësores (Përpara): <strong className="text-sky-700">3.7 cm (37 mm)</strong> bira e 1-rë, <strong className="text-sky-700">6.9 cm (69 mm)</strong> bira e 2-të.
+                        </p>
+                        <div className="p-2 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 text-[10px] font-bold">
+                          ✓ Bira e llagerit del 4cm mbi dysheme (5.8cm nga fundi i anësores për pllakë 18mm)!
+                        </div>
                       </div>
                     </div>
                   </div>
