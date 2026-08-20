@@ -73,6 +73,7 @@ export function TandemboxCalculator({ onBack }: { onBack: () => void }) {
   // Front overhang/overlay (FST) for vertical drilling calculations
   const [fst, setFst] = useState<number>(1.8); // Default 1.8cm for standard 18mm cabinet bottom
   const [sideGapMm, setSideGapMm] = useState<number>(1.5); // Default 1.5mm side gap (e.g. 60cm element -> 59.7cm front)
+  const [runnerHeightZeroMm, setRunnerHeightZeroMm] = useState<number>(58.0); // Default 58mm (5.8cm) from zero bottom
   
   // Roboti specific state
   const [cabinetHeight, setCabinetHeight] = useState<number>(140);
@@ -198,15 +199,15 @@ ${type === 'fijoka-druri' ? `
 3. Podi (Gjerësia): ${results.lesenitiWidth} cm
 4. Podi (Gjatësia): ${results.lesenitiDepth} cm
 5. Përmasa e Frontit (Fugë anash ${sideGapMm} mm): ${(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm (${(kaca * 10 - sideGapMm * 2).toFixed(0)} mm)
-6. Shpimet e Frontit (Ballinës):
-   - Vertikal (Bira 1 poshtme): 7.1 cm (71 mm) nga fundi
-   - Vertikal (Bira 2 sipërme): 10.3 cm (103 mm) [7.1cm + 3.2cm]
-   - Vertikal (Bira e Shipkës / Reling për fijokë të madhe): 19.9 cm (199 mm) [7.1cm + 12.8cm]
+6. Shpimet e Frontit (Ballinës - sinkronizuar me llagerin):
+   - Vertikal (Bira 1 poshtme): ${((runnerHeightZeroMm + 13.0) / 10).toFixed(1)} cm (${(runnerHeightZeroMm + 13.0).toFixed(0)} mm) nga fundi
+   - Vertikal (Bira 2 sipërme): ${((runnerHeightZeroMm + 13.0 + 32.0) / 10).toFixed(1)} cm (${(runnerHeightZeroMm + 13.0 + 32.0).toFixed(0)} mm) [+32mm]
+   - Vertikal (Bira e Shipkës / Reling): ${((runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)) / 10).toFixed(1)} cm (${(runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)).toFixed(0)} mm)
    - Horizontal (nga muri brenda): 15.5 mm
    - Horizontal (nga skaji jashtë): ${((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm
 7. Shpimet e Mureve Anësore për Llagerat:
-   - Nga Fundi në Zero: 5.8 cm (58 mm)
-   - Brenda Mbi Pos (Mbi Dysheme): 4.0 cm (40 mm)
+   - Nga Fundi në Zero: ${(runnerHeightZeroMm / 10).toFixed(1)} cm (${runnerHeightZeroMm.toFixed(0)} mm)
+   - Brenda Mbi Pos (Mbi Dysheme): ${((runnerHeightZeroMm - boardThickness * 10) / 10).toFixed(1)} cm (${(runnerHeightZeroMm - boardThickness * 10).toFixed(0)} mm)
    - Nga Balli i Anësores: 37 mm (bira 1), 69 mm (bira 2)
 ` : type === 'legrabox' ? `
 1. Shpina (Gjerësia): ${results.shpinaWidth} cm (LW - 38mm)
@@ -410,6 +411,45 @@ Gjeneruar nga MergimGroup Tool
                   <strong>FST</strong> është distanca sa zbret ballorja e derës nën dyshemenë e elementit. Standardi për pllakë 18mm është <strong className="text-slate-600">1.8 cm (18 mm)</strong>. Nëse dëshironi që dera të vijë fiks rrafsh me dyshemenë, vendoseni <strong className="text-indigo-600">0</strong>.
                 </p>
 
+                {/* Runner Height / Birat e Llagerit Control */}
+                <div className="pt-3 border-t border-slate-100 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      Lartësia e Llagerit nga Zero
+                    </label>
+                    <span className="text-[10px] font-bold text-amber-600 font-mono">
+                      {(runnerHeightZeroMm / 10).toFixed(1)} cm ({runnerHeightZeroMm.toFixed(0)} mm)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { label: '5.8cm (Std)', val: 58.0 },
+                      { label: '5.0cm', val: 50.0 },
+                      { label: '6.0cm', val: 60.0 },
+                      { label: '6.4cm', val: 64.0 },
+                    ].map((item) => (
+                      <button
+                        key={item.val}
+                        type="button"
+                        onClick={() => setRunnerHeightZeroMm(item.val)}
+                        className={`py-1.5 px-1 text-[9px] font-bold rounded-xl border transition-all text-center ${
+                          runnerHeightZeroMm === item.val
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-amber-50/70 rounded-xl border border-amber-200/60 text-[10px]">
+                    <span className="text-slate-500 font-medium">Mbi pos (dysheme):</span>
+                    <strong className="text-amber-800 font-mono font-bold">
+                      {((runnerHeightZeroMm - boardThickness * 10) / 10).toFixed(1)} cm ({((runnerHeightZeroMm - boardThickness * 10)).toFixed(0)} mm)
+                    </strong>
+                  </div>
+                </div>
+
                 {/* Side Gap Control */}
                 <div className="pt-3 border-t border-slate-100 space-y-2">
                   <div className="flex justify-between items-center">
@@ -592,6 +632,8 @@ Gjeneruar nga MergimGroup Tool
                       llageri={llageri}
                       sideGapMm={sideGapMm}
                       onSideGapChange={setSideGapMm}
+                      runnerHeightZeroMm={runnerHeightZeroMm}
+                      onRunnerHeightChange={setRunnerHeightZeroMm}
                     />
                   </div>
 
@@ -599,24 +641,24 @@ Gjeneruar nga MergimGroup Tool
                     <div>
                       <p className="text-[10px] font-black uppercase text-indigo-500 tracking-wider mb-2">Përmbledhje Teknike e Shpimeve (Blum Antaro)</p>
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        Për profilin <strong className="font-bold">Antaro {antaroProfile}</strong> me kornizë <strong className="font-bold">{kaca} cm</strong> dhe pllakë <strong className="font-bold">{boardThickness * 10} mm</strong>:
+                        Për profilin <strong className="font-bold">Antaro {antaroProfile}</strong> me kornizë <strong className="font-bold">{kaca} cm</strong>, pllakë <strong className="font-bold">{boardThickness * 10} mm</strong> dhe llager <strong className="font-bold font-mono text-amber-700">{(runnerHeightZeroMm / 10).toFixed(1)} cm ({runnerHeightZeroMm} mm)</strong> nga zero poshtë:
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm space-y-2">
-                        <p className="font-extrabold text-indigo-950">1. Shpimi i Ballinës (Frontit)</p>
+                        <p className="font-extrabold text-indigo-950">1. Shpimi i Ballinës (Frontit - Sinkronizuar)</p>
                         <p className="text-slate-600 leading-relaxed">
                           - Gjerësia e prerjes së Frontit: <strong className="text-indigo-600">{(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm ({(kaca * 10 - sideGapMm * 2).toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Bira 1 (e poshtme): <strong className="text-emerald-700 font-bold">7.1 cm (71 mm)</strong> nga fundi i ballinës.
+                          - Bira 1 (e poshtme): <strong className="text-emerald-700 font-bold font-mono">{((runnerHeightZeroMm + 13.0) / 10).toFixed(1)} cm ({(runnerHeightZeroMm + 13.0).toFixed(0)} mm)</strong> nga fundi i ballinës.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Bira 2 (e sipërme): <strong className="text-sky-700 font-bold">10.3 cm (103 mm)</strong> [7.1 cm + 3.2 cm].
+                          - Bira 2 (e sipërme): <strong className="text-sky-700 font-bold font-mono">{((runnerHeightZeroMm + 13.0 + 32.0) / 10).toFixed(1)} cm ({(runnerHeightZeroMm + 13.0 + 32.0).toFixed(0)} mm)</strong> [+3.2 cm].
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Bira e Shipkës (Reling fijokë e madhe): <strong className="text-amber-700 font-bold">19.9 cm (199 mm)</strong> [7.1 cm + 12.8 cm].
+                          - Bira e Shipkës (Reling fijokë e madhe): <strong className="text-amber-700 font-bold font-mono">{((runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)) / 10).toFixed(1)} cm ({(runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)).toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
                           - Anash: <strong className="text-indigo-600">15.5 mm</strong> nga brenda ose <strong className="text-indigo-600">{((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm</strong> nga skaji jashtë.
@@ -626,16 +668,16 @@ Gjeneruar nga MergimGroup Tool
                       <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-sm space-y-2">
                         <p className="font-extrabold text-amber-950">2. Shpimi i Anësores për Llagerat</p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Nga Fundi në Zero (Anësorja poshtë): <strong className="text-amber-700 font-bold">5.8 cm (58 mm)</strong>.
+                          - Nga Fundi në Zero (Anësorja poshtë): <strong className="text-amber-700 font-bold font-mono">{(runnerHeightZeroMm / 10).toFixed(1)} cm ({runnerHeightZeroMm.toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Brenda mbi Pos (Mbi Dysheme): <strong className="text-emerald-700 font-bold">4.0 cm (40 mm)</strong>.
+                          - Brenda mbi Pos (Mbi Dysheme): <strong className="text-emerald-700 font-bold font-mono">{((runnerHeightZeroMm - boardThickness * 10) / 10).toFixed(1)} cm ({(runnerHeightZeroMm - boardThickness * 10).toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
                           - Nga Balli i Anësores (Përpara): <strong className="text-sky-700">3.7 cm (37 mm)</strong> bira e 1-rë, <strong className="text-sky-700">6.9 cm (69 mm)</strong> bira e 2-të (+32mm).
                         </p>
                         <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold">
-                          ✓ Standardi i punishtes: Llageri 5.8cm nga zero &rarr; Fronti 7.1cm / 10.3cm (+ shipka 19.9cm)!
+                          ✓ Sinkronizim automatik: Kur ndryshon bira e llagerit, birat e frontit llogariten menjëherë sipas gjeometrisë Blum!
                         </div>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ruler, Maximize2, Minimize2, Layers, Box } from 'lucide-react';
+import { Ruler, Maximize2, Minimize2, Layers, Box, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface AntaroFrontDrillingVisualizerProps {
   kaca: number; // cm (e.g. 60 or 90)
@@ -10,17 +10,20 @@ interface AntaroFrontDrillingVisualizerProps {
   llageri?: number; // cm (e.g. 50)
   sideGapMm?: number; // mm (e.g. 0 or 1.5 or 2.0)
   onSideGapChange?: (gap: number) => void;
+  runnerHeightZeroMm?: number; // mm from side bottom in zero (default 58)
+  onRunnerHeightChange?: (heightMm: number) => void;
 }
 
 export function AntaroFrontDrillingVisualizer({
   kaca,
   boardThickness,
-  fst,
   antaroProfile,
   lw,
   llageri = 50,
   sideGapMm: propSideGapMm,
   onSideGapChange,
+  runnerHeightZeroMm: propRunnerHeightMm,
+  onRunnerHeightChange,
 }: AntaroFrontDrillingVisualizerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'front' | 'runners'>('front');
   const [unit, setUnit] = useState<'mm' | 'cm'>('mm');
@@ -29,8 +32,17 @@ export function AntaroFrontDrillingVisualizer({
   // Big drawer with gallery rail (shipkë) toggle
   const [hasShipkë, setHasShipkë] = useState<boolean>(antaroProfile === 'D' || antaroProfile === 'C');
 
-  // Base front bottom hole height: standard user workshop rule is 7.1cm (71mm) for 5.8cm runner
-  const [frontHoleBaseMm, setFrontHoleBaseMm] = useState<number>(71.0);
+  // Runner Height from side bottom in zero (default 58 mm = 5.8 cm)
+  const [localRunnerHeightMm, setLocalRunnerHeightMm] = useState<number>(58.0);
+  const currentRunnerHeightMm = propRunnerHeightMm !== undefined ? propRunnerHeightMm : localRunnerHeightMm;
+
+  const handleRunnerHeightUpdate = (newValMm: number) => {
+    const clamped = Math.max(10, Math.min(300, Number(newValMm.toFixed(1))));
+    setLocalRunnerHeightMm(clamped);
+    if (onRunnerHeightChange) {
+      onRunnerHeightChange(clamped);
+    }
+  };
 
   // Local side gap state if not controlled externally
   const [localSideGapMm, setLocalSideGapMm] = useState<number>(1.5);
@@ -60,29 +72,28 @@ export function AntaroFrontDrillingVisualizer({
   // Distance from outer edge of front panel to drill hole centerline: FA + 15.5mm (e.g. 16.5 + 15.5 = 32mm)
   const fromOuterEdgeMm = Number((sideOverlayFaMm + 15.5).toFixed(1));
 
-  // FRONT VERTICAL DRILLING MEASUREMENTS:
-  // Standard Workshop Rule:
-  // - Hole 1 (Bottom): 71.0 mm (7.1 cm)
-  // - Hole 2 (Top): 71.0 + 32 = 103.0 mm (10.3 cm)
-  // - Hole 3 (Shipka / Shufrë për fijokë të madhe - Antaro D): 71.0 + 128 = 199.0 mm (19.9 cm)
-  const hole1FromBottomMm = Number(frontHoleBaseMm.toFixed(1));
-  const hole2FromBottomMm = Number((frontHoleBaseMm + 32.0).toFixed(1));
-  
-  // Gallery rail hole (shipkë):
-  const shipkaFromHole1Mm = antaroProfile === 'C' ? 64.0 : 128.0;
-  const shipkaHoleFromBottomMm = Number((frontHoleBaseMm + shipkaFromHole1Mm).toFixed(1));
-
-  const distanceBetweenLeftRightHolesMm = lwMm - 31; // Center-to-center: LW - 31mm
-
   // RUNNER SIDE WALL DRILLING MEASUREMENTS:
-  // Master workshop standard:
-  // - Runner height from side wall bottom in zero: 58.0 mm (5.8 cm)
-  // - Runner height inside cabinet above floor (mbi pos): 40.0 mm (4.0 cm)
-  const runnerFromSideBottomMm = 58.0;
-  const runnerAboveFloorMm = Number((runnerFromSideBottomMm - btMm).toFixed(1)); // 58 - 18 = 40mm
+  // - Runner height from side wall bottom in zero: user controlled (default 58.0 mm)
+  // - Runner height inside cabinet above floor (mbi pos): runner - boardThickness (e.g. 58 - 18 = 40.0 mm)
+  const runnerFromSideBottomMm = currentRunnerHeightMm;
+  const runnerAboveFloorMm = Number((runnerFromSideBottomMm - btMm).toFixed(1));
   const runner1stHoleFromFrontMm = 37.0; // 37mm from front edge of cabinet side wall (Blum System 32)
   const runner2ndHoleFromFrontMm = 69.0; // 37mm + 32mm = 69mm
   const runner3rdHoleFromFrontMm = llageriMm >= 500 ? 229.0 : 165.0; // standard depth hole
+
+  // FRONT VERTICAL DRILLING MEASUREMENTS (AUTOMATICALLY CALCULATED FROM RUNNER POSITION):
+  // Formula based on Blum Tandembox Antaro geometry:
+  // Hole 1 (Bottom): RunnerHeightInZero + 13.0 mm (e.g. 58 + 13 = 71.0 mm / 7.1 cm)
+  // Hole 2 (Top): Hole 1 + 32.0 mm (e.g. 71 + 32 = 103.0 mm / 10.3 cm)
+  // Hole 3 (Shipka / Gallery Rail for big drawer Antaro D): Hole 1 + 128.0 mm (e.g. 71 + 128 = 199.0 mm / 19.9 cm)
+  // (Or for Antaro C: Hole 1 + 64.0 mm)
+  const hole1FromBottomMm = Number((runnerFromSideBottomMm + 13.0).toFixed(1));
+  const hole2FromBottomMm = Number((hole1FromBottomMm + 32.0).toFixed(1));
+  
+  const shipkaFromHole1Mm = antaroProfile === 'C' ? 64.0 : 128.0;
+  const shipkaHoleFromBottomMm = Number((hole1FromBottomMm + shipkaFromHole1Mm).toFixed(1));
+
+  const distanceBetweenLeftRightHolesMm = lwMm - 31; // Center-to-center: LW - 31mm
 
   // Helper formatting for mm / cm
   const fmt = (valMm: number) => {
@@ -110,7 +121,7 @@ export function AntaroFrontDrillingVisualizer({
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
-              Skema e Plotë: Ballina (7.1 + 3.2) & Anësoret (5.8 / 4cm)
+              Sinkronizimi Automatik: Llagerat ({fmt(runnerFromSideBottomMm)}) &rarr; Ballina ({fmt(hole1FromBottomMm)} / {fmt(hole2FromBottomMm)})
             </h3>
           </div>
         </div>
@@ -147,8 +158,81 @@ export function AntaroFrontDrillingVisualizer({
         </div>
       </div>
 
+      {/* GLOBAL RUNNER POSITION MASTER CONTROLLER BAR */}
+      <div className="bg-slate-950 px-4 sm:px-6 py-3.5 border-b border-indigo-900/50 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              Lartësia e Llagerit nga Zero:
+            </span>
+          </div>
+
+          {/* Quick presets for runner */}
+          <div className="flex items-center gap-1">
+            {[
+              { label: '5.8 cm (58 mm)', val: 58.0, isStd: true },
+              { label: '5.0 cm (50 mm)', val: 50.0, isStd: false },
+              { label: '6.0 cm (60 mm)', val: 60.0, isStd: false },
+              { label: '6.4 cm (64 mm)', val: 64.0, isStd: false },
+            ].map((p) => (
+              <button
+                key={p.val}
+                type="button"
+                onClick={() => handleRunnerHeightUpdate(p.val)}
+                className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg border transition-all ${
+                  currentRunnerHeightMm === p.val
+                    ? 'bg-amber-600 text-white border-amber-500 shadow-sm'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
+                }`}
+              >
+                {p.val / 10}cm {p.isStd ? '★' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stepper / Input */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 font-medium">Ndrysho lirshëm:</span>
+          <div className="flex items-center bg-slate-900 rounded-xl border border-slate-700 p-1">
+            <button
+              type="button"
+              onClick={() => handleRunnerHeightUpdate(currentRunnerHeightMm - 1)}
+              className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              title="-1 mm"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            
+            <div className="px-2.5 font-mono font-black text-amber-300 text-xs text-center min-w-[70px]">
+              {fmt(currentRunnerHeightMm)}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleRunnerHeightUpdate(currentRunnerHeightMm + 1)}
+              className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+              title="+1 mm"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleRunnerHeightUpdate(58.0)}
+            className="p-1.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all text-xs flex items-center gap-1"
+            title="Kthe në Standard (5.8 cm)"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-[10px] font-bold">5.8cm Std</span>
+          </button>
+        </div>
+      </div>
+
       {/* Sub Tabs: 1. Ballina (Front) vs 2. Anësorja (Llagerat) */}
-      <div className="bg-slate-950 px-4 sm:px-6 pt-4 border-b border-slate-800 flex flex-wrap gap-2">
+      <div className="bg-slate-950 px-4 sm:px-6 pt-3 border-b border-slate-800 flex flex-wrap gap-2">
         <button
           onClick={() => setActiveSubTab('front')}
           className={`py-2.5 px-4 text-xs font-black uppercase rounded-t-xl transition-all flex items-center gap-2 border-t-2 ${
@@ -157,7 +241,7 @@ export function AntaroFrontDrillingVisualizer({
               : 'bg-transparent text-slate-500 hover:text-slate-300 border-transparent'
           }`}
         >
-          <Box className="w-4 h-4" /> 1. Shpimi i Ballinës (Frontit: 7.1cm + 3.2cm)
+          <Box className="w-4 h-4" /> 1. Shpimi i Ballinës (Frontit: {fmt(hole1FromBottomMm)} + 3.2cm)
         </button>
 
         <button
@@ -168,7 +252,7 @@ export function AntaroFrontDrillingVisualizer({
               : 'bg-transparent text-slate-500 hover:text-slate-300 border-transparent'
           }`}
         >
-          <Layers className="w-4 h-4" /> 2. Shpimi i Mureve Anësore (Llagerat: 5.8cm / mbi pos 4cm)
+          <Layers className="w-4 h-4" /> 2. Shpimi i Mureve Anësore (Llagerat: {fmt(runnerFromSideBottomMm)} / mbi pos {fmt(runnerAboveFloorMm)})
         </button>
       </div>
 
@@ -177,8 +261,9 @@ export function AntaroFrontDrillingVisualizer({
         
         {activeSubTab === 'front' ? (
           <>
-            {/* Front Side Gap Selector & Drawer Type Banner */}
+            {/* Front Configuration Banner */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-4">
+              
               {/* Row 1: Drawer Size & Shipka Options */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
                 <div className="flex items-center gap-3">
@@ -207,32 +292,8 @@ export function AntaroFrontDrillingVisualizer({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-400">Bira 1 nga Fundi:</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setFrontHoleBaseMm(71.0)}
-                      className={`px-2.5 py-1 text-xs font-mono font-black rounded-lg border transition-all ${
-                        frontHoleBaseMm === 71.0
-                          ? 'bg-emerald-600 text-white border-emerald-500'
-                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                      }`}
-                    >
-                      7.1 cm (71 mm)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFrontHoleBaseMm(65.5)}
-                      className={`px-2.5 py-1 text-xs font-mono font-black rounded-lg border transition-all ${
-                        frontHoleBaseMm === 65.5
-                          ? 'bg-emerald-600 text-white border-emerald-500'
-                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                      }`}
-                    >
-                      6.55 cm (65.5 mm)
-                    </button>
-                  </div>
+                <div className="text-xs text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-xl border border-emerald-800/60 font-bold flex items-center gap-1.5">
+                  <span>✓ Llogaritur automatikisht nga Llageri ({fmt(runnerFromSideBottomMm)} + 1.3cm)</span>
                 </div>
               </div>
 
@@ -247,7 +308,7 @@ export function AntaroFrontDrillingVisualizer({
                   </span>
                 </div>
                 <div className="text-xs font-mono font-black text-amber-300 bg-amber-950/80 px-3 py-1 rounded-xl border border-amber-700/60 shadow-sm">
-                  Gjerësia e Frontit: {frontWidthMm} mm ({frontWidthCm} cm)
+                  Gjerësia e Prerjes së Frontit: {frontWidthMm} mm ({frontWidthCm} cm)
                 </div>
               </div>
 
@@ -360,7 +421,7 @@ export function AntaroFrontDrillingVisualizer({
                 </text>
 
                 {/* LEFT DRILL HOLES */}
-                {/* Hole 1: 71mm from bottom (y = 370 - 75 = 295) */}
+                {/* Hole 1: automatically calculated from runner (y = 370 - 75 = 295) */}
                 <g transform="translate(207, 295)">
                   <circle cx="0" cy="0" r="10" fill="url(#holeGlow)" stroke="#38bdf8" strokeWidth="2" />
                   <line x1="-14" y1="0" x2="14" y2="0" stroke="#e0f2fe" strokeWidth="1" strokeDasharray="2 2" />
@@ -420,7 +481,7 @@ export function AntaroFrontDrillingVisualizer({
                 )}
 
                 {/* DIMENSION LINES */}
-                {/* 1. Vertical from bottom edge to Hole 1 (7.1 cm / 71 mm) */}
+                {/* 1. Vertical from bottom edge to Hole 1 */}
                 <line x1="60" y1="370" x2="207" y2="370" stroke="#475569" strokeWidth="1" strokeDasharray="3 3" />
                 <line x1="60" y1="295" x2="207" y2="295" stroke="#475569" strokeWidth="1" strokeDasharray="3 3" />
                 <line x1="80" y1="370" x2="80" y2="295" stroke="#34d399" strokeWidth="2.5" />
@@ -490,7 +551,9 @@ export function AntaroFrontDrillingVisualizer({
                   Bira 1 (Poshtme)
                 </span>
                 <p className="text-xl font-black text-white">{fmt(hole1FromBottomMm)}</p>
-                <p className="text-xs text-slate-300">Nga fundi i ballinës lart për birën e parë të kapëses.</p>
+                <p className="text-xs text-slate-300">
+                  Llogaritur automatikisht: Llageri {fmt(runnerFromSideBottomMm)} + 13mm.
+                </p>
               </div>
 
               <div className="bg-slate-950 p-4 rounded-2xl border border-sky-500/40 space-y-1.5">
@@ -498,7 +561,9 @@ export function AntaroFrontDrillingVisualizer({
                   Bira 2 (Sipërme)
                 </span>
                 <p className="text-xl font-black text-white">{fmt(hole2FromBottomMm)}</p>
-                <p className="text-xs text-slate-300">Saktësisht <strong>+3.2 cm (32 mm)</strong> më lart për birën e dytë.</p>
+                <p className="text-xs text-slate-300">
+                  Saktësisht <strong>+3.2 cm (32 mm)</strong> mbi birën 1.
+                </p>
               </div>
 
               <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/40 space-y-1.5">
@@ -510,7 +575,7 @@ export function AntaroFrontDrillingVisualizer({
                 </p>
                 <p className="text-xs text-slate-300">
                   {hasShipkë
-                    ? `Bira e shufrës/shipkës për fijokë të madhe (+${shipkaFromHole1Mm}mm).`
+                    ? `Bira e shufrës/shipkës për fijokë të madhe (+${shipkaFromHole1Mm}mm mbi birën 1).`
                     : `15.5mm nga muri brenda (${fmt(fromOuterEdgeMm)} nga skaji jashtë).`}
                 </p>
               </div>
@@ -534,15 +599,15 @@ export function AntaroFrontDrillingVisualizer({
                 <div className="flex items-center gap-2 text-amber-300">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
                   <span className="text-xs font-black uppercase tracking-wider">
-                    Standardi Zyrtar i Punishtes për Shpimin e Anësores
+                    Standardi i Shpimit të Mureve Anësore (Llagerat Blum Antaro)
                   </span>
                 </div>
                 <div className="text-xs font-mono font-black text-emerald-300 bg-emerald-950/80 px-3 py-1.5 rounded-xl border border-emerald-800 shadow-sm">
-                  Nga Zero Poshtë: <strong>{fmt(runnerFromSideBottomMm)}</strong> | Mbi Pos: <strong>{fmt(runnerAboveFloorMm)}</strong>
+                  Nga Zero Poshtë: <strong>{fmt(runnerFromSideBottomMm)}</strong> | Mbi Pos (Dysheme): <strong>{fmt(runnerAboveFloorMm)}</strong>
                 </div>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Kur anësorja shkon në zero poshtë (me dysheme të mbyllur {btMm}mm): matja bëhet <strong>{fmt(runnerFromSideBottomMm)}</strong> nga fundi i anësores, e cila brenda elementit korrespondon saktësisht <strong>{fmt(runnerAboveFloorMm)}</strong> mbi sipërfaqen e posit/dyshemesë!
+                Kur anësorja shkon në zero poshtë (me dysheme të mbyllur {btMm}mm): matja bëhet <strong>{fmt(runnerFromSideBottomMm)}</strong> nga fundi i anësores, e cila brenda elementit korrespondon saktësisht <strong>{fmt(runnerAboveFloorMm)}</strong> mbi sipërfaqen e posit/dyshemesë! Kur e ndryshoni këtë vlerë, birat e frontit azhurnohen automatikisht.
               </p>
             </div>
 
@@ -649,7 +714,7 @@ export function AntaroFrontDrillingVisualizer({
                 </g>
 
                 {/* CALLOUT ARROWS & DIMENSIONS */}
-                {/* 1. Dimension from Floor Top to Hole (4.0 cm / 40 mm) */}
+                {/* 1. Dimension from Floor Top to Hole (mbi pos) */}
                 <line x1="790" y1="335" x2="790" y2="275" stroke="#34d399" strokeWidth="2.5" />
                 <polygon points="790,335 786,327 794,327" fill="#34d399" />
                 <polygon points="790,275 786,283 794,283" fill="#34d399" />
@@ -662,7 +727,7 @@ export function AntaroFrontDrillingVisualizer({
                   (Mbi Pos)
                 </text>
 
-                {/* 2. Dimension from Bottom in Zero (5.8 cm / 58 mm) */}
+                {/* 2. Dimension from Bottom in Zero */}
                 <line x1="50" y1="360" x2="50" y2="275" stroke="#fbbf24" strokeWidth="2.5" />
                 <polygon points="50,360 46,352 54,352" fill="#fbbf24" />
                 <polygon points="50,275 46,283 54,283" fill="#fbbf24" />
