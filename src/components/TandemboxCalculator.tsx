@@ -198,13 +198,14 @@ ${type === 'fijoka-druri' ? `
 3. Podi (Gjerësia): ${results.lesenitiWidth} cm
 4. Podi (Gjatësia): ${results.lesenitiDepth} cm
 5. Përmasa e Frontit (Fugë anash ${sideGapMm} mm): ${(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm (${(kaca * 10 - sideGapMm * 2).toFixed(0)} mm)
-6. Shpimet e Frontit (FST = ${fst} cm):
-   - Vertikal (poshtme): ${(4.75 + fst).toFixed(2)} cm (${((4.75 + fst) * 10).toFixed(0)} mm)
-   - Vertikal (sipërme): ${(4.75 + fst + 3.2).toFixed(2)} cm (${((4.75 + fst + 3.2) * 10).toFixed(0)} mm)
+6. Shpimet e Frontit (Ballinës):
+   - Vertikal (Bira 1 poshtme): 7.1 cm (71 mm) nga fundi
+   - Vertikal (Bira 2 sipërme): 10.3 cm (103 mm) [7.1cm + 3.2cm]
+   - Vertikal (Bira e Shipkës / Reling për fijokë të madhe): 19.9 cm (199 mm) [7.1cm + 12.8cm]
    - Horizontal (nga muri brenda): 15.5 mm
    - Horizontal (nga skaji jashtë): ${((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm
 7. Shpimet e Mureve Anësore për Llagerat:
-   - Nga Fundi në Zero: ${(4.0 + boardThickness).toFixed(1)} cm (${((4.0 + boardThickness) * 10).toFixed(0)} mm)
+   - Nga Fundi në Zero: 5.8 cm (58 mm)
    - Brenda Mbi Pos (Mbi Dysheme): 4.0 cm (40 mm)
    - Nga Balli i Anësores: 37 mm (bira 1), 69 mm (bira 2)
 ` : type === 'legrabox' ? `
@@ -606,13 +607,16 @@ Gjeneruar nga MergimGroup Tool
                       <div className="bg-white p-3.5 rounded-xl border border-indigo-100 shadow-sm space-y-2">
                         <p className="font-extrabold text-indigo-950">1. Shpimi i Ballinës (Frontit)</p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Gjerësia e prerjes së Frontit: <strong className="text-indigo-600">{(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm</strong> (Fugë {sideGapMm}mm anash).
+                          - Gjerësia e prerjes së Frontit: <strong className="text-indigo-600">{(kaca - (sideGapMm * 2) / 10).toFixed(1)} cm ({(kaca * 10 - sideGapMm * 2).toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Vrima e poshtme: <strong className="text-indigo-600">{(4.75 + fst).toFixed(2)} cm ({((4.75 + fst) * 10).toFixed(1)} mm)</strong> nga fundi.
+                          - Bira 1 (e poshtme): <strong className="text-emerald-700 font-bold">7.1 cm (71 mm)</strong> nga fundi i ballinës.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Vrima e sipërme: <strong className="text-indigo-600">{(4.75 + fst + 3.2).toFixed(2)} cm ({((4.75 + fst + 3.2) * 10).toFixed(1)} mm)</strong> (Hapësira fiks 32mm).
+                          - Bira 2 (e sipërme): <strong className="text-sky-700 font-bold">10.3 cm (103 mm)</strong> [7.1 cm + 3.2 cm].
+                        </p>
+                        <p className="text-slate-600 leading-relaxed">
+                          - Bira e Shipkës (Reling fijokë e madhe): <strong className="text-amber-700 font-bold">19.9 cm (199 mm)</strong> [7.1 cm + 12.8 cm].
                         </p>
                         <p className="text-slate-600 leading-relaxed">
                           - Anash: <strong className="text-indigo-600">15.5 mm</strong> nga brenda ose <strong className="text-indigo-600">{((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm</strong> nga skaji jashtë.
@@ -622,16 +626,16 @@ Gjeneruar nga MergimGroup Tool
                       <div className="bg-white p-3.5 rounded-xl border border-amber-100 shadow-sm space-y-2">
                         <p className="font-extrabold text-amber-950">2. Shpimi i Anësores për Llagerat</p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Nga Fundi në Zero (Anësorja poshtë): <strong className="text-amber-700">{(4.0 + boardThickness).toFixed(1)} cm ({((4.0 + boardThickness) * 10).toFixed(0)} mm)</strong>.
+                          - Nga Fundi në Zero (Anësorja poshtë): <strong className="text-amber-700 font-bold">5.8 cm (58 mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Brenda mbi Pos (Mbi Dysheme): <strong className="text-emerald-700">4.0 cm (40 mm)</strong>.
+                          - Brenda mbi Pos (Mbi Dysheme): <strong className="text-emerald-700 font-bold">4.0 cm (40 mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Nga Balli i Anësores (Përpara): <strong className="text-sky-700">3.7 cm (37 mm)</strong> bira e 1-rë, <strong className="text-sky-700">6.9 cm (69 mm)</strong> bira e 2-të.
+                          - Nga Balli i Anësores (Përpara): <strong className="text-sky-700">3.7 cm (37 mm)</strong> bira e 1-rë, <strong className="text-sky-700">6.9 cm (69 mm)</strong> bira e 2-të (+32mm).
                         </p>
-                        <div className="p-2 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 text-[10px] font-bold">
-                          ✓ Bira e llagerit del 4cm mbi dysheme (5.8cm nga fundi i anësores për pllakë 18mm)!
+                        <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 text-[10px] font-bold">
+                          ✓ Standardi i punishtes: Llageri 5.8cm nga zero &rarr; Fronti 7.1cm / 10.3cm (+ shipka 19.9cm)!
                         </div>
                       </div>
                     </div>
