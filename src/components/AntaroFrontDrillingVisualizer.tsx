@@ -71,6 +71,7 @@ export function AntaroFrontDrillingVisualizer({
   
   // Distance from outer edge of front panel to drill hole centerline: FA + 15.5mm (e.g. 16.5 + 15.5 = 32mm)
   const fromOuterEdgeMm = Number((sideOverlayFaMm + 15.5).toFixed(1));
+  const fromOuterEdgeCm = Number((fromOuterEdgeMm / 10).toFixed(1));
 
   // RUNNER SIDE WALL DRILLING MEASUREMENTS:
   // - Runner height from side wall bottom in zero: user controlled (default 58.0 mm)
@@ -518,19 +519,22 @@ export function AntaroFrontDrillingVisualizer({
 
                 {/* 4. Horizontal from inner wall: 15.5mm */}
                 <line x1="182" y1="205" x2="207" y2="205" stroke="#fbbf24" strokeWidth="1.8" />
-                <rect x="165" y="180" width="60" height="18" rx="4" fill="#78350f" stroke="#d97706" strokeWidth="1" />
-                <text x="195" y="192" fill="#fde68a" fontSize="9" fontWeight="900" textAnchor="middle">
-                  {fmt(15.5)}
+                <rect x="155" y="178" width="80" height="22" rx="4" fill="#78350f" stroke="#d97706" strokeWidth="1" />
+                <text x="195" y="193" fill="#fde68a" fontSize="9" fontWeight="900" textAnchor="middle">
+                  15.5 mm (nga muri)
                 </text>
 
-                {/* 5. Horizontal from outer edge of front: e.g. 32mm */}
-                <line x1="150" y1="395" x2="207" y2="395" stroke="#818cf8" strokeWidth="2" />
-                <rect x="135" y="408" width="85" height="22" rx="5" fill="#312e81" stroke="#6366f1" strokeWidth="1" />
-                <text x="178" y="423" fill="#e0e7ff" fontSize="10" fontWeight="900" textAnchor="middle">
+                {/* 5. Horizontal from outer edge of front: e.g. 31-32mm */}
+                <line x1="150" y1="395" x2="207" y2="395" stroke="#818cf8" strokeWidth="2.5" />
+                <polygon points="150,395 158,391 158,399" fill="#818cf8" />
+                <polygon points="207,395 199,391 199,399" fill="#818cf8" />
+                
+                <rect x="125" y="408" width="105" height="24" rx="6" fill="#312e81" stroke="#6366f1" strokeWidth="1.5" />
+                <text x="178" y="424" fill="#ffffff" fontSize="11" fontWeight="900" textAnchor="middle">
                   {fmt(fromOuterEdgeMm)}
                 </text>
-                <text x="178" y="442" fill="#818cf8" fontSize="8" fontWeight="bold" textAnchor="middle">
-                  (Nga Skaji Jashtë)
+                <text x="178" y="444" fill="#c7d2fe" fontSize="8.5" fontWeight="black" textAnchor="middle">
+                  (VETËM KJO NGA SKAJI JASHTË)
                 </text>
 
                 {/* 6. Center-to-center horizontal distance: LW - 31mm */}
@@ -587,6 +591,21 @@ export function AntaroFrontDrillingVisualizer({
                 <p className="text-xl font-black text-amber-300">{frontWidthMm} mm</p>
                 <p className="text-xs text-slate-300">
                   Gjerësia neto e prerjes me fugë {currentSideGapMm}mm anash ({frontWidthCm} cm).
+                </p>
+              </div>
+            </div>
+
+            {/* CLARITY BANNER: 3.1 cm / 3.2 cm explanation */}
+            <div className="p-3.5 bg-indigo-950/60 rounded-2xl border border-indigo-500/40 flex items-start gap-3 text-xs">
+              <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-black shrink-0 mt-0.5">
+                !
+              </div>
+              <div className="space-y-1 text-slate-200">
+                <p className="font-extrabold text-amber-300 uppercase tracking-wide">
+                  SQARIM I RËNDËSISHËM PËR SHPIMIN ANASH (MOS I MBLIDHNI BASHKË):
+                </p>
+                <p className="leading-relaxed text-slate-300">
+                  Matja nga skaji i jashtëm i ballinës me metër bëhet <strong>VETËM {fromOuterEdgeMm} mm ({fromOuterEdgeCm} cm ose 3.1 cm sipas punishtes)</strong>. Distanca <strong>15.5 mm</strong> është matja e brendshme nga muri. <strong>Këto të dyja NUK mblidhen bashkë</strong> — ato tregojnë të njëjtën vrimë!
                 </p>
               </div>
             </div>
