@@ -54,13 +54,13 @@ export function GlassProfileCalculator() {
 
   // Standard deductions:
   // - doorGapHeight: 3mm standard vertical clearance (1037 - 3 = 1034mm = 103.4cm)
-  // - doorGapWidth: 4mm standard horizontal clearance (980 - 4 = 976mm = 97.6cm)
+  // - doorGapWidth: 3mm standard horizontal clearance (350 - 3 = 347mm, 980 - 3 = 977mm)
   // - profileHeightTrim: 10mm (1.0 cm) for top and bottom corner/adapter pieces (0.5cm poshtë + 0.5cm lart -> 1034 - 10 = 1024mm = 102.4cm)
   // - profileWidthTrim: 0mm
   // - glassHeightDeduction: 3mm inner deduction from vertical profile cut (1024 - 3 = 1021mm = 102.1cm)
   // - glassWidthDeduction: 100mm deduction from cabinet width (490 - 100 = 390mm = 39.0cm / 980 - 100 = 880mm = 88.0cm)
   const [doorGapHeight, setDoorGapHeight] = useState<number>(3); 
-  const [doorGapWidth, setDoorGapWidth] = useState<number>(4); 
+  const [doorGapWidth, setDoorGapWidth] = useState<number>(3); 
   const [profileHeightTrim, setProfileHeightTrim] = useState<number>(10); 
   const [profileWidthTrim, setProfileWidthTrim] = useState<number>(0);
   const [glassHeightDeduction, setGlassHeightDeduction] = useState<number>(3); 
@@ -568,14 +568,14 @@ export function GlassProfileCalculator() {
                   type="button"
                   onClick={() => {
                     setDoorGapHeight(3);
-                    setDoorGapWidth(4);
+                    setDoorGapWidth(3);
                     setProfileHeightTrim(10);
                     setProfileWidthTrim(0);
                     setGlassHeightDeduction(3);
                     setGlassWidthDeduction(100);
                   }}
                   className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 transition-colors"
-                  title="Kthe vlerat standarde (Gap H: 3mm, Gap W: 4mm, Pjesët 0.5cm Poshtë/Lart: 10mm, Xham H: 3mm, Xham W: 100mm)"
+                  title="Kthe vlerat standarde (Gap H: 3mm, Gap W: 3mm, Pjesët 0.5cm Poshtë/Lart: 10mm, Xham H: 3mm, Xham W: 100mm)"
                 >
                   Rivendos Standardet
                 </button>
