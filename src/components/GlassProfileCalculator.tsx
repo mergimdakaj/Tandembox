@@ -53,13 +53,13 @@ export function GlassProfileCalculator() {
   const [hasLed, setHasLed] = useState<boolean>(false);
 
   // Standard deductions:
-  // - doorGapHeight: 5mm standard vertical clearance (1037 - 5 = 1032mm = 103.2cm)
+  // - doorGapHeight: 3mm standard vertical clearance (1037 - 3 = 1034mm = 103.4cm)
   // - doorGapWidth: 4mm standard horizontal clearance (980 - 4 = 976mm = 97.6cm)
-  // - profileHeightTrim: 10mm (1.0 cm) for top and bottom corner/adapter pieces (0.5cm poshtë + 0.5cm lart -> 1032 - 10 = 1022mm = 102.2cm)
+  // - profileHeightTrim: 10mm (1.0 cm) for top and bottom corner/adapter pieces (0.5cm poshtë + 0.5cm lart -> 1034 - 10 = 1024mm = 102.4cm)
   // - profileWidthTrim: 0mm
-  // - glassHeightDeduction: 6mm inner deduction from vertical profile cut (1022 - 6 = 1016mm)
+  // - glassHeightDeduction: 6mm inner deduction from vertical profile cut (1024 - 6 = 1018mm)
   // - glassWidthDeduction: 103mm deduction from cabinet width (980 - 103 = 877mm)
-  const [doorGapHeight, setDoorGapHeight] = useState<number>(5); 
+  const [doorGapHeight, setDoorGapHeight] = useState<number>(3); 
   const [doorGapWidth, setDoorGapWidth] = useState<number>(4); 
   const [profileHeightTrim, setProfileHeightTrim] = useState<number>(10); 
   const [profileWidthTrim, setProfileWidthTrim] = useState<number>(0);
@@ -567,7 +567,7 @@ export function GlassProfileCalculator() {
                 <button
                   type="button"
                   onClick={() => {
-                    setDoorGapHeight(5);
+                    setDoorGapHeight(3);
                     setDoorGapWidth(4);
                     setProfileHeightTrim(10);
                     setProfileWidthTrim(0);
@@ -575,7 +575,7 @@ export function GlassProfileCalculator() {
                     setGlassWidthDeduction(103);
                   }}
                   className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 transition-colors"
-                  title="Kthe vlerat standarde (Gap H: 5mm, Gap W: 4mm, Pjesët 0.5cm Poshtë/Lart: 10mm, Xham H: 6mm, Xham W: 103mm)"
+                  title="Kthe vlerat standarde (Gap H: 3mm, Gap W: 4mm, Pjesët 0.5cm Poshtë/Lart: 10mm, Xham H: 6mm, Xham W: 103mm)"
                 >
                   Rivendos Standardet
                 </button>
