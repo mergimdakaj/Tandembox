@@ -32,15 +32,17 @@ interface GlassDoorItem {
   shelfWidth: number;
   shelfDepth: number;
   verticalProfileCut: number;
+  horizontalProfileCut: number;
   doorGlassCount: number;
   verticalProfileCount: number;
+  horizontalProfileCount: number;
   totalShelfGlassCount: number;
 }
 
 export function GlassProfileCalculator() {
   // Primary Inputs in mm
-  const [kacaHeight, setKacaHeight] = useState<number>(720);
-  const [kacaWidth, setKacaWidth] = useState<number>(600);
+  const [kacaHeight, setKacaHeight] = useState<number>(1037);
+  const [kacaWidth, setKacaWidth] = useState<number>(980);
   const [kacaDepth, setKacaDepth] = useState<number>(575);
   const [quantity, setQuantity] = useState<number>(1);
   const [doorType, setDoorType] = useState<'single' | 'double'>('single');
@@ -50,12 +52,19 @@ export function GlassProfileCalculator() {
   const [numShelves, setNumShelves] = useState<number>(0);
   const [hasLed, setHasLed] = useState<boolean>(false);
 
-  // Custom deductions
-  const [doorGapHeight, setDoorGapHeight] = useState<number>(3); // 3mm gap for door height
-  const [doorGapWidth, setDoorGapWidth] = useState<number>(3); // 3mm gap for door width
-  const [profileHeightTrim, setProfileHeightTrim] = useState<number>(13); // 13mm trim for vertical profile
-  const [glassHeightDeduction, setGlassHeightDeduction] = useState<number>(6); // 6mm inner deduction from vertical profile cut (704 - 6 = 698mm glass height)
-  const [glassWidthDeduction, setGlassWidthDeduction] = useState<number>(103); // W - 103mm for glass
+  // Standard deductions:
+  // - doorGapHeight: 5mm standard vertical clearance (1037 - 5 = 1032mm = 103.2cm)
+  // - doorGapWidth: 4mm standard horizontal clearance (980 - 4 = 976mm = 97.6cm)
+  // - profileHeightTrim: 0mm for standard 45° mitre cut (Profile cut = Door outer height = 1032mm)
+  // - profileWidthTrim: 0mm for standard 45° mitre cut (Profile cut = Door outer width = 976mm)
+  // - glassHeightDeduction: 6mm inner deduction from profile cut
+  // - glassWidthDeduction: 103mm deduction from cabinet width
+  const [doorGapHeight, setDoorGapHeight] = useState<number>(5); 
+  const [doorGapWidth, setDoorGapWidth] = useState<number>(4); 
+  const [profileHeightTrim, setProfileHeightTrim] = useState<number>(0); 
+  const [profileWidthTrim, setProfileWidthTrim] = useState<number>(0);
+  const [glassHeightDeduction, setGlassHeightDeduction] = useState<number>(6); 
+  const [glassWidthDeduction, setGlassWidthDeduction] = useState<number>(103); 
 
   // Copy status
   const [copied, setCopied] = useState<boolean>(false);
@@ -65,20 +74,25 @@ export function GlassProfileCalculator() {
 
   // Calculate dimensions
   const calculations = useMemo(() => {
-    // Effective width per door if double doors (e.g. 600mm / 2 = 300mm)
+    // Effective width per door if double doors (e.g. 980mm / 2 = 490mm)
     const effKacaWidth = doorType === 'double' ? kacaWidth / 2 : kacaWidth;
 
-    // Black Aluminum Vertical Profile Cut (e.g. 2640 - 3 gap - 13 trim = 2624mm or H - doorGapHeight - profileHeightTrim)
-    const verticalProfileCut = Math.max(0, kacaHeight - doorGapHeight - profileHeightTrim);
-
     // Outer Door Dimensions (Masat e Jashtme të Derës me Alumin)
-    // Outer door height = Cabinet height minus outer door vertical gap (H - doorGapHeight)
+    // Outer door height = Kaca height minus vertical gap (e.g. 1037 - 5 = 1032mm = 103.2 cm)
     const doorHeight = Math.max(0, kacaHeight - doorGapHeight);
+    // Outer door width = Kaca width per door minus horizontal gap (e.g. 980 - 4 = 976mm = 97.6 cm)
     const doorWidth = Math.max(0, effKacaWidth - doorGapWidth);
 
+    // Black Aluminum 45° Mitre Cut Profiles:
+    // Vertical Profile (2x per door): Length equals outer door height minus any trim (1032mm = 103.2 cm)
+    const verticalProfileCut = Math.max(0, doorHeight - profileHeightTrim);
+    // Horizontal Profile (2x per door): Length equals outer door width minus any trim (976mm = 97.6 cm)
+    const horizontalProfileCut = Math.max(0, doorWidth - profileWidthTrim);
+
     // Door Glass Dimensions (4mm thickness)
-    // Glass height automatically adjusts when vertical profile cut / trim changes (verticalProfileCut - glassHeightDeduction)
+    // Glass height: vertical profile cut minus glass height deduction (e.g. 1032 - 6 = 1026mm)
     const glassDoorHeight = Math.max(0, verticalProfileCut - glassHeightDeduction);
+    // Glass width: effective kaca width minus glass width deduction (e.g. 980 - 103 = 877mm)
     const glassDoorWidth = Math.max(0, effKacaWidth - glassWidthDeduction);
 
     // Glass Shelf Dimensions (6mm thickness)
@@ -90,8 +104,10 @@ export function GlassProfileCalculator() {
 
     // Total Door Glass count
     const doorGlassCount = quantity * (doorType === 'double' ? 2 : 1);
-    // Total Vertical Profile count
+    // Total Vertical Profile count (2 per door)
     const verticalProfileCount = quantity * (doorType === 'double' ? 4 : 2);
+    // Total Horizontal Profile count (2 per door)
+    const horizontalProfileCount = quantity * (doorType === 'double' ? 4 : 2);
     // Total Glass Shelf count
     const totalShelfGlassCount = numShelves * quantity;
 
@@ -100,12 +116,14 @@ export function GlassProfileCalculator() {
       doorHeight,
       doorWidth,
       verticalProfileCut,
+      horizontalProfileCut,
       glassDoorHeight,
       glassDoorWidth,
       shelfDepth,
       shelfWidth,
       doorGlassCount,
       verticalProfileCount,
+      horizontalProfileCount,
       totalShelfGlassCount,
       shelfWidthDeduction
     };
@@ -120,6 +138,7 @@ export function GlassProfileCalculator() {
     doorGapHeight,
     doorGapWidth,
     profileHeightTrim,
+    profileWidthTrim,
     glassHeightDeduction,
     glassWidthDeduction
   ]);
@@ -143,8 +162,10 @@ export function GlassProfileCalculator() {
       shelfWidth: calculations.shelfWidth,
       shelfDepth: calculations.shelfDepth,
       verticalProfileCut: calculations.verticalProfileCut,
+      horizontalProfileCut: calculations.horizontalProfileCut,
       doorGlassCount: calculations.doorGlassCount,
       verticalProfileCount: calculations.verticalProfileCount,
+      horizontalProfileCount: calculations.horizontalProfileCount,
       totalShelfGlassCount: calculations.totalShelfGlassCount
     };
     setDoorList(prev => [...prev, newItem]);
@@ -170,10 +191,10 @@ export function GlassProfileCalculator() {
     text += `   • Formula: (H-${doorGapHeight}) x (W-${doorGapWidth}) mm\n`;
     text += `   • Sasia: *${calculations.doorGlassCount} copë derë*\n\n`;
 
-    text += `2️⃣ *PROFILET E ZEZA TË ALUMINIT (Lartësia Vertikale)*\n`;
-    text += `👉 *${calculations.verticalProfileCut} mm*  (${(calculations.verticalProfileCut / 10).toFixed(1)} cm)\n`;
-    text += `   • Formula: H - ${doorGapHeight} (gap) - ${profileHeightTrim} (trim)\n`;
-    text += `   • Sasia: *${calculations.verticalProfileCount} copë* profile vertikale\n\n`;
+    text += `2️⃣ *PROFILET E ZEZA TË ALUMINIT (Prerje me Kënd 45°)*\n`;
+    text += `👉 *Vertikale (Lartësia): ${calculations.verticalProfileCut} mm*  (${(calculations.verticalProfileCut / 10).toFixed(1)} cm) — *${calculations.verticalProfileCount} copë*\n`;
+    text += `👉 *Horizontale (Gjerësia): ${calculations.horizontalProfileCut} mm*  (${(calculations.horizontalProfileCut / 10).toFixed(1)} cm) — *${calculations.horizontalProfileCount} copë*\n`;
+    text += `   • Lloji i prerjes: 45° kënd (jashtë-jashtë)\n\n`;
 
     text += `3️⃣ *XHAMI I DERËS I PRERË (Trashësia: 4mm)*\n`;
     text += `👉 *${calculations.glassDoorHeight} x ${calculations.glassDoorWidth} mm*  (${(calculations.glassDoorHeight / 10).toFixed(1)} x ${(calculations.glassDoorWidth / 10).toFixed(1)} cm)\n`;
@@ -207,7 +228,7 @@ export function GlassProfileCalculator() {
       text += `🔹 *${idx + 1}. ${item.name}* (${item.quantity} Element(e) - ${item.doorType === 'double' ? 'Dyer Çift' : 'Derë Teke'})\n`;
       text += `   • Kaca Totale: *${item.kacaHeight} x ${item.kacaWidth} x ${item.kacaDepth} mm* (${(item.kacaHeight/10).toFixed(1)} x ${(item.kacaWidth/10).toFixed(1)} x ${(item.kacaDepth/10).toFixed(1)} cm)\n`;
       text += `   • Masa Jashtme Derës: *${item.doorHeight} x ${item.doorWidth} mm* (${(item.doorHeight/10).toFixed(1)} x ${(item.doorWidth/10).toFixed(1)} cm) [${item.doorGlassCount}x dyer]\n`;
-      text += `   • Profili Vertikal (i zi): *${item.verticalProfileCut} mm* [${item.verticalProfileCount}x copë]\n`;
+      text += `   • Profilet e Zeza (45°): Vertikale *${item.verticalProfileCut} mm* [${item.verticalProfileCount}x] | Horizontale *${item.horizontalProfileCut} mm* [${item.horizontalProfileCount}x]\n`;
       text += `   • Xhami Derës (4mm): *${item.glassDoorHeight} x ${item.glassDoorWidth} mm* [${item.doorGlassCount}x copë xham 4mm]\n`;
       if (item.numShelves > 0) {
         text += `   • Raftat Xhami (6mm): *${item.shelfWidth} x ${item.shelfDepth} mm* [${item.totalShelfGlassCount}x copë rafta 6mm ${item.hasLed ? 'me LED' : 'pa LED'}]\n`;
@@ -259,7 +280,7 @@ export function GlassProfileCalculator() {
         content += `${idx + 1}. ${item.name} (${item.quantity} Element(e) - ${item.doorType === 'double' ? 'Dyer Çift' : 'Derë Teke'})\n`;
         content += `   - Përmasa Kace Totale: ${item.kacaHeight} x ${item.kacaWidth} x ${item.kacaDepth} mm (${(item.kacaHeight/10).toFixed(1)} x ${(item.kacaWidth/10).toFixed(1)} x ${(item.kacaDepth/10).toFixed(1)} cm)\n`;
         content += `   - MASA E JASHTME E DERËS: ${item.doorHeight} x ${item.doorWidth} mm (${(item.doorHeight/10).toFixed(1)} x ${(item.doorWidth/10).toFixed(1)} cm) | Sasia: ${item.doorGlassCount} dyer\n`;
-        content += `   - PROFILI VERTIKAL (i zi): ${item.verticalProfileCut} mm (${(item.verticalProfileCut/10).toFixed(1)} cm) | Sasia: ${item.verticalProfileCount} copë\n`;
+        content += `   - PROFILET E ZEZA (45°): Vertikale ${item.verticalProfileCut} mm (${item.verticalProfileCount}x) | Horizontale ${item.horizontalProfileCut} mm (${item.horizontalProfileCount}x)\n`;
         content += `   - XHAMI I DERËS (Trashësia: 4mm): ${item.glassDoorHeight} x ${item.glassDoorWidth} mm (${(item.glassDoorHeight/10).toFixed(1)} x ${(item.glassDoorWidth/10).toFixed(1)} cm) | Sasia: ${item.doorGlassCount} copë xham 4mm\n`;
         if (item.numShelves > 0) {
           content += `   - RAFTAT E XHAMIT (Trashësia: 6mm): ${item.shelfWidth} x ${item.shelfDepth} mm (${(item.shelfWidth/10).toFixed(1)} x ${(item.shelfDepth/10).toFixed(1)} cm) | Sasia: ${item.totalShelfGlassCount} copë rafta 6mm ${item.hasLed ? '(Me LED)' : '(Pa LED)'}\n`;
@@ -546,68 +567,21 @@ export function GlassProfileCalculator() {
                 <button
                   type="button"
                   onClick={() => {
-                    setDoorGapHeight(3);
-                    setDoorGapWidth(3);
-                    setProfileHeightTrim(13);
+                    setDoorGapHeight(5);
+                    setDoorGapWidth(4);
+                    setProfileHeightTrim(0);
+                    setProfileWidthTrim(0);
                     setGlassHeightDeduction(6);
                     setGlassWidthDeduction(103);
                   }}
                   className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 transition-colors"
-                  title="Kthe vlerat standarde (Gap: 3mm, Trim: 13mm, Xham: 6mm, Gjerësi: 103mm)"
+                  title="Kthe vlerat standarde (Gap Lartësi: 5mm, Gap Gjerësi: 4mm, Trim 45°: 0mm, Xham H: 6mm, Xham W: 103mm)"
                 >
                   Rivendos Standardet
                 </button>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                  <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
-                    Zbritja Xham nga Profili (H):
-                  </span>
-                  <div className="flex items-center gap-1 font-black text-slate-800">
-                    <span className="text-[10px] text-slate-500 font-mono">Profili -</span>
-                    <input
-                      type="number"
-                      value={glassHeightDeduction}
-                      onChange={(e) => setGlassHeightDeduction(Number(e.target.value))}
-                      className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-emerald-700 outline-none focus:border-emerald-500 font-bold"
-                    />
-                    <span className="text-[10px]">mm</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                  <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
-                    Zbritja Xham Derës (W):
-                  </span>
-                  <div className="flex items-center gap-1 font-black text-slate-800">
-                    <span className="text-[10px] text-slate-500 font-mono">W -</span>
-                    <input
-                      type="number"
-                      value={glassWidthDeduction}
-                      onChange={(e) => setGlassWidthDeduction(Number(e.target.value))}
-                      className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-emerald-700 outline-none focus:border-emerald-500 font-bold"
-                    />
-                    <span className="text-[10px]">mm</span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                  <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
-                    Zbritja Profilit (Trim):
-                  </span>
-                  <div className="flex items-center gap-1 font-black text-slate-800">
-                    <span className="text-[10px] text-slate-500 font-mono">Trim -</span>
-                    <input
-                      type="number"
-                      value={profileHeightTrim}
-                      onChange={(e) => setProfileHeightTrim(Number(e.target.value))}
-                      className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-slate-800 outline-none focus:border-slate-500 font-bold"
-                    />
-                    <span className="text-[10px]">mm</span>
-                  </div>
-                </div>
-
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                   <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
                     Gap Dritë Lartësi (H):
@@ -639,6 +613,58 @@ export function GlassProfileCalculator() {
                     <span className="text-[10px]">mm</span>
                   </div>
                 </div>
+
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
+                    Zbritja Qoshes (Trim 45°):
+                  </span>
+                  <div className="flex items-center gap-1 font-black text-slate-800">
+                    <span className="text-[10px] text-slate-500 font-mono">Trim -</span>
+                    <input
+                      type="number"
+                      value={profileHeightTrim}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setProfileHeightTrim(val);
+                        setProfileWidthTrim(val);
+                      }}
+                      className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-slate-800 outline-none focus:border-slate-500 font-bold"
+                    />
+                    <span className="text-[10px]">mm</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
+                    Zbritja Xham nga Profili (H):
+                  </span>
+                  <div className="flex items-center gap-1 font-black text-slate-800">
+                    <span className="text-[10px] text-slate-500 font-mono">Profili -</span>
+                    <input
+                      type="number"
+                      value={glassHeightDeduction}
+                      onChange={(e) => setGlassHeightDeduction(Number(e.target.value))}
+                      className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-emerald-700 outline-none focus:border-emerald-500 font-bold"
+                    />
+                    <span className="text-[10px]">mm</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                  <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
+                    Zbritja Xham Derës (W):
+                  </span>
+                  <div className="flex items-center gap-1 font-black text-slate-800">
+                    <span className="text-[10px] text-slate-500 font-mono">W -</span>
+                    <input
+                      type="number"
+                      value={glassWidthDeduction}
+                      onChange={(e) => setGlassWidthDeduction(Number(e.target.value))}
+                      className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-emerald-700 outline-none focus:border-emerald-500 font-bold"
+                    />
+                    <span className="text-[10px]">mm</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -655,20 +681,20 @@ export function GlassProfileCalculator() {
           {/* Formula Rule Card */}
           <div className="bg-emerald-50 p-5 rounded-3xl border border-emerald-200 space-y-2">
             <div className="flex items-center gap-2 text-emerald-900 font-black text-xs uppercase tracking-wider">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Rregullat e Prerjes të Xhamit:
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> Rregullat e Prerjes për Profil & Xham:
             </div>
             <ul className="text-[11px] text-emerald-950 space-y-1.5 font-medium leading-relaxed pl-1">
               <li>
-                • <strong>Xhami i Derës (4mm):</strong> Lartësia: <strong>Profili Vertikal ({calculations.verticalProfileCut}mm) - {glassHeightDeduction}mm</strong> = <strong className="text-emerald-700 font-bold">{calculations.glassDoorHeight} mm</strong> (kacaHeight {kacaHeight} - {doorGapHeight} - {profileHeightTrim} - {glassHeightDeduction} = {calculations.glassDoorHeight}mm) | Gjerësia: <strong>W - {glassWidthDeduction} mm</strong> ({calculations.effKacaWidth}-{glassWidthDeduction} = <strong className="text-emerald-700 font-bold">{calculations.glassDoorWidth} mm</strong>).
+                • <strong>Masa e Jashtme e Derës:</strong> Lartësia: <strong>H - {doorGapHeight} mm</strong> ({kacaHeight} - {doorGapHeight} = <strong className="text-indigo-700 font-bold">{calculations.doorHeight} mm / {(calculations.doorHeight / 10).toFixed(1)} cm</strong>) | Gjerësia: <strong>W - {doorGapWidth} mm</strong> ({calculations.effKacaWidth} - {doorGapWidth} = <strong className="text-indigo-700 font-bold">{calculations.doorWidth} mm / {(calculations.doorWidth / 10).toFixed(1)} cm</strong>).
+              </li>
+              <li>
+                • <strong>Profilet e Zeza të Aluminit (Prerje me kënd 45°):</strong> Vertikale (Lartësia): <strong>{calculations.verticalProfileCut} mm</strong> ({(calculations.verticalProfileCut / 10).toFixed(1)} cm) | Horizontale (Gjerësia): <strong>{calculations.horizontalProfileCut} mm</strong> ({(calculations.horizontalProfileCut / 10).toFixed(1)} cm).
+              </li>
+              <li>
+                • <strong>Xhami i Derës (4mm):</strong> Lartësia: <strong>Profili Vertikal ({calculations.verticalProfileCut}mm) - {glassHeightDeduction}mm</strong> = <strong className="text-emerald-700 font-bold">{calculations.glassDoorHeight} mm</strong> ({(calculations.glassDoorHeight / 10).toFixed(1)} cm) | Gjerësia: <strong>W - {glassWidthDeduction} mm</strong> = <strong className="text-emerald-700 font-bold">{calculations.glassDoorWidth} mm</strong> ({(calculations.glassDoorWidth / 10).toFixed(1)} cm).
               </li>
               <li>
                 • <strong>Raftat e Xhamit (6mm):</strong> Thellësia: {kacaDepth === 575 ? <strong>510 mm (Nuti 55mm mbas anësores 575)</strong> : <><strong>D - 45 mm</strong> ({kacaDepth}-45 = <strong className="text-emerald-700 font-bold">{calculations.shelfDepth} mm</strong>)</>} | Gjerësia: <strong>W - {calculations.shelfWidthDeduction} mm</strong> ({kacaWidth}-{calculations.shelfWidthDeduction} = <strong className="text-emerald-700 font-bold">{calculations.shelfWidth} mm</strong>).
-              </li>
-              <li>
-                • <strong>Profilet Vertikale të Zeza:</strong> Lartësia: <strong>H - {doorGapHeight} (gap) - {profileHeightTrim} (trim) mm</strong> ({kacaHeight} - {doorGapHeight} - {profileHeightTrim} = <strong className="text-emerald-700 font-bold">{calculations.verticalProfileCut} mm</strong>).
-              </li>
-              <li>
-                • <strong>Masa e Jashtme e Derës me Alumin:</strong> Lartësia/Gjerësia: <strong>(H - {doorGapHeight}) x (W - {doorGapWidth}) mm</strong> = <strong className="text-indigo-700 font-bold">{calculations.doorHeight} x {calculations.doorWidth} mm</strong>.
               </li>
             </ul>
           </div>
@@ -700,14 +726,83 @@ export function GlassProfileCalculator() {
 
             {/* Results Grid Cards */}
             <div className="p-6 space-y-6">
-              
-              {/* 1. GLASS DOOR CUT CARD */}
+
+              {/* 1. OUTER DOOR & BLACK ALUMINUM PROFILES CARD */}
+              <div className="bg-slate-900 text-white rounded-2xl p-5 relative border border-slate-800 shadow-md">
+                <div className="absolute top-3 right-4 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm">
+                  Prerje me Kënd 45°
+                </div>
+                <p className="text-xs font-black uppercase text-emerald-400 tracking-wider mb-3">
+                  1. PROFILET E ZEZA TË ALUMINIT & MASA E JASHTME E DERËS
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  {/* Vertical Profiles */}
+                  <div className="bg-slate-800/90 p-4 rounded-xl border border-slate-700/70">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-black uppercase text-slate-400">
+                        Profilet Vertikale (Lartësia)
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-slate-900 px-2 py-0.5 rounded">
+                        {calculations.verticalProfileCount} copë
+                      </span>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-white">
+                      {calculations.verticalProfileCut} mm
+                    </p>
+                    <p className="text-xs text-emerald-400 font-bold mt-0.5">
+                      = {(calculations.verticalProfileCut / 10).toFixed(1)} cm
+                    </p>
+                    <p className="text-[10.5px] text-slate-400 font-mono mt-1">
+                      Formula: {kacaHeight} - {doorGapHeight} (gap) = {calculations.verticalProfileCut} mm
+                    </p>
+                  </div>
+
+                  {/* Horizontal Profiles */}
+                  <div className="bg-slate-800/90 p-4 rounded-xl border border-slate-700/70">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-black uppercase text-slate-400">
+                        Profilet Horizontale (Gjerësia)
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-slate-900 px-2 py-0.5 rounded">
+                        {calculations.horizontalProfileCount} copë
+                      </span>
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-white">
+                      {calculations.horizontalProfileCut} mm
+                    </p>
+                    <p className="text-xs text-emerald-400 font-bold mt-0.5">
+                      = {(calculations.horizontalProfileCut / 10).toFixed(1)} cm
+                    </p>
+                    <p className="text-[10.5px] text-slate-400 font-mono mt-1">
+                      Formula: {calculations.effKacaWidth} - {doorGapWidth} (gap) = {calculations.horizontalProfileCut} mm
+                    </p>
+                  </div>
+                </div>
+
+                {/* Outer Door Size summary */}
+                <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/40 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-300 block">
+                      Masa e Jashtme e Derës së Kompletuar:
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      (Hapësirë dritë {doorGapHeight}mm vertikal / {doorGapWidth}mm horizontal)
+                    </span>
+                  </div>
+                  <div className="text-right font-black text-emerald-300 text-sm sm:text-base">
+                    {calculations.doorHeight} x {calculations.doorWidth} mm <span className="text-xs text-slate-300 font-normal">({(calculations.doorHeight / 10).toFixed(1)} x {(calculations.doorWidth / 10).toFixed(1)} cm)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. GLASS DOOR CUT CARD */}
               <div className="bg-[#ecfdf5] border-2 border-emerald-500/80 rounded-2xl p-5 relative shadow-sm">
                 <div className="absolute top-3 right-4 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm">
                   Trashësia: 4mm
                 </div>
                 <p className="text-xs font-black uppercase text-emerald-900 tracking-wider mb-2">
-                  1. DIMENSIONET E XHAMIT TË PRERË (GLASS CUT SIZE)
+                  2. DIMENSIONET E XHAMIT TË PRERË (GLASS CUT SIZE)
                 </p>
                 <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-emerald-200 pb-3 mb-3">
                   <div>
@@ -728,27 +823,27 @@ export function GlassProfileCalculator() {
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">Lartësia e Xhamit:</span>
                     <strong>{calculations.glassDoorHeight} mm</strong> 
                     <span className="block text-[10px] text-emerald-800/80 font-mono mt-0.5">
-                      ({kacaHeight} - {doorGapHeight}gap - {profileHeightTrim}trim - {glassHeightDeduction}xham)
+                      ({calculations.verticalProfileCut} profili - {glassHeightDeduction}mm zbritje)
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">Gjerësia e Xhamit:</span>
                     <strong>{calculations.glassDoorWidth} mm</strong>
                     <span className="block text-[10px] text-emerald-800/80 font-mono mt-0.5">
-                      ({calculations.effKacaWidth} - {glassWidthDeduction} zbritje)
+                      ({calculations.effKacaWidth} - {glassWidthDeduction}mm zbritje)
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* 2. GLASS SHELVES CARD (IF SHELVES > 0) */}
+              {/* 3. GLASS SHELVES CARD (IF SHELVES > 0) */}
               {numShelves > 0 && (
                 <div className="bg-amber-50/80 border-2 border-amber-400/80 rounded-2xl p-5 relative shadow-sm">
                   <div className="absolute top-3 right-4 bg-amber-500 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm">
                     Trashësia: 6mm
                   </div>
                   <p className="text-xs font-black uppercase text-amber-950 tracking-wider mb-2 flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-amber-600" /> 2. DIMENSIONET E RAFTAVE TË XHAMIT
+                    <Layers className="w-4 h-4 text-amber-600" /> 3. DIMENSIONET E RAFTAVE TË XHAMIT
                   </p>
                   <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 border-b border-amber-200 pb-3 mb-3">
                     <div>
@@ -777,55 +872,6 @@ export function GlassProfileCalculator() {
                 </div>
               )}
 
-              {/* 3. BLACK ALUMINUM VERTICAL PROFILES CARD */}
-              <div className="bg-slate-900 text-white rounded-2xl p-5 relative border border-slate-800 shadow-md">
-                <div className="absolute top-3 right-4 bg-slate-800 text-slate-300 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-slate-700">
-                  Vetëm Lartësia
-                </div>
-                <p className="text-xs font-black uppercase text-emerald-400 tracking-wider mb-2">
-                  {numShelves > 0 ? '3' : '2'}. PROFILET E ZEZA TË ALUMININ (ALUMINUM FRAME CUTS)
-                </p>
-
-                <div className="flex items-center justify-between bg-slate-800/80 p-4 rounded-xl border border-slate-700/60">
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">
-                      Profilet Vertikale të Zeza (Lartësia)
-                    </p>
-                    <p className="text-3xl font-black text-white">
-                      {calculations.verticalProfileCut} mm
-                    </p>
-                    <p className="text-[11px] text-slate-400 font-medium mt-1">
-                      Formula: {kacaHeight} mm - {doorGapHeight} mm (gap) - {profileHeightTrim} mm (trim)
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-black uppercase text-emerald-400 block mb-1">
-                      Sasia e Profileve
-                    </span>
-                    <span className="text-xl font-extrabold text-white bg-slate-900 px-3.5 py-1.5 rounded-xl border border-slate-700">
-                      {calculations.verticalProfileCount} copë
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* OUTER DOOR DIMENSIONS */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase text-slate-700 tracking-wider">
-                    Masa e Jashtme e Derës me Alumin
-                  </p>
-                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                    Hapësirë dritë H-{doorGapHeight}mm & W-{doorGapWidth}mm (Formula: (H-{doorGapHeight}) x (W-{doorGapWidth}))
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-black text-slate-900">
-                    {calculations.doorHeight} x {calculations.doorWidth} mm
-                  </p>
-                </div>
-              </div>
-
               {/* VISUAL SVG DIAGRAM */}
               <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center space-y-3">
                 <div className="flex items-center justify-between text-xs font-black text-slate-300">
@@ -839,16 +885,16 @@ export function GlassProfileCalculator() {
 
                 <div className="flex justify-center items-center py-2">
                   <svg
-                    className="w-full max-w-[340px] h-[240px]"
-                    viewBox="0 0 340 240"
+                    className="w-full max-w-[360px] h-[240px]"
+                    viewBox="0 0 360 240"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     {/* Outer Cabinet (White Frame Box) */}
                     <rect
-                      x="30"
+                      x="35"
                       y="25"
-                      width="280"
+                      width="290"
                       height="190"
                       rx="4"
                       fill="#1e293b"
@@ -856,25 +902,25 @@ export function GlassProfileCalculator() {
                       strokeWidth="2"
                     />
                     <text
-                      x="170"
+                      x="180"
                       y="18"
                       fill="#cbd5e1"
                       fontSize="10"
                       fontWeight="black"
                       textAnchor="middle"
                     >
-                      Kaca: {kacaWidth} x {kacaDepth} mm
+                      Kaca: {kacaHeight} x {kacaWidth} mm
                     </text>
 
                     {/* Left & Right Cabinet Wall thickness */}
-                    <rect x="30" y="25" width="16" height="190" fill="#334155" stroke="#475569" strokeWidth="1" />
-                    <rect x="294" y="25" width="16" height="190" fill="#334155" stroke="#475569" strokeWidth="1" />
+                    <rect x="35" y="25" width="16" height="190" fill="#334155" stroke="#475569" strokeWidth="1" />
+                    <rect x="309" y="25" width="16" height="190" fill="#334155" stroke="#475569" strokeWidth="1" />
 
                     {/* Black Aluminum Door Frame */}
                     <rect
-                      x="50"
+                      x="55"
                       y="35"
-                      width="240"
+                      width="250"
                       height="170"
                       rx="2"
                       fill="#0f172a"
@@ -884,9 +930,9 @@ export function GlassProfileCalculator() {
 
                     {/* Glass Door Panel inside */}
                     <rect
-                      x="68"
+                      x="72"
                       y="48"
-                      width="204"
+                      width="216"
                       height="144"
                       rx="1"
                       fill="#0284c7"
@@ -899,9 +945,9 @@ export function GlassProfileCalculator() {
                     {/* Glass Shelves if enabled */}
                     {numShelves > 0 && (
                       <line
-                        x1="50"
+                        x1="55"
                         y1="120"
-                        x2="290"
+                        x2="305"
                         y2="120"
                         stroke="#f59e0b"
                         strokeWidth="3"
@@ -911,22 +957,33 @@ export function GlassProfileCalculator() {
 
                     {/* Labels on SVG */}
                     <text
-                      x="170"
-                      y={numShelves > 0 ? "105" : "125"}
+                      x="180"
+                      y={numShelves > 0 ? "105" : "115"}
                       fill="#38bdf8"
-                      fontSize="11"
+                      fontSize="10"
                       fontWeight="black"
                       textAnchor="middle"
                     >
                       XHAMI: {calculations.glassDoorHeight} x {calculations.glassDoorWidth} mm (4mm)
                     </text>
 
+                    <text
+                      x="180"
+                      y={numShelves > 0 ? "135" : "135"}
+                      fill="#10b981"
+                      fontSize="10"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      DERA: {calculations.doorHeight} x {calculations.doorWidth} mm ({((calculations.doorHeight)/10).toFixed(1)} x {((calculations.doorWidth)/10).toFixed(1)} cm)
+                    </text>
+
                     {numShelves > 0 && (
                       <text
-                        x="170"
-                        y="140"
+                        x="180"
+                        y="155"
                         fill="#fbbf24"
-                        fontSize="10"
+                        fontSize="9.5"
                         fontWeight="black"
                         textAnchor="middle"
                       >
@@ -936,15 +993,15 @@ export function GlassProfileCalculator() {
 
                     {/* Vertical profile label */}
                     <text
-                      x="42"
+                      x="46"
                       y="120"
                       fill="#10b981"
                       fontSize="9"
                       fontWeight="extrabold"
                       textAnchor="middle"
-                      transform="rotate(-90, 42, 120)"
+                      transform="rotate(-90, 46, 120)"
                     >
-                      Profili Vertikal: {calculations.verticalProfileCut} mm
+                      Profili 45°: {calculations.verticalProfileCut} mm
                     </text>
                   </svg>
                 </div>
@@ -974,10 +1031,10 @@ export function GlassProfileCalculator() {
                     <tr className="text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">
                       <th className="py-2">Pozicioni</th>
                       <th className="py-2">Kaca (H x W x D)</th>
+                      <th className="py-2">Masa Jashtme Derës</th>
+                      <th className="py-2">Profilet e Zeza (45°)</th>
                       <th className="py-2">Xhami i Derës (4mm)</th>
                       <th className="py-2">Raftat (6mm)</th>
-                      <th className="py-2">Profili Vertikal</th>
-                      <th className="py-2">Masa Jashtme Derës</th>
                       <th className="py-2 text-right">Veprime</th>
                     </tr>
                   </thead>
@@ -987,20 +1044,27 @@ export function GlassProfileCalculator() {
                         <td className="py-3 font-bold text-slate-900">
                           {item.name} <span className="text-slate-400">({item.quantity}x)</span>
                         </td>
-                        <td className="py-3 text-slate-600">
+                        <td className="py-3 text-slate-600 font-mono">
                           {item.kacaHeight} x {item.kacaWidth} x {item.kacaDepth} mm
-                        </td>
-                        <td className="py-3 font-black text-emerald-700">
-                          {item.glassDoorHeight} x {item.glassDoorWidth} mm
-                        </td>
-                        <td className="py-3 text-amber-700 font-bold">
-                          {item.numShelves > 0 ? `${item.shelfWidth} x ${item.shelfDepth} mm (${item.totalShelfGlassCount}x)` : '-'}
-                        </td>
-                        <td className="py-3 text-slate-700">
-                          {item.verticalProfileCut} mm
                         </td>
                         <td className="py-3 font-bold text-slate-900">
                           {item.doorHeight} x {item.doorWidth} mm
+                          <span className="block text-[10px] text-slate-400 font-normal">
+                            ({(item.doorHeight/10).toFixed(1)} x {(item.doorWidth/10).toFixed(1)} cm)
+                          </span>
+                        </td>
+                        <td className="py-3 text-slate-700">
+                          <div><span className="text-[10px] text-slate-400">V:</span> <strong>{item.verticalProfileCut} mm</strong> ({item.verticalProfileCount}x)</div>
+                          <div><span className="text-[10px] text-slate-400">H:</span> <strong>{item.horizontalProfileCut} mm</strong> ({item.horizontalProfileCount}x)</div>
+                        </td>
+                        <td className="py-3 font-black text-emerald-700">
+                          {item.glassDoorHeight} x {item.glassDoorWidth} mm
+                          <span className="block text-[10px] text-emerald-600 font-normal">
+                            ({(item.glassDoorHeight/10).toFixed(1)} x {(item.glassDoorWidth/10).toFixed(1)} cm)
+                          </span>
+                        </td>
+                        <td className="py-3 text-amber-700 font-bold">
+                          {item.numShelves > 0 ? `${item.shelfWidth} x ${item.shelfDepth} mm (${item.totalShelfGlassCount}x)` : '-'}
                         </td>
                         <td className="py-3 text-right">
                           <button
@@ -1105,11 +1169,20 @@ export function GlassProfileCalculator() {
             <tbody className="divide-y divide-slate-300 font-semibold text-slate-900">
               {/* 1. Profilet e zeza */}
               <tr className="bg-slate-50/50">
-                <td className="p-2 border-r border-slate-300 font-black">1. PROFILET E ZEZA TË ALUMININ</td>
-                <td className="p-2 border-r border-slate-300 text-slate-700">H-{doorGapHeight}-{profileHeightTrim} mm (Vertikale)</td>
-                <td className="p-2 border-r border-slate-300 font-black text-slate-900 text-sm">{calculations.verticalProfileCut} mm</td>
-                <td className="p-2 border-r border-slate-300 font-bold">{(calculations.verticalProfileCut / 10).toFixed(1)} cm</td>
-                <td className="p-2 font-black">{calculations.verticalProfileCount} copë profile</td>
+                <td className="p-2 border-r border-slate-300 font-black">1. PROFILET E ZEZA TË ALUMININ (45°)</td>
+                <td className="p-2 border-r border-slate-300 text-slate-700">
+                  <div>Vertikale: H-{doorGapHeight} mm</div>
+                  <div>Horizontale: W-{doorGapWidth} mm</div>
+                </td>
+                <td className="p-2 border-r border-slate-300 font-black text-slate-900 text-xs">
+                  <div>V: {calculations.verticalProfileCut} mm ({calculations.verticalProfileCount}x)</div>
+                  <div>H: {calculations.horizontalProfileCut} mm ({calculations.horizontalProfileCount}x)</div>
+                </td>
+                <td className="p-2 border-r border-slate-300 font-bold text-xs">
+                  <div>V: {(calculations.verticalProfileCut / 10).toFixed(1)} cm</div>
+                  <div>H: {(calculations.horizontalProfileCut / 10).toFixed(1)} cm</div>
+                </td>
+                <td className="p-2 font-black">{calculations.verticalProfileCount + calculations.horizontalProfileCount} copë profile</td>
               </tr>
 
               {/* 2. Xhami i deres */}
@@ -1133,11 +1206,11 @@ export function GlassProfileCalculator() {
               )}
 
               {/* 4. Masat e jashtme te deres */}
-              <tr className="text-slate-600 font-normal">
-                <td className="p-2 border-r border-slate-300 text-slate-600 font-medium">4. MASA E JASHTME E DERËS ME ALUMIN</td>
-                <td className="p-2 border-r border-slate-300 text-slate-500">(H-{doorGapHeight}) x (W-{doorGapWidth}) mm</td>
-                <td className="p-2 border-r border-slate-300 text-slate-800 font-semibold">{calculations.doorHeight} x {calculations.doorWidth} mm</td>
-                <td className="p-2 border-r border-slate-300 text-slate-600">{(calculations.doorHeight / 10).toFixed(1)} x {(calculations.doorWidth / 10).toFixed(1)} cm</td>
+              <tr className="text-slate-700 font-normal">
+                <td className="p-2 border-r border-slate-300 text-slate-800 font-bold">4. MASA E JASHTME E DERËS ME ALUMIN</td>
+                <td className="p-2 border-r border-slate-300 text-slate-600">(H-{doorGapHeight}) x (W-{doorGapWidth}) mm</td>
+                <td className="p-2 border-r border-slate-300 text-slate-900 font-black">{calculations.doorHeight} x {calculations.doorWidth} mm</td>
+                <td className="p-2 border-r border-slate-300 text-slate-900 font-black">{(calculations.doorHeight / 10).toFixed(1)} x {(calculations.doorWidth / 10).toFixed(1)} cm</td>
                 <td className="p-2 text-slate-700 font-medium">{calculations.doorGlassCount} copë derë</td>
               </tr>
             </tbody>
@@ -1156,10 +1229,10 @@ export function GlassProfileCalculator() {
                   <th className="p-1.5 border border-slate-300">#</th>
                   <th className="p-1.5 border border-slate-300">Pozicioni</th>
                   <th className="p-1.5 border border-slate-300">Kaca (mm)</th>
-                  <th className="p-1.5 border border-slate-300">Profili Vertikal</th>
+                  <th className="p-1.5 border border-slate-300">Masa Jashtme Derës</th>
+                  <th className="p-1.5 border border-slate-300">Profilet e Zeza (45°)</th>
                   <th className="p-1.5 border border-slate-300">Xhami Derës (4mm)</th>
                   <th className="p-1.5 border border-slate-300">Raftat (6mm)</th>
-                  <th className="p-1.5 border border-slate-300">Masa Jashtme Derës</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300 text-[11px] font-bold text-slate-900">
@@ -1167,11 +1240,14 @@ export function GlassProfileCalculator() {
                   <tr key={item.id}>
                     <td className="p-1.5 border border-slate-300">{idx + 1}</td>
                     <td className="p-1.5 border border-slate-300 font-black">{item.name} ({item.quantity}x)</td>
-                    <td className="p-1.5 border border-slate-300">{item.kacaHeight}x{item.kacaWidth}x{item.kacaDepth}</td>
-                    <td className="p-1.5 border border-slate-300 font-black text-slate-900">{item.verticalProfileCut} mm ({item.verticalProfileCount}x)</td>
+                    <td className="p-1.5 border border-slate-300 font-mono">{item.kacaHeight}x{item.kacaWidth}x{item.kacaDepth}</td>
+                    <td className="p-1.5 border border-slate-300 font-black text-slate-900">{item.doorHeight} x {item.doorWidth} mm ({(item.doorHeight/10).toFixed(1)} x {(item.doorWidth/10).toFixed(1)} cm)</td>
+                    <td className="p-1.5 border border-slate-300 text-slate-800">
+                      <div>V: {item.verticalProfileCut} mm ({item.verticalProfileCount}x)</div>
+                      <div>H: {item.horizontalProfileCut} mm ({item.horizontalProfileCount}x)</div>
+                    </td>
                     <td className="p-1.5 border border-slate-300 font-black text-emerald-900">{item.glassDoorHeight} x {item.glassDoorWidth} mm ({item.doorGlassCount}x)</td>
                     <td className="p-1.5 border border-slate-300">{item.numShelves > 0 ? `${item.shelfWidth} x ${item.shelfDepth} mm (${item.totalShelfGlassCount}x)` : '-'}</td>
-                    <td className="p-1.5 border border-slate-300 font-normal text-slate-600">{item.doorHeight} x {item.doorWidth} mm</td>
                   </tr>
                 ))}
               </tbody>

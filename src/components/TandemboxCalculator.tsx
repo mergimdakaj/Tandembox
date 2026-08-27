@@ -203,8 +203,7 @@ ${type === 'fijoka-druri' ? `
    - Vertikal (Bira 1 poshtme): ${((runnerHeightZeroMm + 13.0) / 10).toFixed(1)} cm (${(runnerHeightZeroMm + 13.0).toFixed(0)} mm) nga fundi
    - Vertikal (Bira 2 sipërme): ${((runnerHeightZeroMm + 13.0 + 32.0) / 10).toFixed(1)} cm (${(runnerHeightZeroMm + 13.0 + 32.0).toFixed(0)} mm) [+32mm]
    - Vertikal (Bira e Shipkës / Reling): ${((runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)) / 10).toFixed(1)} cm (${(runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)).toFixed(0)} mm)
-   - Horizontal (nga muri brenda): 15.5 mm
-   - Horizontal (nga skaji jashtë): ${((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm
+   - Horizontal (nga skaji jashtë): ${((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm (${(((boardThickness * 10 - sideGapMm) + 15.5) / 10).toFixed(1)} cm / 3.1 cm)
 7. Shpimet e Mureve Anësore për Llagerat:
    - Nga Fundi në Zero: ${(runnerHeightZeroMm / 10).toFixed(1)} cm (${runnerHeightZeroMm.toFixed(0)} mm)
    - Brenda Mbi Pos (Mbi Dysheme): ${((runnerHeightZeroMm - boardThickness * 10) / 10).toFixed(1)} cm (${(runnerHeightZeroMm - boardThickness * 10).toFixed(0)} mm)
@@ -661,7 +660,7 @@ Gjeneruar nga MergimGroup Tool
                           - Bira e Shipkës (Reling fijokë e madhe): <strong className="text-amber-700 font-bold font-mono">{((runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)) / 10).toFixed(1)} cm ({(runnerHeightZeroMm + 13.0 + (antaroProfile === 'C' ? 64.0 : 128.0)).toFixed(0)} mm)</strong>.
                         </p>
                         <p className="text-slate-600 leading-relaxed">
-                          - Anash: <strong className="text-indigo-600">15.5 mm</strong> nga brenda ose <strong className="text-indigo-600">{((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm</strong> nga skaji jashtë.
+                          - Anash (Nga skaji jashtë): <strong className="text-indigo-600 font-mono font-bold">{((boardThickness * 10 - sideGapMm) + 15.5).toFixed(1)} mm ({(((boardThickness * 10 - sideGapMm) + 15.5) / 10).toFixed(1)} cm / 3.1 cm)</strong>.
                         </p>
                       </div>
 

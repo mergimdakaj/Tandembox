@@ -517,14 +517,7 @@ export function AntaroFrontDrillingVisualizer({
                   </>
                 )}
 
-                {/* 4. Horizontal from inner wall: 15.5mm */}
-                <line x1="182" y1="205" x2="207" y2="205" stroke="#fbbf24" strokeWidth="1.8" />
-                <rect x="155" y="178" width="80" height="22" rx="4" fill="#78350f" stroke="#d97706" strokeWidth="1" />
-                <text x="195" y="193" fill="#fde68a" fontSize="9" fontWeight="900" textAnchor="middle">
-                  15.5 mm (nga muri)
-                </text>
-
-                {/* 5. Horizontal from outer edge of front: e.g. 31-32mm */}
+                {/* Horizontal from outer edge of front: e.g. 32mm (3.2cm) nga skaji i jashtem */}
                 <line x1="150" y1="395" x2="207" y2="395" stroke="#818cf8" strokeWidth="2.5" />
                 <polygon points="150,395 158,391 158,399" fill="#818cf8" />
                 <polygon points="207,395 199,391 199,399" fill="#818cf8" />
@@ -534,7 +527,7 @@ export function AntaroFrontDrillingVisualizer({
                   {fmt(fromOuterEdgeMm)}
                 </text>
                 <text x="178" y="444" fill="#c7d2fe" fontSize="8.5" fontWeight="black" textAnchor="middle">
-                  (VETËM KJO NGA SKAJI JASHTË)
+                  (NGA SKAJI JASHTË)
                 </text>
 
                 {/* 6. Center-to-center horizontal distance: LW - 31mm */}
@@ -572,15 +565,15 @@ export function AntaroFrontDrillingVisualizer({
 
               <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/40 space-y-1.5">
                 <span className="text-[10px] font-black uppercase text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800">
-                  {hasShipkë ? 'Bira e Shipkës' : 'Anash (Pozicioni)'}
+                  {hasShipkë ? 'Bira e Shipkës' : 'Anash (Nga Skaji Jashtë)'}
                 </span>
                 <p className="text-xl font-black text-white">
-                  {hasShipkë ? fmt(shipkaHoleFromBottomMm) : `${fmt(15.5)} / ${fmt(fromOuterEdgeMm)}`}
+                  {hasShipkë ? fmt(shipkaHoleFromBottomMm) : fmt(fromOuterEdgeMm)}
                 </p>
                 <p className="text-xs text-slate-300">
                   {hasShipkë
                     ? `Bira e shufrës/shipkës për fijokë të madhe (+${shipkaFromHole1Mm}mm mbi birën 1).`
-                    : `15.5mm nga muri brenda (${fmt(fromOuterEdgeMm)} nga skaji jashtë).`}
+                    : `Mat me metër saktësisht ${fmt(fromOuterEdgeMm)} (${fromOuterEdgeCm} cm) nga skaji i jashtëm i frontit.`}
                 </p>
               </div>
 
@@ -595,17 +588,18 @@ export function AntaroFrontDrillingVisualizer({
               </div>
             </div>
 
-            {/* CLARITY BANNER: 3.1 cm / 3.2 cm explanation */}
+            {/* DIRECT WORKSHOP TIP */}
             <div className="p-3.5 bg-indigo-950/60 rounded-2xl border border-indigo-500/40 flex items-start gap-3 text-xs">
-              <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-black shrink-0 mt-0.5">
-                !
+              <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-black shrink-0 mt-0.5">
+                ✓
               </div>
               <div className="space-y-1 text-slate-200">
-                <p className="font-extrabold text-amber-300 uppercase tracking-wide">
-                  SQARIM I RËNDËSISHËM PËR SHPIMIN ANASH (MOS I MBLIDHNI BASHKË):
+                <p className="font-extrabold text-emerald-300 uppercase tracking-wide">
+                  RREGULLA E PUNISHTES PËR SHPIMIN E FRONTIT:
                 </p>
                 <p className="leading-relaxed text-slate-300">
-                  Matja nga skaji i jashtëm i ballinës me metër bëhet <strong>VETËM {fromOuterEdgeMm} mm ({fromOuterEdgeCm} cm ose 3.1 cm sipas punishtes)</strong>. Distanca <strong>15.5 mm</strong> është matja e brendshme nga muri. <strong>Këto të dyja NUK mblidhen bashkë</strong> — ato tregojnë të njëjtën vrimë!
+                  1. Nga skaji anash (jashtë): Shëno <strong>{fmt(fromOuterEdgeMm)} ({fromOuterEdgeCm} cm / 3.1 cm)</strong>.<br />
+                  2. Nga fundi i frontit poshtë: Shëno <strong>{fmt(hole1FromBottomMm)}</strong> (bira e 1-rë) dhe <strong>{fmt(hole2FromBottomMm)}</strong> (bira e 2-të).
                 </p>
               </div>
             </div>
