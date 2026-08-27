@@ -55,13 +55,13 @@ export function GlassProfileCalculator() {
   // Standard deductions:
   // - doorGapHeight: 5mm standard vertical clearance (1037 - 5 = 1032mm = 103.2cm)
   // - doorGapWidth: 4mm standard horizontal clearance (980 - 4 = 976mm = 97.6cm)
-  // - profileHeightTrim: 0mm for standard 45° mitre cut (Profile cut = Door outer height = 1032mm)
-  // - profileWidthTrim: 0mm for standard 45° mitre cut (Profile cut = Door outer width = 976mm)
-  // - glassHeightDeduction: 6mm inner deduction from profile cut
-  // - glassWidthDeduction: 103mm deduction from cabinet width
+  // - profileHeightTrim: 10mm (1.0 cm) for top and bottom corner/adapter pieces (0.5cm poshtë + 0.5cm lart -> 1032 - 10 = 1022mm = 102.2cm)
+  // - profileWidthTrim: 0mm
+  // - glassHeightDeduction: 6mm inner deduction from vertical profile cut (1022 - 6 = 1016mm)
+  // - glassWidthDeduction: 103mm deduction from cabinet width (980 - 103 = 877mm)
   const [doorGapHeight, setDoorGapHeight] = useState<number>(5); 
   const [doorGapWidth, setDoorGapWidth] = useState<number>(4); 
-  const [profileHeightTrim, setProfileHeightTrim] = useState<number>(0); 
+  const [profileHeightTrim, setProfileHeightTrim] = useState<number>(10); 
   const [profileWidthTrim, setProfileWidthTrim] = useState<number>(0);
   const [glassHeightDeduction, setGlassHeightDeduction] = useState<number>(6); 
   const [glassWidthDeduction, setGlassWidthDeduction] = useState<number>(103); 
@@ -569,13 +569,13 @@ export function GlassProfileCalculator() {
                   onClick={() => {
                     setDoorGapHeight(5);
                     setDoorGapWidth(4);
-                    setProfileHeightTrim(0);
+                    setProfileHeightTrim(10);
                     setProfileWidthTrim(0);
                     setGlassHeightDeduction(6);
                     setGlassWidthDeduction(103);
                   }}
                   className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 transition-colors"
-                  title="Kthe vlerat standarde (Gap Lartësi: 5mm, Gap Gjerësi: 4mm, Trim 45°: 0mm, Xham H: 6mm, Xham W: 103mm)"
+                  title="Kthe vlerat standarde (Gap H: 5mm, Gap W: 4mm, Pjesët 0.5cm Poshtë/Lart: 10mm, Xham H: 6mm, Xham W: 103mm)"
                 >
                   Rivendos Standardet
                 </button>
@@ -616,22 +616,22 @@ export function GlassProfileCalculator() {
 
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                   <span className="text-[9.5px] font-bold text-slate-500 block mb-1">
-                    Zbritja Qoshes (Trim 45°):
+                    Pjesët Poshtë/Lart (1cm):
                   </span>
                   <div className="flex items-center gap-1 font-black text-slate-800">
-                    <span className="text-[10px] text-slate-500 font-mono">Trim -</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Dera -</span>
                     <input
                       type="number"
                       value={profileHeightTrim}
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         setProfileHeightTrim(val);
-                        setProfileWidthTrim(val);
                       }}
                       className="w-11 bg-white border border-slate-300 rounded px-1 py-0.5 text-center text-slate-800 outline-none focus:border-slate-500 font-bold"
                     />
                     <span className="text-[10px]">mm</span>
                   </div>
+                  <span className="text-[8.5px] text-slate-400 block mt-0.5">0.5cm posht + 0.5cm lart</span>
                 </div>
 
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
@@ -688,7 +688,10 @@ export function GlassProfileCalculator() {
                 • <strong>Masa e Jashtme e Derës:</strong> Lartësia: <strong>H - {doorGapHeight} mm</strong> ({kacaHeight} - {doorGapHeight} = <strong className="text-indigo-700 font-bold">{calculations.doorHeight} mm / {(calculations.doorHeight / 10).toFixed(1)} cm</strong>) | Gjerësia: <strong>W - {doorGapWidth} mm</strong> ({calculations.effKacaWidth} - {doorGapWidth} = <strong className="text-indigo-700 font-bold">{calculations.doorWidth} mm / {(calculations.doorWidth / 10).toFixed(1)} cm</strong>).
               </li>
               <li>
-                • <strong>Profilet e Zeza të Aluminit (Prerje me kënd 45°):</strong> Vertikale (Lartësia): <strong>{calculations.verticalProfileCut} mm</strong> ({(calculations.verticalProfileCut / 10).toFixed(1)} cm) | Horizontale (Gjerësia): <strong>{calculations.horizontalProfileCut} mm</strong> ({(calculations.horizontalProfileCut / 10).toFixed(1)} cm).
+                • <strong>Profili Vertikal i Zi (Lartësia):</strong> <strong>Dera ({calculations.doorHeight}mm) - {profileHeightTrim}mm (pjesët 0.5cm poshtë & lart)</strong> = <strong className="text-emerald-700 font-bold">{calculations.verticalProfileCut} mm</strong> ({(calculations.verticalProfileCut / 10).toFixed(1)} cm).
+              </li>
+              <li>
+                • <strong>Profili Horizontal i Zi (Gjerësia):</strong> <strong>{calculations.horizontalProfileCut} mm</strong> ({(calculations.horizontalProfileCut / 10).toFixed(1)} cm).
               </li>
               <li>
                 • <strong>Xhami i Derës (4mm):</strong> Lartësia: <strong>Profili Vertikal ({calculations.verticalProfileCut}mm) - {glassHeightDeduction}mm</strong> = <strong className="text-emerald-700 font-bold">{calculations.glassDoorHeight} mm</strong> ({(calculations.glassDoorHeight / 10).toFixed(1)} cm) | Gjerësia: <strong>W - {glassWidthDeduction} mm</strong> = <strong className="text-emerald-700 font-bold">{calculations.glassDoorWidth} mm</strong> ({(calculations.glassDoorWidth / 10).toFixed(1)} cm).
@@ -754,7 +757,7 @@ export function GlassProfileCalculator() {
                       = {(calculations.verticalProfileCut / 10).toFixed(1)} cm
                     </p>
                     <p className="text-[10.5px] text-slate-400 font-mono mt-1">
-                      Formula: {kacaHeight} - {doorGapHeight} (gap) = {calculations.verticalProfileCut} mm
+                      Formula: Dera {calculations.doorHeight} - {profileHeightTrim}mm (0.5cm posht + 0.5cm lart) = {calculations.verticalProfileCut} mm
                     </p>
                   </div>
 
@@ -1169,10 +1172,10 @@ export function GlassProfileCalculator() {
             <tbody className="divide-y divide-slate-300 font-semibold text-slate-900">
               {/* 1. Profilet e zeza */}
               <tr className="bg-slate-50/50">
-                <td className="p-2 border-r border-slate-300 font-black">1. PROFILET E ZEZA TË ALUMININ (45°)</td>
+                <td className="p-2 border-r border-slate-300 font-black">1. PROFILET E ZEZA TË ALUMINIT (45°)</td>
                 <td className="p-2 border-r border-slate-300 text-slate-700">
-                  <div>Vertikale: H-{doorGapHeight} mm</div>
-                  <div>Horizontale: W-{doorGapWidth} mm</div>
+                  <div>Vertikale: Dera - {profileHeightTrim} mm (0.5cm posht + 0.5cm lart)</div>
+                  <div>Horizontale: W - {doorGapWidth} mm</div>
                 </td>
                 <td className="p-2 border-r border-slate-300 font-black text-slate-900 text-xs">
                   <div>V: {calculations.verticalProfileCut} mm ({calculations.verticalProfileCount}x)</div>
