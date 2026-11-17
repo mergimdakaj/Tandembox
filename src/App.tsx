@@ -25,6 +25,7 @@ import { NotificationsView } from './components/NotificationsView';
 import { checkAndTriggerWorkReminders } from './lib/notifications';
 import { Login } from './components/Login';
 import { Landing } from './components/Landing';
+import { GcfGate } from './components/GcfGate';
 import { TandemboxCalculator } from './components/TandemboxCalculator';
 import { KuzhinaProStudio } from './components/KuzhinaProStudio';
 import { TvWallStudioMain } from './components/tvwall/TvWallStudioMain';
@@ -56,6 +57,7 @@ interface AuthContextType {
   triggerManualSyncUp: () => Promise<void>;
   triggerManualSyncDown: () => Promise<void>;
   showToast: (message: string, type?: 'success' | 'warning' | 'info') => void;
+  lockGcf: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -69,7 +71,8 @@ const AuthContext = createContext<AuthContextType>({
   syncing: false,
   triggerManualSyncUp: async () => {},
   triggerManualSyncDown: async () => {},
-  showToast: () => {}
+  showToast: () => {},
+  lockGcf: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -86,6 +89,18 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [appMode, setAppMode] = useState<AppMode>('portal');
+  
+  // GCF Entry Security Gate - Username: 'gcf', Password: 'gcf'
+  const [isGcfUnlocked, setIsGcfUnlocked] = useState<boolean>(() => {
+    return localStorage.getItem('gcf_gate_authenticated') === 'true' ||
+           sessionStorage.getItem('gcf_gate_authenticated') === 'true';
+  });
+
+  const lockGcf = () => {
+    localStorage.removeItem('gcf_gate_authenticated');
+    sessionStorage.removeItem('gcf_gate_authenticated');
+    setIsGcfUnlocked(false);
+  };
   
   // High fidelity selectedDate state synchronized globally with top visual scroller
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -313,6 +328,11 @@ export default function App() {
     );
   }
 
+  // Direct GCF Login Gate on opening the site (Username: 'gcf', Password: 'gcf')
+  if (!isGcfUnlocked) {
+    return <GcfGate onUnlock={() => setIsGcfUnlocked(true)} />;
+  }
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard': 
@@ -347,6 +367,7 @@ export default function App() {
         onSelectWork={() => setAppMode('work-management')} 
         onSelectCalc={() => setAppMode('calculator')} 
         onSelectTvWall={() => setAppMode('tvwall-studio')}
+        onLockGcf={lockGcf}
       />;
     }
 
@@ -618,7 +639,8 @@ export default function App() {
       syncing,
       triggerManualSyncUp,
       triggerManualSyncDown,
-      showToast
+      showToast,
+      lockGcf
     }}>
       {renderContent()}
 
