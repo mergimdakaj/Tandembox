@@ -7,9 +7,10 @@ interface LandingProps {
   onSelectWork: () => void;
   onSelectCalc: () => void;
   onSelectTvWall: () => void;
+  onLockGcf?: () => void;
 }
 
-export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingProps) {
+export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall, onLockGcf }: LandingProps) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -58,6 +59,20 @@ export function Landing({ onSelectWork, onSelectCalc, onSelectTvWall }: LandingP
 
       {/* Explosive Background Grid & Star Dust */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
+
+      {/* Quick Lock Button */}
+      {onLockGcf && (
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
+          <button
+            onClick={onLockGcf}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-indigo-500/30 text-indigo-200 hover:text-white text-xs font-bold shadow-xl transition-all active:scale-95 backdrop-blur-md"
+            title="Kyç faqen me kodin GCF"
+          >
+            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <span>Kyç Faqen (GCF)</span>
+          </button>
+        </div>
+      )}
 
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.96 }}

@@ -70,13 +70,13 @@ export function Login({ onBack }: LoginProps) {
         return credentialsMatch && passMatch;
       });
 
-      if ((inputVal === 'mergim' || inputVal === 'mergim-id') && inputPass === 'mergim') {
+      if ((inputVal === 'gcf' || inputVal === 'mergim' || inputVal === 'mergim-id') && (inputPass === 'gcf' || inputPass === 'mergim')) {
         login(
-          { uid: 'mergim-id', email: 'mergim@primelink.com' },
+          { uid: 'gcf-admin-id', email: 'gcf@mergimgroup.com' },
           { 
-            uid: 'mergim-id', 
-            name: 'Mergim', 
-            email: 'mergim@primelink.com', 
+            uid: 'gcf-admin-id', 
+            name: inputVal === 'gcf' ? 'GCF Admin' : 'Mergim', 
+            email: 'gcf@mergimgroup.com', 
             role: 'admin',
             createdAt: new Date().toISOString() 
           }
